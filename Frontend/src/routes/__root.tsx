@@ -72,14 +72,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "JobPilot — AI Job Application Tracker" },
+      { title: "JobPilot — The AI agent that applies to every job that fits you" },
       {
         name: "description",
         content:
           "JobPilot watches 50,000+ career pages across Workday, Greenhouse, Lever, Ashby, and submits tailored applications automatically.",
       },
       { name: "author", content: "JobPilot" },
-      { property: "og:title", content: "JobPilot — AI Job Application Tracker" },
+      { property: "og:title", content: "JobPilot — The AI agent that applies to every job that fits you" },
       {
         property: "og:description",
         content:
@@ -94,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
