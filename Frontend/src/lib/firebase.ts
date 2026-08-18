@@ -18,7 +18,7 @@ const firebaseConfig = {
 
 // Initialize Firebase App singleton safely
 const isConfigured = Boolean(firebaseConfig.apiKey);
-const app = isConfigured
+export const app = isConfigured
   ? (!getApps().length ? initializeApp(firebaseConfig) : getApp())
   : null;
 

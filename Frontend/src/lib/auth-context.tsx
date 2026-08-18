@@ -1,13 +1,51 @@
+/**
+ * auth-context.tsx — Authentication Context
+ *
+ * MIGRATION NOTE:
+ * This file was updated from a localStorage-based email/password system to
+ * Firebase Email/Password Authentication. The reason: Firestore Security Rules
+ * require a real Firebase Auth token to enforce data ownership
+ * (WHERE userId == request.auth.uid). The old localStorage system produced
+ * fake IDs like "usr_1234567890" that Firebase Firestore cannot verify.
+ *
+ * What changed internally:
+ * - login()   → signInWithEmailAndPassword (Firebase Auth)
+ * - signup()  → createUserWithEmailAndPassword + updateProfile (Firebase Auth)
+ * - logout()  → Firebase signOut (handled in firebase.ts)
+ * - Session   → onAuthStateChanged listener (survives page refresh automatically)
+ * - Passwords → Managed by Firebase (bcrypt-hashed) — never stored as plain text
+ *
+ * What did NOT change (zero impact on UI consumers):
+ * - User interface shape (id, name, email, targetRole, avatar, createdAt)
+ * - useAuth() hook
+ * - login(), signup(), logout(), demoLogin(), googleLogin() signatures
+ * - isAuthenticated, isLoading, user properties
+ * - Login/Signup page UI — no changes to those components
+ *
+ * The `targetRole` preference is stored in localStorage because it is not
+ * sensitive auth data — it is a UI display preference, not a security boundary.
+ */
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { signInWithGooglePopup, signOutFirebase } from "./firebase";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged,
+} from "firebase/auth";
+import type { FirebaseError } from "firebase/app";
+import { auth, signInWithGooglePopup, signOutFirebase } from "./firebase";
+
+// ---------------------------------------------------------------------------
+// Types — identical interface to the previous implementation
+// ---------------------------------------------------------------------------
 
 export interface User {
-  id: string;
+  id: string;          // Firebase UID (for both email/password and Google users)
   name: string;
   email: string;
   targetRole?: string;
   avatar?: string;
-  createdAt: string;
+  createdAt: string;   // ISO 8601 — from Firebase metadata.creationTime
 }
 
 interface AuthContextType {
@@ -22,184 +60,256 @@ interface AuthContextType {
     targetRole?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  demoLogin: () => void;
+  demoLogin: () => void; // kept as () => void — internally async but callers discard return
   googleLogin: () => Promise<{ success: boolean; error?: string }>;
 }
 
-const STORAGE_USERS_KEY = "jobpilot_users";
-const STORAGE_SESSION_KEY = "jobpilot_session_user";
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
-const DEFAULT_DEMO_USER: User = {
-  id: "usr_demo_01",
-  name: "Alex Carter",
-  email: "demo@jobpilot.ai",
-  targetRole: "Full Stack Engineer",
-  createdAt: new Date().toISOString(),
-};
+/**
+ * localStorage key for the user's target role preference.
+ * Not auth data — stored locally as a UI convenience. Not sensitive.
+ */
+const TARGET_ROLE_KEY = "jobpilot_target_role";
 
-const DEFAULT_DEMO_PASSWORD = "password123";
+/** Demo account — auto-created in Firebase Auth on first demoLogin() call. */
+const DEMO_EMAIL = "demo@jobpilot.ai";
+const DEMO_PASSWORD = "password123";
+const DEMO_NAME = "Alex Carter";
+const DEMO_TARGET_ROLE = "Full Stack Engineer";
+const DEMO_FALLBACK_ROLE = "Software Engineer";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// ---------------------------------------------------------------------------
+// Error mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps Firebase Auth error codes to user-friendly messages.
+ * Firebase returns machine codes like "auth/wrong-password" — we convert
+ * these to sentences the user can understand and act on.
+ */
+function mapFirebaseError(code: string): string {
+  switch (code) {
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "Invalid email or password. Please try again.";
+    case "auth/email-already-in-use":
+      return "An account with this email already exists.";
+    case "auth/weak-password":
+      return "Password must be at least 6 characters long.";
+    case "auth/invalid-email":
+      return "Please provide a valid email address.";
+    case "auth/too-many-requests":
+      return "Too many failed attempts. Please wait a moment and try again.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection and try again.";
+    case "auth/not-configured":
+      return "Firebase is not configured. Please set up your .env file.";
+    default:
+      return "Authentication failed. Please try again.";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize stored users and session
+  /**
+   * Subscribe to Firebase Auth state changes.
+   *
+   * For viva:
+   * onAuthStateChanged fires whenever the auth state changes:
+   * - On page load (restores session from Firebase's IndexedDB persistence)
+   * - After login / signup / logout
+   * - When a Firebase token expires and is refreshed
+   *
+   * This replaces the old pattern of reading localStorage on mount and
+   * is more reliable: Firebase handles token rotation automatically.
+   */
   useEffect(() => {
-    try {
-      // Initialize seed demo user if not present
-      const storedUsersRaw = localStorage.getItem(STORAGE_USERS_KEY);
-      let storedUsers: Array<User & { passwordHash: string }> = storedUsersRaw
-        ? JSON.parse(storedUsersRaw)
-        : [];
-
-      if (!storedUsers.some((u) => u.email.toLowerCase() === DEFAULT_DEMO_USER.email.toLowerCase())) {
-        storedUsers.push({
-          ...DEFAULT_DEMO_USER,
-          passwordHash: DEFAULT_DEMO_PASSWORD,
-        });
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(storedUsers));
-      }
-
-      // Check current session
-      const storedSession = localStorage.getItem(STORAGE_SESSION_KEY);
-      if (storedSession) {
-        setUser(JSON.parse(storedSession));
-      }
-    } catch (e) {
-      console.error("Failed to parse auth storage:", e);
-    } finally {
+    if (!auth) {
+      // Firebase not configured — running without authentication
       setIsLoading(false);
+      return;
     }
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const targetRole = localStorage.getItem(TARGET_ROLE_KEY) ?? DEMO_FALLBACK_ROLE;
+        setUser({
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+          email: firebaseUser.email ?? "",
+          targetRole,
+          createdAt: firebaseUser.metadata.creationTime ?? new Date().toISOString(),
+          // Spread avatar conditionally to satisfy exactOptionalPropertyTypes
+          ...(firebaseUser.photoURL ? { avatar: firebaseUser.photoURL } : {}),
+        });
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Clean up the listener when AuthProvider unmounts
+    return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Simulate brief network latency for realistic feel
-    await new Promise((res) => setTimeout(res, 400));
+  // ---------------------------------------------------------------------------
+  // login — Firebase Email/Password Sign-In
+  // ---------------------------------------------------------------------------
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!auth) return { success: false, error: mapFirebaseError("auth/not-configured") };
 
-    const storedUsersRaw = localStorage.getItem(STORAGE_USERS_KEY);
-    const storedUsers: Array<User & { passwordHash: string }> = storedUsersRaw
-      ? JSON.parse(storedUsersRaw)
-      : [];
-
-    const found = storedUsers.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-    );
-
-    if (!found) {
-      return { success: false, error: "No account found with this email address." };
+    try {
+      await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      // onAuthStateChanged will handle setting the user state
+      return { success: true };
+    } catch (err) {
+      const firebaseErr = err as FirebaseError;
+      return { success: false, error: mapFirebaseError(firebaseErr.code) };
     }
-
-    if (found.passwordHash !== password) {
-      return { success: false, error: "Incorrect password. Please try again." };
-    }
-
-    const sessionUser: User = {
-      id: found.id,
-      name: found.name,
-      email: found.email,
-      targetRole: found.targetRole,
-      avatar: found.avatar,
-      createdAt: found.createdAt,
-    };
-
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(sessionUser));
-    setUser(sessionUser);
-    return { success: true };
   };
 
+  // ---------------------------------------------------------------------------
+  // signup — Firebase Email/Password Account Creation
+  // ---------------------------------------------------------------------------
   const signup = async (data: {
     name: string;
     email: string;
     password: string;
     targetRole?: string;
   }): Promise<{ success: boolean; error?: string }> => {
-    await new Promise((res) => setTimeout(res, 500));
+    if (!auth) return { success: false, error: mapFirebaseError("auth/not-configured") };
 
-    const storedUsersRaw = localStorage.getItem(STORAGE_USERS_KEY);
-    const storedUsers: Array<User & { passwordHash: string }> = storedUsersRaw
-      ? JSON.parse(storedUsersRaw)
-      : [];
+    try {
+      // Step 1: Create the Firebase Auth account
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        data.email.trim().toLowerCase(),
+        data.password
+      );
 
-    const normalizedEmail = data.email.trim().toLowerCase();
+      // Step 2: Set the display name
+      // Firebase Auth stores email/password separately from profile data.
+      // We call updateProfile to attach the user's name to their account.
+      await updateProfile(credential.user, { displayName: data.name.trim() });
 
-    if (storedUsers.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-      return { success: false, error: "An account with this email already exists." };
+      // Step 3: Persist targetRole preference
+      const targetRole = data.targetRole?.trim() || DEMO_FALLBACK_ROLE;
+      localStorage.setItem(TARGET_ROLE_KEY, targetRole);
+
+      // Step 4: Manually update React state
+      // onAuthStateChanged has already fired (before updateProfile resolved),
+      // so displayName was null at that point. We set the final state manually
+      // so the UI immediately shows the correct name without waiting for reload.
+      setUser({
+        id: credential.user.uid,
+        name: data.name.trim(),
+        email: credential.user.email ?? data.email.trim().toLowerCase(),
+        targetRole,
+        createdAt: credential.user.metadata.creationTime ?? new Date().toISOString(),
+      });
+
+      return { success: true };
+    } catch (err) {
+      const firebaseErr = err as FirebaseError;
+      return { success: false, error: mapFirebaseError(firebaseErr.code) };
     }
-
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      name: data.name.trim(),
-      email: normalizedEmail,
-      targetRole: data.targetRole?.trim() || "Software Engineer",
-      createdAt: new Date().toISOString(),
-    };
-
-    storedUsers.push({
-      ...newUser,
-      passwordHash: data.password,
-    });
-
-    localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(storedUsers));
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(newUser));
-    setUser(newUser);
-
-    return { success: true };
   };
 
+  // ---------------------------------------------------------------------------
+  // logout
+  // ---------------------------------------------------------------------------
+  const logout = (): void => {
+    void signOutFirebase(); // fires async sign-out; onAuthStateChanged sets user→null
+    localStorage.removeItem(TARGET_ROLE_KEY);
+    setUser(null); // immediate UI response — don't wait for onAuthStateChanged
+  };
+
+  // ---------------------------------------------------------------------------
+  // demoLogin — Signs into the demo account, creating it first if needed
+  // ---------------------------------------------------------------------------
+  /**
+   * For viva:
+   * The demo account is a real Firebase Auth user (demo@jobpilot.ai / password123).
+   * On first call, we create the account if it doesn't exist in Firebase Auth.
+   * On subsequent calls, we just sign in normally.
+   *
+   * Return type is void (as declared in AuthContextType) because all call sites
+   * fire-and-forget: demoLogin(); navigate("/dashboard");
+   * The navigation and loading state handle the async gap gracefully.
+   */
+  const demoLogin = (): void => {
+    if (!auth) return;
+
+    // Fire and forget — callers do not await demoLogin()
+    void (async () => {
+      try {
+        // First, try to sign in (covers the common case)
+        await signInWithEmailAndPassword(auth, DEMO_EMAIL, DEMO_PASSWORD);
+        if (!localStorage.getItem(TARGET_ROLE_KEY)) {
+          localStorage.setItem(TARGET_ROLE_KEY, DEMO_TARGET_ROLE);
+        }
+      } catch {
+        // Sign-in failed — demo account likely doesn't exist yet; create it
+        try {
+          const credential = await createUserWithEmailAndPassword(auth, DEMO_EMAIL, DEMO_PASSWORD);
+          await updateProfile(credential.user, { displayName: DEMO_NAME });
+          localStorage.setItem(TARGET_ROLE_KEY, DEMO_TARGET_ROLE);
+        } catch {
+          // Demo account may have just been created by a concurrent call —
+          // try signing in one more time before giving up silently
+          try {
+            await signInWithEmailAndPassword(auth, DEMO_EMAIL, DEMO_PASSWORD);
+          } catch {
+            // Silent fail — demo mode is a convenience feature, not critical
+          }
+        }
+      }
+    })();
+  };
+
+  // ---------------------------------------------------------------------------
+  // googleLogin — Firebase Google OAuth (unchanged from previous implementation)
+  // ---------------------------------------------------------------------------
   const googleLogin = async (): Promise<{ success: boolean; error?: string }> => {
     try {
       const result = await signInWithGooglePopup();
 
-      if (!result.success || !result.user) {
-        // If popup was closed by user
+      if (!result.success) {
         if (result.code === "auth/popup-closed-by-user") {
           return { success: false, error: "Google Sign-In was cancelled." };
         }
-        return { success: false, error: result.error || "Google Sign-In failed." };
+        return { success: false, error: result.error ?? "Google Sign-In failed." };
       }
 
-      const googleUser: User = {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        targetRole: "Software Engineer",
-        avatar: result.user.avatar,
-        createdAt: result.user.createdAt,
-      };
-
-      const storedUsersRaw = localStorage.getItem(STORAGE_USERS_KEY);
-      const storedUsers: Array<User & { passwordHash: string }> = storedUsersRaw
-        ? JSON.parse(storedUsersRaw)
-        : [];
-
-      if (!storedUsers.some((u) => u.email.toLowerCase() === googleUser.email.toLowerCase())) {
-        storedUsers.push({
-          ...googleUser,
-          passwordHash: "google_firebase_oauth",
-        });
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(storedUsers));
+      // Set a default targetRole for first-time Google users
+      if (!localStorage.getItem(TARGET_ROLE_KEY)) {
+        localStorage.setItem(TARGET_ROLE_KEY, DEMO_FALLBACK_ROLE);
       }
 
-      localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(googleUser));
-      setUser(googleUser);
+      // onAuthStateChanged handles setting the user state after Google sign-in
       return { success: true };
-    } catch (err: any) {
-      console.error("Google Auth error:", err);
-      return { success: false, error: err.message || "Failed to authenticate with Google." };
+    } catch (err) {
+      const firebaseErr = err as FirebaseError;
+      return {
+        success: false,
+        error: firebaseErr.message ?? "Failed to authenticate with Google.",
+      };
     }
-  };
-
-  const logout = () => {
-    signOutFirebase();
-    localStorage.removeItem(STORAGE_SESSION_KEY);
-    setUser(null);
-  };
-
-  const demoLogin = () => {
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(DEFAULT_DEMO_USER));
-    setUser(DEFAULT_DEMO_USER);
   };
 
   return (

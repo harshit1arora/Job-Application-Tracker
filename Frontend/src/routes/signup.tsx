@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect as import_react_useEffect, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
@@ -40,9 +40,11 @@ function SignUpPage() {
   const { googleLogin } = useAuth();
 
   // If already authenticated, redirect to dashboard
-  if (isAuthenticated) {
-    navigate({ to: "/dashboard" });
-  }
+  import_react_useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/dashboard" });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleGoogleAuth = async () => {
     setGoogleLoading(true);
