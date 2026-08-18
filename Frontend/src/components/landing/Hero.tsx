@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { MessageSquare, Puzzle, Sparkles, Terminal, Phone } from "lucide-react";
 import { Reveal } from "./Reveal";
 import { DashboardMock } from "./DashboardMock";
@@ -37,12 +38,12 @@ export function Hero() {
 
         <Reveal delay={180} className="lg:text-right">
           <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-            <a
-              href="#how-it-works"
+            <Link
+              to="/signup"
               className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
             >
               Get started
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               className="rounded-full border border-border px-6 py-3 text-sm font-semibold transition-colors hover:bg-secondary"

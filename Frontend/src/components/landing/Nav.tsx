@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Menu, Moon, Sun, X, LogOut, LayoutDashboard } from "lucide-react";
 import { Logo } from "./Logo";
+import { useAuth } from "@/lib/auth-context";
 
 const LINKS = [
   { label: "How it works", href: "#how-it-works" },
@@ -11,6 +13,7 @@ const LINKS = [
 ];
 
 export function Nav() {
+  const { user, isAuthenticated, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -55,7 +58,7 @@ export function Nav() {
       }`}
     >
       <nav className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3.5 lg:grid-cols-[1fr_auto_1fr]">
-        <a href="#top" className="flex min-w-0 items-center gap-2.5">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5">
           <Logo className="h-6 w-6 shrink-0 text-foreground" />
           <span className="truncate text-lg font-semibold tracking-tight text-foreground">
             JobPilot
@@ -63,7 +66,7 @@ export function Nav() {
           <span className="ml-1 hidden items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground xl:inline-flex">
             AI Application Tracker
           </span>
-        </a>
+        </Link>
 
         <div className="hidden items-center gap-7 lg:flex">
           {LINKS.map((l) => (
@@ -87,18 +90,42 @@ export function Nav() {
           >
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-          <a
-            href="#how-it-works"
-            className="hidden rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary sm:inline-flex"
-          >
-            Log in
-          </a>
-          <a
-            href="#how-it-works"
-            className="hidden rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:inline-flex"
-          >
-            Sign up
-          </a>
+
+          {isAuthenticated ? (
+            <div className="hidden sm:flex items-center gap-2">
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3.5 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+              >
+                <LayoutDashboard size={15} />
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                title="Log out"
+                className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="hidden rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary sm:inline-flex"
+              >
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                className="hidden rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:inline-flex"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
+
           <button
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
@@ -124,20 +151,44 @@ export function Nav() {
             ))}
           </div>
           <div className="mt-3 flex gap-2">
-            <a
-              href="#how-it-works"
-              onClick={() => setOpen(false)}
-              className="flex-1 rounded-full border border-border py-2.5 text-center text-sm font-medium text-foreground"
-            >
-              Log in
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={() => setOpen(false)}
-              className="flex-1 rounded-full bg-primary py-2.5 text-center text-sm font-semibold text-primary-foreground"
-            >
-              Sign up
-            </a>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 rounded-full bg-primary py-2.5 text-center text-sm font-semibold text-primary-foreground"
+                >
+                  Go to Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setOpen(false);
+                  }}
+                  className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 rounded-full border border-border py-2.5 text-center text-sm font-medium text-foreground"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 rounded-full bg-primary py-2.5 text-center text-sm font-semibold text-primary-foreground"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

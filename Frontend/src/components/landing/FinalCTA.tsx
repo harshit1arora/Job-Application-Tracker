@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Reveal } from "./Reveal";
 
 export function FinalCTA() {
@@ -9,12 +10,12 @@ export function FinalCTA() {
           <h2 className="mx-auto mt-5 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-[-0.03em] sm:text-6xl">
             Get the next 25 applications off your plate by tonight.
           </h2>
-          <a
-            href="#how-it-works"
+          <Link
+            to="/signup"
             className="mt-10 inline-block rounded-full bg-primary-foreground px-8 py-3.5 text-sm font-semibold text-primary transition-transform hover:-translate-y-0.5"
           >
             Get started
-          </a>
+          </Link>
         </div>
       </Reveal>
     </section>
