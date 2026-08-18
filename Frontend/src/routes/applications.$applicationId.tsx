@@ -75,7 +75,7 @@ function ApplicationDetailsPage() {
         followUpDate: followUpRef.current?.value || undefined,
         notes: notesRef.current?.value || undefined,
         jobDescription: jdRef.current?.value || undefined,
-      };
+      } as Partial<import("@/lib/types").CreateApplicationInput>;
 
       const updated = await updateApplication(user.id, applicationId, changes);
       setApplication(updated);

@@ -124,7 +124,7 @@ function DashboardPage() {
         if (!prev) {
           return {
             totalApplications: 1,
-            byStatus: { applied: 1, interviewing: 0, rejected: 0, offers: 0 },
+            byStatus: { saved: 0, applied: 1, underReview: 0, interview: 0, offer: 0, rejected: 0 },
             recentApplications: [newApp],
             upcomingFollowUps: [],
           };
@@ -132,7 +132,7 @@ function DashboardPage() {
         return {
           ...prev,
           totalApplications: prev.totalApplications + 1,
-          byStatus: { ...prev, applied: (prev.byStatus?.applied || 0) + 1 },
+          byStatus: { ...prev.byStatus, applied: prev.byStatus.applied + 1 },
           recentApplications: [newApp, ...prev.recentApplications].slice(0, 5),
         };
       });
