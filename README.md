@@ -1,4 +1,4 @@
-# 🚀 AI Job-Application-Tracker
+# 🚀 AI-Job-Application-Tracker
 
 An autonomous AI Job Application Tracker platform designed to monitor career sites, tailor résumés, submit applications automatically, and track responses in a unified dashboard.
 
