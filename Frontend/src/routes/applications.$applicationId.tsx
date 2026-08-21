@@ -6,8 +6,9 @@ import type { ApplicationDocument, ApplicationStatus } from "@/lib/types";
 import { APPLICATION_STATUSES } from "@/lib/types";
 import { toast } from "sonner";
 import { AppError } from "@/lib/types";
-import { ArrowLeft, Loader2, Save, Trash2, Building2, Briefcase, Calendar, MapPin, DollarSign } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Trash2, Building2, Briefcase, Calendar, MapPin, DollarSign, ClipboardCopy } from "lucide-react";
 import { DocumentsSection } from "@/components/documents-section";
+import { getProfile, autofillText } from "@/lib/profile";
 
 export const Route = createFileRoute("/applications/$applicationId")({
   component: ApplicationDetailsPage,
@@ -109,6 +110,29 @@ function ApplicationDetailsPage() {
     }
   };
 
+  // Autofill MVP: copy the user's saved contact details + résumé to the
+  // clipboard so they paste once into the career portal instead of retyping.
+  // ponytail: true per-field autofill on third-party portals needs a browser
+  // extension with content scripts — clipboard is the lazy, no-extension version.
+  const handleCopyAutofill = async () => {
+    if (!user) return;
+    const profile = getProfile(user.id);
+    const block = autofillText(profile);
+    if (!block && !profile.resumeText) {
+      toast.error("Add your details on the dashboard (Résumé & Profile) first.");
+      return;
+    }
+    const payload = [block, profile.resumeText && `\nRésumé:\n${profile.resumeText}`]
+      .filter(Boolean)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(payload);
+      toast.success("Details copied — paste them into the application form.");
+    } catch {
+      toast.error("Couldn't access the clipboard. Copy manually from your profile.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
@@ -133,6 +157,14 @@ function ApplicationDetailsPage() {
             Back to Dashboard
           </Link>
           <div className="flex gap-3">
+            <button
+              onClick={handleCopyAutofill}
+              title="Copy your saved details to paste into the career portal"
+              className="px-4 py-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors flex items-center gap-2"
+            >
+              <ClipboardCopy size={14} />
+              Copy details
+            </button>
             <button
               onClick={handleDelete}
               disabled={isDeleting}

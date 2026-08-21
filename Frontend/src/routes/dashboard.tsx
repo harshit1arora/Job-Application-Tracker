@@ -7,6 +7,8 @@ import { formatDistanceToNow } from "date-fns";
 import type { ApplicationDocument, ApplicationSource, ApplicationStatus, DashboardStats } from "@/lib/types";
 import { AppError } from "@/lib/types";
 import { createApplication, getApplications } from "@/lib/applications-service";
+import { matchScore, isAiConfigured } from "@/lib/ai";
+import { getProfile, saveProfile, type UserProfile } from "@/lib/profile";
 import {
   Send,
   Calendar,
@@ -19,6 +21,8 @@ import {
   Bot,
   TrendingUp,
   Loader2,
+  FileText,
+  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
@@ -48,6 +52,72 @@ function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "All">("All");
   const [isBotRunning, setIsBotRunning] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // AI résumé matching
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [resumeDraft, setResumeDraft] = useState("");
+  const [isScoring, setIsScoring] = useState(false);
+
+  // Load the saved résumé/profile once the user is known (localStorage).
+  // Prefill name/email from the signed-in account if not set yet.
+  useEffect(() => {
+    if (!user) return;
+    const p = getProfile(user.id);
+    setProfile({
+      ...p,
+      fullName: p.fullName || user.name || "",
+      email: p.email || user.email || "",
+    });
+    setResumeDraft(p.resumeText);
+  }, [user?.id]);
+
+  const setField = (field: keyof UserProfile, value: string) =>
+    setProfile((p) => (p ? { ...p, [field]: value } : p));
+
+  const handleSaveResume = () => {
+    if (!user || !profile) return;
+    const updated = { ...profile, resumeText: resumeDraft.trim() };
+    saveProfile(user.id, updated);
+    setProfile(updated);
+    toast.success("Profile saved. Contact details will autofill applications; click \"Score matches\" to rank jobs.");
+  };
+
+  // Embeds the résumé against each application's job text and fills matchScore.
+  // Scores are held in local state only (no Firestore write) — recompute anytime.
+  const handleScoreMatches = async () => {
+    if (!user || !profile?.resumeText.trim()) {
+      toast.error("Add your résumé first, then score matches.");
+      return;
+    }
+    if (applications.length === 0) {
+      toast.error("Track an application first.");
+      return;
+    }
+    setIsScoring(true);
+    try {
+      const scored = await Promise.all(
+        applications.map(async (app) => {
+          const jobText = app.jobDescription?.trim() || `${app.jobTitle} at ${app.company}`;
+          try {
+            const score = await matchScore(profile.resumeText, jobText);
+            return { ...app, matchScore: score };
+          } catch {
+            return app; // leave unscored on a per-row failure
+          }
+        })
+      );
+      setApplications(scored);
+      const best = [...scored].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))[0];
+      if (best?.matchScore !== undefined) {
+        toast.success(`Top match: ${best.company} — ${best.matchScore}%. Apply there first!`);
+      }
+    } catch (error) {
+      console.error("Match scoring failed:", error);
+      toast.error("AI match scoring failed. Please try again.");
+    } finally {
+      setIsScoring(false);
+    }
+  };
 
   // New application form state has been moved to the AddApplicationModal component.
 
@@ -346,6 +416,71 @@ function DashboardPage() {
           </div>
         </div>
 
+        {/* AI Résumé Match Panel */}
+        <div className="mb-8 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <FileText size={16} className="text-primary" />
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Résumé & Profile</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Save your résumé and contact details once. AI ranks where you're a strong match, and your details autofill each application (Copy on the detail page).
+          </p>
+
+          {/* Contact details — used for one-click autofill on career portals */}
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {([
+              ["fullName", "Full name", "e.g. Priya Sharma"],
+              ["email", "Email", "you@example.com"],
+              ["phone", "Phone", "+91 98765 43210"],
+              ["location", "Location", "Bengaluru, India"],
+              ["linkedin", "LinkedIn URL", "linkedin.com/in/…"],
+              ["portfolio", "Portfolio / GitHub", "github.com/…"],
+            ] as [keyof UserProfile, string, string][]).map(([field, label, placeholder]) => (
+              <div key={field}>
+                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">{label}</label>
+                <input
+                  type="text"
+                  value={profile?.[field] ?? ""}
+                  onChange={(e) => setField(field, e.target.value)}
+                  placeholder={placeholder}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+            ))}
+          </div>
+
+          <textarea
+            value={resumeDraft}
+            onChange={(e) => setResumeDraft(e.target.value)}
+            rows={6}
+            placeholder="Paste your résumé text here (skills, experience, education)…"
+            className="w-full resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSaveResume}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-xs font-semibold hover:bg-secondary transition-colors"
+            >
+              <FileText size={14} />
+              Save Profile
+            </button>
+            <button
+              onClick={handleScoreMatches}
+              disabled={isScoring || !profile?.resumeText.trim()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow hover:opacity-95 transition-opacity disabled:opacity-60"
+            >
+              {isScoring ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+              {isScoring ? "Scoring…" : "Score matches with AI"}
+            </button>
+            {!isAiConfigured() && (
+              <span className="text-[11px] text-amber-600 dark:text-amber-400">
+                Set VITE_OPENROUTER_API_KEY in .env to enable AI.
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Applications Section */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
           <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -438,9 +573,14 @@ function DashboardPage() {
                                 style={{ width: `${app.matchScore}%` }}
                               />
                             </div>
+                            {app.matchScore >= 75 && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                <Zap size={10} /> Strong
+                              </span>
+                            )}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-[11px]">— (AI pending)</span>
+                          <span className="text-muted-foreground text-[11px]">— (score with AI)</span>
                         )}
                       </td>
                       <td className="py-4 px-4 text-muted-foreground">
