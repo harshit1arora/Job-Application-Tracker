@@ -46,3 +46,30 @@ Content-Type: application/json
   "applicationSource": "LinkedIn",
   "status": "Definitely Not A Real Status"
 }
+
+### Register a document
+POST http://localhost:5117/api/documents
+Content-Type: application/json
+
+{
+  "fileName": "shubham_resume.pdf",
+  "fileType": "application/pdf",
+  "fileSize": 245678,
+  "storageRef": "users/test-user-123/resume.pdf",
+  "displayName": "Resume v2"
+}
+
+### List documents
+GET http://localhost:5117/api/documents
+Accept: application/json
+
+### Rejected file type — expect 400
+POST http://localhost:5117/api/documents
+Content-Type: application/json
+
+{
+  "fileName": "photo.png",
+  "fileType": "image/png",
+  "fileSize": 1000,
+  "storageRef": "users/test-user-123/photo.png"
+}

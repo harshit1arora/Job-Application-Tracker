@@ -7,11 +7,9 @@ namespace JobTracker.Api.Services;
 ///
 /// The controller depends on this interface, not on any concrete storage.
 /// Swapping in-memory storage for Firestore means writing a new class that
-/// implements this interface and changing one line in Program.cs —
-/// the controller is untouched. This is the Dependency Inversion Principle.
+/// implements this interface and changing one line in Program.cs.
 ///
 /// Every method is async because Firestore calls are network calls.
-/// Defining that now avoids changing every signature later.
 /// </summary>
 public interface IApplicationRepository
 {
