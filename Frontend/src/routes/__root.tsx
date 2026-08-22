@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { ChatWidget } from "@/components/chat-widget";
 
 function NotFoundComponent() {
   return (
@@ -122,6 +123,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
+        <ChatWidget />
         <Toaster position="top-right" offset="80px" richColors closeButton />
       </AuthProvider>
     </QueryClientProvider>
