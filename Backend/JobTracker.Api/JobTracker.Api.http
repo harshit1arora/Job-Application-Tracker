@@ -73,3 +73,31 @@ Content-Type: application/json
   "fileSize": 1000,
   "storageRef": "users/test-user-123/photo.png"
 }
+### Create a reminder
+POST http://localhost:5117/api/reminders
+Content-Type: application/json
+
+{
+  "applicationId": "some-app-id",
+  "reminderDate": "2026-09-01T09:00",
+  "type": "follow-up",
+  "message": "Follow up with Google recruiter"
+}
+
+### List reminders
+GET http://localhost:5117/api/reminders
+Accept: application/json
+
+### Filter to incomplete only
+GET http://localhost:5117/api/reminders?isCompleted=false
+Accept: application/json
+
+### Invalid type — expect 400
+POST http://localhost:5117/api/reminders
+Content-Type: application/json
+
+{
+  "applicationId": "some-app-id",
+  "reminderDate": "2026-09-01T09:00",
+  "type": "coffee-break"
+}
