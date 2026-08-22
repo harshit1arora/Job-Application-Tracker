@@ -5,20 +5,20 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOu
  * Firebase Web Configuration
  *
  * Configured securely via Vite environment variables (.env).
- * To setup your own Firebase project, copy .env.example to .env and set your keys.
+ * To connect your Firebase project, copy .env.example to .env and set your keys.
  */
 const firebaseConfig = {
-  apiKey: import.meta.env["VITE_FIREBASE_API_KEY"] as string,
-  authDomain: import.meta.env["VITE_FIREBASE_AUTH_DOMAIN"] as string,
-  projectId: import.meta.env["VITE_FIREBASE_PROJECT_ID"] as string,
-  storageBucket: import.meta.env["VITE_FIREBASE_STORAGE_BUCKET"] as string,
-  messagingSenderId: import.meta.env["VITE_FIREBASE_MESSAGING_SENDER_ID"] as string,
-  appId: import.meta.env["VITE_FIREBASE_APP_ID"] as string,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
 };
 
 // Initialize Firebase App singleton safely
 const isConfigured = Boolean(firebaseConfig.apiKey);
-export const app = isConfigured
+const app = isConfigured
   ? (!getApps().length ? initializeApp(firebaseConfig) : getApp())
   : null;
 
