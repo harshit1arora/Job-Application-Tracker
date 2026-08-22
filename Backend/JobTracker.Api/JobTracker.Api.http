@@ -1,0 +1,48 @@
+### List all applications
+GET http://localhost:5117/api/applications
+Accept: application/json
+
+### Create an application
+POST http://localhost:5117/api/applications
+Content-Type: application/json
+
+{
+  "company": "Google",
+  "jobTitle": "Software Engineer Intern",
+  "applicationSource": "LinkedIn",
+  "status": "Applied",
+  "location": "Bangalore",
+  "salaryRange": "12-15 LPA",
+  "notes": "Applied through college referral",
+  "followUpDate": "2026-09-01"
+}
+
+### Create a second one
+POST http://localhost:5117/api/applications
+Content-Type: application/json
+
+{
+  "company": "Zoho",
+  "jobTitle": "Backend Developer",
+  "applicationSource": "Greenhouse",
+  "status": "Saved"
+}
+
+### Filter by status
+GET http://localhost:5117/api/applications?status=Applied
+Accept: application/json
+
+### Search by company or job title
+GET http://localhost:5117/api/applications?search=goog
+Accept: application/json
+
+### Validation failure — empty company, bad status. Expect 400.
+POST http://localhost:5117/api/applications
+Content-Type: application/json
+
+{
+  "company": "",
+  "jobTitle": "Test Role",
+  "applicationSource": "LinkedIn",
+  "status": "Definitely Not A Real Status"
+}
