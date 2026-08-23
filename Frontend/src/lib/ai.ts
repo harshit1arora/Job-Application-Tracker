@@ -54,19 +54,86 @@ async function orFetch(path: string, body: unknown, timeoutMs = 2200): Promise<a
 // --- Smart Local Fallback Responses ---
 function generateLocalChatReply(userMessage: string): string {
   const q = userMessage.toLowerCase();
-  if (q.includes("resume") || q.includes("résumé") || q.includes("cv")) {
-    return "💡 **Resume Optimization Tip**: Tailor your bullet points using the **Action Verb + Context + Measurable Result** framework (e.g., *'Architected real-time WebSocket service reducing latency by 35%'*). Ensure key skills from the job description are mirrored in your experience section!";
+
+  // First-time onboarding / Tour / Getting started
+  if (q.includes("tour") || q.includes("start") || q.includes("how does this work") || q.includes("first time") || q.includes("help me get started") || q.includes("guide")) {
+    return "🚀 **Welcome to JobPilot! Here is how to get the most out of your job search:**\n\n" +
+      "1. **Upload & Parse Résumé** (`/profile`): Upload your PDF or paste text. Our AI auto-extracts your skills, target roles, and experience.\n" +
+      "2. **Browse & Auto-Match Jobs** (`/browse`): Filter 50,000+ live jobs indexed across Workday, Greenhouse, Lever, and Ashby with AI match scores.\n" +
+      "3. **Track with Kanban** (`/tracker`): Move applications smoothly across *Applied*, *Screening*, *Interview*, *Offer*, and *Archived* columns.\n" +
+      "4. **AI Quick Tools**: Ask me to draft tailored cover letters, run mock interview questions, or calculate match scores anytime!\n" +
+      "5. **Voice Navigation**: Click the mic or press `Ctrl+J` and say *'Go to Tracker'*, *'Browse Jobs'*, or *'Edit Résumé'*.";
   }
-  if (q.includes("interview") || q.includes("question") || q.includes("prep")) {
-    return "🎯 **Interview Preparation Strategy**:\n1. **STAR Method**: Structure behavioral answers around Situation, Task, Action, and Result.\n2. **System Design / Technical**: Practice discussing trade-offs (scalability vs latency, SQL vs NoSQL).\n3. **Company Alignment**: Review their engineering blog and recent product launches.";
+
+  // Voice navigation help
+  if (q.includes("voice") || q.includes("speech") || q.includes("stt") || q.includes("commands")) {
+    return "🎙️ **JobPilot Voice Commands**:\n\n" +
+      "Simply click the **Mic icon** (or press `Ctrl+J`) and speak naturally:\n" +
+      "• *'Go to Dashboard'* → Main analytics & activity overview\n" +
+      "• *'Browse Jobs'* → Real-time job listings catalog\n" +
+      "• *'Show Applications'* → Detailed submissions table\n" +
+      "• *'Go to Tracker'* → Interactive Kanban board & interview calendar\n" +
+      "• *'Open Inbox'* → Recruiter messages & status updates\n" +
+      "• *'Edit Résumé'* → Profile builder, PDF parser & ATS optimization\n" +
+      "• *'Open Settings'* → Account & theme preferences\n\n" +
+      "You can also dictate any question directly into the chat!";
   }
+
+  // Job Tracker / Kanban explanation
+  if (q.includes("tracker") || q.includes("kanban") || q.includes("stages") || q.includes("pipeline") || q.includes("columns")) {
+    return "📊 **Job Tracker Workflow**:\n\n" +
+      "Your Kanban board organizes opportunities through 5 key stages:\n" +
+      "• **Applied**: Jobs submitted via JobPilot or manually logged.\n" +
+      "• **Screening**: Recruiter phone screens and initial assessments scheduled.\n" +
+      "• **Interview**: Technical rounds, hiring manager chats, and presentations.\n" +
+      "• **Offer**: Congratulations! Track compensation and deadlines here.\n" +
+      "• **Archived / Rejected**: Keep historical records to learn and refine.\n\n" +
+      "💡 *Tip: Drag and drop cards, or click any card to view detailed notes, add interview reminders, and draft tailored follow-ups!*";
+  }
+
+  // Auto-Apply / Quick Fill
+  if (q.includes("auto apply") || q.includes("quick fill") || q.includes("portal") || q.includes("apply")) {
+    return "⚡ **JobPilot Auto-Apply & Quick-Fill**:\n\n" +
+      "When applying on external company portals (Workday, Greenhouse, Lever, Ashby):\n" +
+      "• **1-Click Profile Sync**: Pulls your verified contact details, work history, and portfolio links directly from your `/profile`.\n" +
+      "• **Custom Cover Letters**: Generates an 8-10 line tailored letter mapped to the specific job requirements.\n" +
+      "• **Missing Field Detection**: Highlights any required fields (e.g. sponsorship, notice period) before final submission.";
+  }
+
+  if (q.includes("resume") || q.includes("résumé") || q.includes("cv") || q.includes("ats")) {
+    return "💡 **ATS Résumé Optimization Framework**:\n\n" +
+      "1. **Impact Metrics**: Use *'Action Verb + Task + Measurable Result'* (e.g., *'Architected real-time WebSocket service reducing latency by 35%'*).\n" +
+      "2. **Keyword Mirroring**: Ensure critical skills and tech stack terms from the target job description appear naturally in your bullets.\n" +
+      "3. **Clean Formatting**: Use standard single-column headings (Experience, Skills, Education) so ATS scanners parse every field with 100% fidelity.";
+  }
+
+  if (q.includes("interview") || q.includes("question") || q.includes("prep") || q.includes("mock")) {
+    return "🎯 **Interview Preparation Playbook**:\n\n" +
+      "1. **STAR Method**: Structure behavioral answers around **S**ituation, **T**ask, **A**ction, and **R**esult.\n" +
+      "2. **Top Behavioral Questions**:\n" +
+      "   • *'Tell me about a time you resolved a major production incident under pressure.'*\n" +
+      "   • *'Describe a situation where you had a technical disagreement with a team member.'*\n" +
+      "3. **System Design & Architecture**: Practice discussing trade-offs (scalability vs latency, SQL vs NoSQL, caching strategies).\n" +
+      "4. **Reverse Interviewing**: Ask the panel: *'What does success look like in the first 90 days for this role?'*";
+  }
+
   if (q.includes("cover letter") || q.includes("letter") || q.includes("application")) {
-    return "✍️ **Cover Letter Formula**:\n- **Opening**: State role and what draws you to their mission.\n- **Core Value**: 2-3 specific accomplishments matching their exact job requirements.\n- **Closing**: Express enthusiasm for a conversational screening.";
+    return "✍️ **High-Converting Cover Letter Formula**:\n\n" +
+      "• **Hook (Lines 1-2)**: State the role and why you admire their product or engineering culture.\n" +
+      "• **Core Proof (Lines 3-6)**: 2 specific achievements with real numbers that solve their immediate pain points.\n" +
+      "• **Call to Action (Lines 7-8)**: Express enthusiasm for an introductory conversation.\n\n" +
+      "💡 *Tip: Head over to any job on `/browse` or use our quick tool below to draft one instantly!*";
   }
-  if (q.includes("salary") || q.includes("negotiat")) {
-    return "💼 **Salary Negotiation Advice**: Research levels on Levels.fyi and Glassdoor. When asked for your range, provide a bracket anchored by your target number as the floor, and highlight the full compensation package (equity, bonuses, benefits).";
+
+  if (q.includes("salary") || q.includes("negotiat") || q.includes("offer") || q.includes("comp")) {
+    return "💼 **Salary Negotiation Strategy**:\n\n" +
+      "• **Anchor High**: Benchmark on Levels.fyi and Glassdoor. Provide a range where your target is at the floor.\n" +
+      "• **Look at Total Comp**: Consider base salary, equity/RSUs, signing bonus, remote stipend, and 401(k) match.\n" +
+      "• **Competing Leverage**: If you have multiple interviews in flight, mention your timeline to accelerate offer deadlines.";
   }
-  return "I'm your JobPilot AI career assistant! I can help you tailor your résumé, generate cover letters, practice interview questions, or calculate match scores for any job application. How can I assist your job hunt today?";
+
+  return "👋 I'm your **JobPilot Career Copilot**! I can help you tailor your résumé for ATS, generate custom cover letters, practice role-specific interview questions, or navigate across JobPilot with voice commands.\n\n" +
+    "How can I assist your job hunt today?";
 }
 
 /**
