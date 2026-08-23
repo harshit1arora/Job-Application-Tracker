@@ -121,4 +121,5 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 var appPort = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+Console.WriteLine($"[Startup] Binding to port {appPort}");
 app.Run($"http://0.0.0.0:{appPort}");
