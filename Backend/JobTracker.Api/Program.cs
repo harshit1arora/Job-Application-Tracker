@@ -12,7 +12,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
 
-// Enable CORS — production URL added; localhost kept for local dev
+// Enable CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -28,27 +28,44 @@ var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    // Render provides DATABASE_URL in the format:
-    // postgres://user:password@host:port/dbname
-    // Npgsql needs it converted to a standard connection string.
-    var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    var connectionString =
-        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    // Parse postgres:// URL provided by Render
+    // Format: postgres://user:password@host:port/dbname
+    string connectionString;
+    try
+    {
+        var uri = new Uri(databaseUrl.Replace("postgres://", "postgresql://"));
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var db = uri.AbsolutePath.TrimStart('/');
+        var user = Uri.UnescapeDataString(userInfo[0]);
+        var pass = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+
+        // Use SslMode=Prefer for Render internal connections (avoids native SSL crash)
+        connectionString =
+            $"Host={host};Port={port};Database={db};Username={user};Password={pass};" +
+            "SSL Mode=Prefer;Trust Server Certificate=true;Include Error Detail=true";
+
+        Console.WriteLine($"[Startup] Connecting to PostgreSQL at {host}:{port}/{db}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Startup] Failed to parse DATABASE_URL: {ex.Message}");
+        throw;
+    }
 
     builder.Services.AddDbContext<AppDbContext>(opt =>
-        opt.UseNpgsql(connectionString));
+        opt.UseNpgsql(connectionString,
+            npgsql => npgsql.CommandTimeout(60)));
 
     builder.Services.AddScoped<IApplicationRepository, PostgresApplicationRepository>();
     builder.Services.AddScoped<IDocumentRepository, PostgresDocumentRepository>();
     builder.Services.AddScoped<IReminderRepository, PostgresReminderRepository>();
 
-    Console.WriteLine("[Startup] Using PostgreSQL database.");
+    Console.WriteLine("[Startup] Using PostgreSQL repositories.");
 }
 else
 {
-    // Local dev — no DATABASE_URL set, fall back to InMemory
     builder.Services.AddSingleton<IApplicationRepository, InMemoryApplicationRepository>();
     builder.Services.AddSingleton<IDocumentRepository, InMemoryDocumentRepository>();
     builder.Services.AddSingleton<IReminderRepository, InMemoryReminderRepository>();
@@ -64,13 +81,22 @@ var app = builder.Build();
 // Auto-apply EF migrations on startup (only in PostgreSQL mode)
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-    Console.WriteLine("[Startup] Database migrations applied.");
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Console.WriteLine("[Startup] Applying database migrations...");
+        db.Database.Migrate();
+        Console.WriteLine("[Startup] Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Startup] Migration failed: {ex.Message}");
+        Console.WriteLine($"[Startup] StackTrace: {ex.StackTrace}");
+        throw;
+    }
 }
 
-// Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -94,5 +120,5 @@ app.MapGet("/", () => Results.Ok(new
     endpoints = new[] { "/api/applications", "/api/documents", "/api/reminders", "/api/dashboard/stats" }
 }));
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5117";
-app.Run($"http://0.0.0.0:{port}");
+var appPort = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+app.Run($"http://0.0.0.0:{appPort}");
