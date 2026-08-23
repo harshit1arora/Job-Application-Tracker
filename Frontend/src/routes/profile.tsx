@@ -12,16 +12,11 @@ import {
   Upload,
   Sparkles,
   FileText,
-  Phone,
-  MapPin,
-  Briefcase,
-  Award,
-  Link as LinkIcon,
+  Trash2,
   CheckCircle2,
   AlertTriangle,
   Loader2,
   Save,
-  Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
@@ -52,8 +47,8 @@ function ProfilePage() {
       const p = getProfile(user.id);
       const initial: UserProfile = {
         ...p,
-        fullName: p.fullName || user.name || "Alex Morgan",
-        email: p.email || user.email || "alex.morgan@example.com",
+        fullName: p.fullName || user.name || "",
+        email: p.email || user.email || "",
       };
       setProfile(initial);
       setResumeText(initial.resumeText || "");
@@ -119,6 +114,30 @@ function ProfilePage() {
     }
   };
 
+  const handleClearResume = () => {
+    if (!user) return;
+    const blank: UserProfile = {
+      fullName: user.name || "",
+      email: user.email || "",
+      phone: "",
+      city: "",
+      location: "",
+      ageOrExperience: "",
+      targetRole: "",
+      skills: [],
+      linkedin: "",
+      portfolio: "",
+      education: "",
+      resumeText: "",
+    };
+    saveProfile(user.id, blank);
+    setProfile(blank);
+    setResumeText("");
+    setSkillsInput("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    toast.success("Résumé and profile data cleared.");
+  };
+
   const handleManualSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
@@ -171,6 +190,18 @@ function ProfilePage() {
               <Sparkles size={13} />
               Load Sample Résumé
             </button>
+
+            {resumeText && (
+              <button
+                type="button"
+                onClick={handleClearResume}
+                disabled={isParsing}
+                className="text-xs font-semibold text-destructive bg-destructive/10 hover:bg-destructive/20 px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 size={13} />
+                Clear Résumé
+              </button>
+            )}
 
             <button
               type="button"

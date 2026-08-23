@@ -38,13 +38,13 @@ export function DashboardSidebar({
     }
   }, [user?.id]);
 
-  const userName = profile?.fullName || user?.name || "Alex Morgan";
+  const userName = profile?.fullName || user?.name || user?.email || "User";
   const initials = userName
     .split(" ")
     .map((n) => n[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase() || "AM";
+    .toUpperCase() || "U";
 
   return (
     <aside className="w-full md:w-64 bg-white dark:bg-[#111622] border-r border-border/80 p-5 flex flex-col justify-between shrink-0 shadow-xs z-30 min-h-screen">
