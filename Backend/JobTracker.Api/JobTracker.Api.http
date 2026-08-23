@@ -1,0 +1,103 @@
+### List all applications
+GET http://localhost:5117/api/applications
+Accept: application/json
+
+### Create an application
+POST http://localhost:5117/api/applications
+Content-Type: application/json
+
+{
+  "company": "Google",
+  "jobTitle": "Software Engineer Intern",
+  "applicationSource": "LinkedIn",
+  "status": "Applied",
+  "location": "Bangalore",
+  "salaryRange": "12-15 LPA",
+  "notes": "Applied through college referral",
+  "followUpDate": "2026-09-01"
+}
+
+### Create a second one
+POST http://localhost:5117/api/applications
+Content-Type: application/json
+
+{
+  "company": "Zoho",
+  "jobTitle": "Backend Developer",
+  "applicationSource": "Greenhouse",
+  "status": "Saved"
+}
+
+### Filter by status
+GET http://localhost:5117/api/applications?status=Applied
+Accept: application/json
+
+### Search by company or job title
+GET http://localhost:5117/api/applications?search=goog
+Accept: application/json
+
+### Validation failure — empty company, bad status. Expect 400.
+POST http://localhost:5117/api/applications
+Content-Type: application/json
+
+{
+  "company": "",
+  "jobTitle": "Test Role",
+  "applicationSource": "LinkedIn",
+  "status": "Definitely Not A Real Status"
+}
+
+### Register a document
+POST http://localhost:5117/api/documents
+Content-Type: application/json
+
+{
+  "fileName": "shubham_resume.pdf",
+  "fileType": "application/pdf",
+  "fileSize": 245678,
+  "storageRef": "users/test-user-123/resume.pdf",
+  "displayName": "Resume v2"
+}
+
+### List documents
+GET http://localhost:5117/api/documents
+Accept: application/json
+
+### Rejected file type — expect 400
+POST http://localhost:5117/api/documents
+Content-Type: application/json
+
+{
+  "fileName": "photo.png",
+  "fileType": "image/png",
+  "fileSize": 1000,
+  "storageRef": "users/test-user-123/photo.png"
+}
+### Create a reminder
+POST http://localhost:5117/api/reminders
+Content-Type: application/json
+
+{
+  "applicationId": "some-app-id",
+  "reminderDate": "2026-09-01T09:00",
+  "type": "follow-up",
+  "message": "Follow up with Google recruiter"
+}
+
+### List reminders
+GET http://localhost:5117/api/reminders
+Accept: application/json
+
+### Filter to incomplete only
+GET http://localhost:5117/api/reminders?isCompleted=false
+Accept: application/json
+
+### Invalid type — expect 400
+POST http://localhost:5117/api/reminders
+Content-Type: application/json
+
+{
+  "applicationId": "some-app-id",
+  "reminderDate": "2026-09-01T09:00",
+  "type": "coffee-break"
+}

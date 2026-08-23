@@ -1,0 +1,16 @@
+{
+  "name": "job-application-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Powered Job Application Tracker with React 19 Frontend and .NET Core Backend",
+  "scripts": {
+    "dev": "npm --prefix Frontend run dev",
+    "build": "npm --prefix Frontend run build",
+    "test": "npm --prefix Frontend test",
+    "backend": "dotnet run --project Backend/JobTracker.Api",
+    "start:all": "concurrently \"npm --prefix Frontend run dev\" \"dotnet run --project Backend/JobTracker.Api\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

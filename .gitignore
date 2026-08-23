@@ -1,0 +1,45 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node modules & build outputs
+node_modules/
+**/node_modules/
+dist/
+dist-ssr/
+coverage/
+**/coverage/
+.output/
+.vinxi/
+.tanstack/
+**/.tanstack/
+.nitro/
+*.local
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# .NET Build artifacts
+**/bin/
+**/obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE / OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

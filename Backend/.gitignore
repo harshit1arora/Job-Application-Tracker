@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+
+# Rider / JetBrains
+.idea/
+*.user
+
+# macOS
+.DS_Store
+
+# Secrets — never commit these
+*firebase-adminsdk*.json
+firebase-service-account.json
+appsettings.Local.json
+appsettings.*.Local.json
+
+# HTTP client response history
+**/.httpResponses/
+
+# The root .gitignore inherits *.sln from the Vite template,
+# which would exclude the backend solution file. Re-include it.
+~/Job-Application-Tracker.sln
