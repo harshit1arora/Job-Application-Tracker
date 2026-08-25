@@ -699,6 +699,11 @@ function DashboardPage() {
         <ApplyPortalModal
           job={selectedApplyJob}
           profile={profile}
+          userId={user?.id}
+          onProfileUpdated={(updated) => {
+            setProfile(updated);
+            void rankJobsForProfile(updated);
+          }}
           onOpenMissingFields={() => {
             setSelectedApplyJob(null);
             setShowMissingModal(true);

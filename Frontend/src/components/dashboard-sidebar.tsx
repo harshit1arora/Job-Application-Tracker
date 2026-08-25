@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 
 interface DashboardSidebarProps {
-  applicationsCount?: number;
-  inboxCount?: number;
+  applicationsCount?: number | undefined;
+  inboxCount?: number | undefined;
 }
 
 export function DashboardSidebar({

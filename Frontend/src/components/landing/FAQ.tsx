@@ -8,28 +8,24 @@ import {
 
 const ITEMS = [
   {
-    q: "How does JobPilot find jobs?",
-    a: "We poll 50,000+ company career pages directly — Workday, Greenhouse, Lever, Ashby and 15+ other ATSes — every few minutes. No job-board scraping, no stale listings. New roles reach your feed within minutes of going live.",
+    q: "How does JobPilot match jobs with my profile?",
+    a: "When you upload your résumé, JobPilot's AI extracts your technical skills, experience level, education, and target roles. It computes compatibility match scores against curated job descriptions so you focus on high-probability opportunities.",
   },
   {
-    q: "How do I know it applied correctly?",
-    a: "Every submission produces a receipt: the exact fields sent, the résumé file used, screener answers, and the confirmation page. If a form can't be completed cleanly, it's flagged as 'Needs you' instead of guessing.",
+    q: "How does 1-click application autofill work?",
+    a: "JobPilot pre-fills all your contact information, résumé attachments, and answers to common screening questions (such as country of residence, hybrid schedule preferences, and visa status). When you answer a new question once, it's remembered permanently across future applications.",
   },
   {
-    q: "Will recruiters know I used JobPilot?",
-    a: "No. Applications are submitted through the normal ATS form with your details and your documents. There's no JobPilot branding anywhere in what a recruiter sees.",
+    q: "How does AI cover letter generation work?",
+    a: "JobPilot analyzes the specific job description and company culture, combining them with your verified résumé skills to craft an authentic, first-person 8-10 line cover note in seconds.",
   },
   {
-    q: "How does résumé tailoring work?",
-    a: "We parse the job description, map it against your master résumé, and rewrite bullet points to lead with the relevant evidence. Nothing is invented — you see a line-by-line diff and can require approval before send.",
+    q: "Can I track my application pipeline and interviews?",
+    a: "Yes. Every application you submit is recorded on your dashboard with an interactive Kanban board (Saved, Applied, Under Review, Interview, Offer, Rejected), timeline calendar, and follow-up reminders.",
   },
   {
-    q: "I'm on OPT or need sponsorship — does JobPilot help?",
-    a: "Yes. Set your work authorization once and we answer sponsorship screeners consistently, and filter out roles that explicitly exclude your status so you don't burn applications.",
-  },
-  {
-    q: "Is there a free plan?",
-    a: "You get 25 free applications, no card required. After that, pick a cycle — you only pay for applications actually submitted.",
+    q: "Is there a free trial?",
+    a: "Yes! JobPilot is free to get started without a credit card. You can parse your résumé, view compatibility scores, and manage your full application pipeline immediately.",
   },
 ];
 

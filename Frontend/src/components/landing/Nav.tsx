@@ -5,11 +5,11 @@ import { Logo } from "./Logo";
 import { useAuth } from "@/lib/auth-context";
 
 const LINKS = [
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Platforms", href: "#platforms" },
-  { label: "Developers", href: "#platforms" },
-  { label: "Blog", href: "#faq" },
-  { label: "Jobs", href: "#faq" },
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Browse Jobs", to: "/browse" },
+  { label: "Pipeline Tracker", to: "/tracker" },
+  { label: "AI Résumé Matcher", to: "/profile" },
+  { label: "FAQ", href: "#faq" },
 ];
 
 export function Nav() {
@@ -58,8 +58,8 @@ export function Nav() {
           : "border-transparent bg-background"
       }`}
     >
-      <nav className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3.5 lg:grid-cols-[1fr_auto_1fr]">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5">
+      <nav className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3.5 lg:grid-cols-[auto_1fr_auto]">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 mr-4">
           <Logo className="h-6 w-6 shrink-0 text-foreground" />
           <span className="truncate text-lg font-semibold tracking-tight text-foreground">
             JobPilot
@@ -69,16 +69,26 @@ export function Nav() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-7 lg:flex">
-          {LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              className="text-sm text-foreground/80 transition-colors hover:text-foreground"
-            >
-              {l.label}
-            </a>
-          ))}
+        <div className="hidden items-center justify-center gap-6 lg:flex">
+          {LINKS.map((l) =>
+            l.to ? (
+              <Link
+                key={l.label}
+                to={l.to}
+                className="text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+              >
+                {l.label}
+              </Link>
+            ) : (
+              <a
+                key={l.label}
+                href={l.href}
+                className="text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+              >
+                {l.label}
+              </a>
+            )
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2">
@@ -140,16 +150,27 @@ export function Nav() {
       {open && (
         <div className="border-t border-border bg-background px-5 py-4 lg:hidden">
           <div className="flex flex-col gap-1">
-            {LINKS.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-2 py-2.5 text-sm text-foreground hover:bg-secondary"
-              >
-                {l.label}
-              </a>
-            ))}
+            {LINKS.map((l) =>
+              l.to ? (
+                <Link
+                  key={l.label}
+                  to={l.to}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-2 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
+                >
+                  {l.label}
+                </Link>
+              ) : (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-2 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
+                >
+                  {l.label}
+                </a>
+              )
+            )}
           </div>
           <div className="mt-3 flex gap-2">
             {isAuthenticated ? (

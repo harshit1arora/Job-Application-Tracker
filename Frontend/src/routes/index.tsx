@@ -3,14 +3,13 @@ import { Nav } from "@/components/landing/Nav";
 import { Hero } from "@/components/landing/Hero";
 import { LogoCloud } from "@/components/landing/LogoCloud";
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Platforms } from "@/components/landing/Platforms";
 import { FAQ } from "@/components/landing/FAQ";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { Footer } from "@/components/landing/Footer";
 
-const TITLE = "JobPilot — The AI agent that applies to every job that fits you";
+const TITLE = "JobPilot — Intelligent AI Job Application Tracker & Autofill";
 const DESCRIPTION =
-  "JobPilot watches 50,000+ career pages across Workday, Greenhouse, Lever and Ashby, tailors your résumé and submits applications automatically. Free to start.";
+  "Parse your résumé, discover matched tech opportunities, auto-fill applications in 1-click with persistent memory, and track your interview pipeline.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,7 +33,6 @@ function Index() {
         <Hero />
         <LogoCloud />
         <HowItWorks />
-        <Platforms />
         <FAQ />
         <FinalCTA />
       </main>

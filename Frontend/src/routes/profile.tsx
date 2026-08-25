@@ -350,14 +350,38 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Education</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">Country</label>
                   <input
                     type="text"
-                    value={profile.education || ""}
-                    onChange={(e) => setProfile({ ...profile, education: e.target.value })}
-                    placeholder="B.S. in Computer Science"
+                    value={profile.country || "United States"}
+                    onChange={(e) => setProfile({ ...profile, country: e.target.value })}
+                    placeholder="e.g. United States, UK, India, Germany"
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Hybrid Schedule OK?</label>
+                  <select
+                    value={profile.hybridScheduleOk || "Yes"}
+                    onChange={(e) => setProfile({ ...profile, hybridScheduleOk: e.target.value })}
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="Yes">Yes (Open to Hybrid/Office)</option>
+                    <option value="No">No (Remote Only)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-muted-foreground mb-1">Visa Sponsorship Required?</label>
+                  <select
+                    value={profile.sponsorshipRequired || "No"}
+                    onChange={(e) => setProfile({ ...profile, sponsorshipRequired: e.target.value })}
+                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="No">No (Authorized to work)</option>
+                    <option value="Yes">Yes (Require sponsorship)</option>
+                  </select>
                 </div>
               </div>
             </div>

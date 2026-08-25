@@ -7,16 +7,16 @@ const COLS = [
     links: ["How it works", "FAQ", "Get started"],
   },
   {
-    title: "Platforms",
-    links: ["Mobile apps", "App Store", "Google Play", "Web", "iMessage", "Chrome"],
+    title: "Features",
+    links: ["AI Résumé Parser", "Compatibility Matcher", "1-Click Autofill", "Pipeline Tracker"],
   },
   {
     title: "Company",
-    links: ["Jobs", "About", "Blog", "Changelog", "AI disclosure"],
+    links: ["About", "Changelog", "AI Disclosure"],
   },
   {
     title: "Legal",
-    links: ["Privacy", "Terms", "Bug bounty", "Delete account"],
+    links: ["Privacy Policy", "Terms of Service"],
   },
 ];
 

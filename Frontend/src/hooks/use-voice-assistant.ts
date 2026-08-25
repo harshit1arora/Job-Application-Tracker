@@ -301,7 +301,7 @@ export function useVoiceAssistant({
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
+          sum += dataArray[i] ?? 0;
         }
         const avg = sum / dataArray.length;
         setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));

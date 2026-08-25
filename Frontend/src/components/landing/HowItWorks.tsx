@@ -6,41 +6,41 @@ import { MatchBadge } from "./MatchBadge";
 const STEPS = [
   {
     id: "01",
-    name: "Find",
-    copy: "JobPilot watches 50,000+ company career pages. The moment a role drops that fits your résumé, you know — and you're already in the top 100 applicants.",
+    name: "Discover",
+    copy: "Explore top opportunities across engineering, product, and design, ranked automatically by AI compatibility with your résumé skills and target role.",
   },
   {
     id: "02",
-    name: "Prep",
-    copy: "Every application gets a résumé rewritten against the actual job description. You see the diff before anything leaves your account.",
+    name: "Tailor",
+    copy: "Instantly generate tailored, first-person cover letters specifically crafted for each job description and company culture in 1 click.",
   },
   {
     id: "03",
-    name: "Apply",
-    copy: "Workday, Greenhouse, Lever, Ashby — the agent fills every field, uploads the file, answers the screeners and submits. You get the receipt.",
+    name: "Autofill",
+    copy: "Auto-fill application fields with pre-parsed résumé details and screening answers that are permanently remembered across all your applications.",
   },
   {
     id: "04",
     name: "Track",
-    copy: "Replies get routed and statuses update themselves. One board for every application, no spreadsheet to maintain.",
+    copy: "Manage applications on an interactive Kanban board and timeline calendar with automated follow-up reminders and AI interview coaching.",
   },
 ];
 
 function FindMock() {
   const lines = [
-    { t: "22:29:45", url: "datadoghq.com/careers", n: "+1 new", hot: true },
-    { t: "22:29:46", url: "ramp.com/careers", n: "0 new" },
-    { t: "22:29:48", url: "figma.com/careers", n: "0 new" },
-    { t: "22:29:49", url: "openai.com/careers", n: "+3 new", hot: true },
+    { t: "Live Match", url: "stripe.com/jobs", n: "92% match", hot: true },
+    { t: "Live Match", url: "openai.com/careers", n: "95% match", hot: true },
+    { t: "Live Match", url: "vercel.com/careers", n: "91% match", hot: true },
+    { t: "Live Match", url: "figma.com/careers", n: "88% match", hot: true },
   ];
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
         <p className="text-[10px] font-semibold tracking-widest opacity-60">
-          01 · FIND → HEAD START
+          01 · AI DISCOVERY & MATCHING
         </p>
         <p className="mt-3 text-lg font-semibold">
-          50,000 pages watched. The role finds you. You apply first.
+          AI matches your skills with relevant opportunities in real-time.
         </p>
         <div className="mt-5 space-y-1.5 rounded-xl bg-primary-foreground/5 p-3 font-mono text-[11px]">
           {lines.map((l) => (

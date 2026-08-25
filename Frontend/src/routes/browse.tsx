@@ -118,6 +118,11 @@ function BrowseJobsPage() {
         <ApplyPortalModal
           job={selectedApplyJob}
           profile={profile}
+          userId={user?.id}
+          onProfileUpdated={(updated) => {
+            setProfile(updated);
+            void rankJobs(updated);
+          }}
           onOpenMissingFields={() => {
             setSelectedApplyJob(null);
             setShowMissingModal(true);
