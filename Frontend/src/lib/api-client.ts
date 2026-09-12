@@ -137,38 +137,8 @@ async function apiRequest<T>(
   userId: string,
   init: RequestInit = {}
 ): Promise<{ ok: boolean; data?: T; status: number; error?: string }> {
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-User-Id": userId,
-      ...((init.headers as Record<string, string>) || {}),
-    };
-
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers,
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { message: text };
-      }
-      return {
-        ok: false,
-        status: res.status,
-        error: data?.message || `Request failed with status ${res.status}`,
-      };
-    }
-
-    const data = await res.json();
-    return { ok: true, data, status: res.status };
-  } catch (err: any) {
-    return { ok: false, status: 0, error: err.message || "Network request failed" };
-  }
+  // Always trigger the local fallback since the .NET backend has been removed
+  return { ok: false, status: 0, error: "Backend removed" };
 }
 
 // ===========================================================================

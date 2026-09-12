@@ -165,7 +165,7 @@ Job-Application-Tracker/
 | **Styling & Icons** | Tailwind CSS v4, Lucide React, Date-fns, Sonner, Vaul |
 | **PDF Extraction** | Mozilla PDF.js (`pdfjs-dist`) with client-side stream decoding |
 | **AI Intelligence** | OpenRouter API (`nvidia/nemotron-3-ultra`, `google/gemma-4`, embeddings) + Local NLP Fallbacks |
-| **Backend API** | ASP.NET Core 8 Web API (.NET 8 SDK, C#) |
+| **Backend API** | Removed (Local Storage Fallback) |
 | **Authentication & DB** | Firebase Web Auth, Firestore / In-Memory Repository |
 | **Testing** | Vitest, JSDOM, Coverage-v8 (26/26 passing tests) |
 
@@ -176,7 +176,6 @@ Job-Application-Tracker/
 ### Prerequisites
 - **Node.js** `v20+` or `v22+`
 - **npm** `10+` or **bun**
-- **.NET 8 SDK** (for running the C# backend API)
 
 ### 1. Clone the Repository
 ```bash
@@ -205,13 +204,6 @@ npm install
 npm run dev
 ```
 Open **`http://localhost:5173`** in your browser.
-
-### 4. (Optional) Start the .NET Backend API
-```bash
-cd Backend/JobTracker.Api
-dotnet run
-```
-API runs locally on `http://localhost:5117` and is automatically proxied by Vite.
 
 ---
 
