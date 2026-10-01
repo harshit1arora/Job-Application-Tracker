@@ -62,38 +62,46 @@ flowchart TB
         Dashboard --> Portals
         BrowseJobs --> Portals
         Applications <--> DataSync
-        CalendarTracker <--> DataSync
-        ProfileHub <--> DataSync
-    end
-```
+        CalendarTrac## 🌟 Comprehensive Features & Capabilities
 
----
+### 1. ⚡ Client-Side PDF.js & FlateDecode Stream Engine
+- **Zero Binary Stream Corruption**: Employs Mozilla PDF.js (`pdfjs-dist`) for in-browser client-side parsing of modern compressed PDF streams (`FlateDecode`), font tables, glyph mappings, and `.docx` XML archives without sending raw documents to external servers.
+- **Automated Text Sanitizer (`cleanExtractedText`)**: Cleanses non-printable control characters, null bytes, and normalizes formatting prior to LLM analysis.
 
-## 🌟 Key Capabilities
+### 2. 🎯 Unified Career Intelligence & Next Best Action Coach
+- **Explainable 6-Factor Readiness Formula**:
+  - Deterministic candidate-to-job calculation balancing Resume Match (35%), Required Skills (20%), Project Evidence (15%), Experience Relevance (10%), Seniority Fit (10%), and Profile Completeness (10%).
+  - Never inflates weak candidates with arbitrary defaults; provides actionable positive signals and readiness reducers.
+- **Living Career Twin**:
+  - Models candidate skills, seniority, experience years, and practical projects.
+  - Interactive STAR-method technical interview simulator with instant scoring and qualitative feedback.
+- **Evidence-Based Skill Proof Hierarchy**:
+  - Tracks skill evidence through 4 rigorous levels: Claimed (25%) → Résumé Mention (50%) → Practical Project Demonstration (75%) → Technical Verification Challenge (100%).
+- **Closed-Loop Action Completion Engine**:
+  - Completing recommended actions (verifying skills, attaching practical projects, optimizing bullets) updates underlying profile state, triggers immediate Career Intelligence recomputation, and dynamically generates the next prioritized task.
 
-### 1. ⚡ In-Browser Mozilla PDF.js & FlateDecode Stream Engine
-- **Zero Binary Corruption**: Decodes modern compressed PDF streams (`FlateDecode`), font tables, glyph mappings, and XML paragraphs (`.docx`) client-side without sending raw files to an untrusted server.
-- **Automated Text Sanitizer**: Cleanses non-printable binary artifacts and normalizes line breaks before LLM embedding.
+### 3. 🧩 1-Click Career Portal Auto-Fill & Floating Quick-Fill
+- **Instant Field Copy**: Dedicated copy shortcuts for First Name, Last Name, Email, Phone, City, Experience, LinkedIn, and Portfolio.
+- **Master Bundle Copy**: Copies full candidate application profile in one click.
+- **Floating Quick-Fill Widget**: Stays docked on screen while navigating external ATS portals (Workday, Greenhouse, Lever, Ashby, LinkedIn).
 
-### 2. 🧩 1-Click Career Portal Auto-Fill Sheet & Master Bundle
-- **1-Click Field Helper**: Instant clipboard copy buttons for First Name, Last Name, Email, Phone, City, Experience, LinkedIn, and Portfolio.
-- **Master Bundle Copy**: Copies all application responses in a single structured clipboard payload.
-- **Floating Quick-Fill Widget**: Docked assistant that stays on screen while candidate completes forms across external tabs.
+### 4. ✍️ Tailored First-Person Cover Letter Generator
+- **Zero Generic Fluff**: Directly addresses the hiring team and target position.
+- **Role-Specific Alignment**: Generates concise, high-impact 8–10 line letters tailored to the candidate's verified skills and the specific job requirements.
 
-### 3. ✍️ Tailored First-Person Cover Letter Generator
-- **Zero Generic Advice**: Never outputs generic resume tips or advice.
-- **Direct & Personalized**: Produces an authentic, role-specific first-person letter tailored to the job description and candidate background.
+### 5. 📅 Color-Coded Interview & Process Timeline Calendar
+- **Interactive Multi-Stage Tracking**:
+  - 🟢 **Emerald Green**: Scheduled Technical, System Design, and Onsite Interviews.
+  - 🔵 **Sky Blue**: Recruiter Outreach & Follow-ups.
+  - 🟠 **Amber**: Take-Home Assessments & Coding Deadlines.
+  - 🟣 **Purple**: Offer Decision Deadlines and Status Milestones.
+- Filter pills, monthly grid, day agenda drawer, and modal for adding new dates.
 
-### 4. 📅 Color-Coded Interview & Process Timeline Calendar
-- **🟢 Emerald Green (`bg-emerald-500`)**: Scheduled Interviews *(Technical System Design, Live Coding, Onsite Loop)*.
-- **🔵 Sky Blue (`bg-blue-500`)**: Recruiter Follow-ups and outreach check-ins.
-- **🟠 Amber (`bg-amber-500`)**: Assessment Deadlines and Take-home challenges.
-- **🟣 Purple (`bg-purple-500`)**: Status Updates and Offer Decision Deadlines.
-- Features real-time count filter pills, interactive monthly grid, day agenda drawer, and built-in event scheduler.
-
-### 5. 🎯 Career Intelligence & Next Best Action
-- Deterministic candidate-to-job matching, skill proof auditing, and career twin fit calculation with automatic fallback when AI is unavailable.
-- Action loop updates candidate proof and recalculates readiness upon completing verified tasks.
+### 6. 🔒 Production Security, Data Isolation & Fault Tolerance
+- **Strict Cross-User Isolation**: User accounts are strictly scoped; seed demo data is restricted strictly to `demo-user`, preventing cross-account state leakage.
+- **Protocol Security**: Zod validation restricts application URLs strictly to `http://` and `https://`, blocking malicious schemes (`javascript:`, `data:`, `vbscript:`).
+- **Zod AI Schema Validation & Fallback**: AI extraction is parsed against strict runtime schemas with automatic deterministic fallback if LLM inference times out or fails.
+- **Honest Application Tracking**: Real-time status indicators derived from actual profile text and persisted application data, removing synthetic readiness defaults.
 
 ---
 
@@ -103,33 +111,40 @@ flowchart TB
 Job-Application-Tracker/
 ├── Frontend/                          # React 19 + TypeScript + Vite Application
 │   ├── src/
-│   │   ├── components/                # Reusable UI Components & Modals
-│   │   │   ├── dashboard-sidebar.tsx  # Left sidebar with active state & Back button
+│   │   ├── components/                # Modular UI Components & Modals
 │   │   │   ├── apply-portal-modal.tsx # 1-Click Auto-Fill sheet & Cover Letter
-│   │   │   ├── interview-calendar-modal.tsx # Color-coded interactive calendar
-│   │   │   ├── job-career-intelligence-panel.tsx # Career intelligence & readiness
-│   │   │   ├── quick-fill-widget.tsx  # Floating multi-tab form helper
-│   │   │   ├── suggested-jobs-section.tsx # Job discovery cards & filters
-│   │   │   └── landing/               # Marketing Landing Page Components
-│   │   ├── lib/                       # Core Logic & Services
-│   │   │   ├── ai.ts                  # OpenRouter LLM, parser, & schema validation
+│   │   │   ├── career-twin-section.tsx # Interactive Career Twin & Mock Interview
+│   │   │   ├── dashboard-sidebar.tsx  # Navigation sidebar with responsive layout
+│   │   │   ├── interview-calendar-modal.tsx # Color-coded timeline calendar
+│   │   │   ├── job-career-intelligence-panel.tsx # Intelligence, Proof & Coach panel
+│   │   │   ├── missing-fields-modal.tsx # Profile gap detection & resolution
+│   │   │   ├── next-best-action-card.tsx # Prioritized Next Best Action card
+│   │   │   ├── quick-fill-widget.tsx  # Floating multi-tab ATS assistant
+│   │   │   ├── skill-proof-section.tsx # Evidence-based skill verification
+│   │   │   ├── suggested-jobs-section.tsx # Curated role matching cards
+│   │   │   └── landing/               # Marketing & Landing Page Components
+│   │   ├── lib/                       # Core Business Logic & State Services
+│   │   │   ├── ai.ts                  # OpenRouter client, schema validation & fallback
+│   │   │   ├── api-client.ts          # Unified REST & LocalStorage data adapter
+│   │   │   ├── applications-service.ts# Application CRUD & validation rules
+│   │   │   ├── auth-context.tsx       # Authentication state provider
 │   │   │   ├── career-intelligence.ts # Deterministic Career Intelligence engine
+│   │   │   ├── jobs-catalog.ts        # Curated ATS job openings catalog
+│   │   │   ├── profile.ts             # Profile management & auto-fill map
+│   │   │   ├── reminders-service.ts   # Interview calendar reminders store
 │   │   │   ├── resume-parser.ts       # Mozilla PDF.js & DOCX text extraction
-│   │   │   ├── jobs-catalog.ts        # Curated real-world ATS job openings
-│   │   │   ├── profile.ts             # User Profile & Gap Detection helpers
-│   │   │   ├── applications-service.ts# Application CRUD & validation
-│   │   │   ├── reminders-service.ts   # Interview calendar reminders data layer
-│   │   │   └── __tests__/             # Vitest Automated Test Suite (78 tests)
+│   │   │   ├── validation.ts          # Runtime Zod validation schemas
+│   │   │   └── __tests__/             # Vitest Test Suite (78 tests)
 │   │   ├── routes/                    # TanStack File-Based Routes
 │   │   │   ├── index.tsx              # Landing Page (/)
 │   │   │   ├── dashboard.tsx          # Executive Dashboard (/dashboard)
 │   │   │   ├── browse.tsx             # Job Discovery (/browse)
 │   │   │   ├── applications.index.tsx # Pipeline Management (/applications)
-│   │   │   ├── applications.$applicationId.tsx # Dossier Details (/applications/:id)
+│   │   │   ├── applications.$applicationId.tsx # Application Dossier & Intelligence
 │   │   │   ├── inbox.tsx              # Recruiter Messages (/inbox)
 │   │   │   ├── tracker.tsx            # Timeline Calendar (/tracker)
-│   │   │   ├── profile.tsx            # Résumé Ingestion Hub (/profile)
-│   │   │   └── settings.tsx           # Preferences & JSON Export (/settings)
+│   │   │   ├── profile.tsx            # Résumé Ingestion & Profile Hub (/profile)
+│   │   │   └── settings.tsx           # Preferences & Data Management (/settings)
 │   │   └── styles.css                 # Tailwind CSS v4 & OKLCH Design Tokens
 │   └── package.json
 │
@@ -141,16 +156,16 @@ Job-Application-Tracker/
 
 ## 🛠️ Tech Stack & Dependencies
 
-| Area | Technologies |
+| Layer | Technologies |
 | :--- | :--- |
 | **Frontend Framework** | React 19, TypeScript 5.8, Vite 8 |
-| **Routing & State** | TanStack Router, TanStack Query |
-| **Styling & Icons** | Tailwind CSS v4, Lucide React, Date-fns, Sonner, Vaul |
-| **PDF Extraction** | Mozilla PDF.js (`pdfjs-dist`) with client-side stream decoding |
-| **AI Intelligence** | OpenRouter API (`nvidia/nemotron-3-ultra`, `google/gemma-4`, embeddings) + Local NLP Fallbacks |
-| **Backend API** | Removed (Local Storage Fallback) |
-| **Authentication & DB** | Firebase Web Auth, Firestore / In-Memory Repository |
-| **Testing** | Vitest, JSDOM, Coverage-v8 (26/26 passing tests) |
+| **Routing & Architecture** | TanStack Router, TanStack Query |
+| **Styling & Design System** | Tailwind CSS v4, Lucide React, Date-fns, Sonner, Vaul |
+| **Document Processing** | Mozilla PDF.js (`pdfjs-dist`) with client-side stream decoding |
+| **AI & Career Intelligence**| OpenRouter API (`nvidia/nemotron-3-ultra`, `google/gemma-4`) + Local Deterministic Fallback Engine |
+| **Data Persistence** | Unified API Adapter (Local Storage fallback with Firebase / Firestore support) |
+| **Validation & Schemas** | Zod 3.25 runtime validation |
+| **Testing** | Vitest, JSDOM, Coverage-v8 (**78/78 passing tests**) |
 
 ---
 
@@ -167,11 +182,11 @@ cd Job-Application-Tracker
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env` file in the `Frontend/` folder:
+Create a `.env` file in `Frontend/`:
 ```env
 VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
 
-# Firebase Configuration
+# Firebase Configuration (Optional)
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
@@ -180,7 +195,7 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 ```
 
-### 3. Start the Frontend
+### 3. Start the Development Server
 ```bash
 cd Frontend
 npm install
@@ -192,7 +207,7 @@ Open **`http://localhost:5173`** in your browser.
 
 ## 🧪 Automated Testing
 
-To run the complete unit and integration test suite:
+To run the complete automated test suite:
 
 ```bash
 cd Frontend
@@ -201,27 +216,37 @@ npm test
 
 ### Test Suite Summary:
 ```text
-✓ src/lib/ai.test.ts (6 tests)
-    ✓ builds an authentic 8-10 line first-person cover letter for specific job and company
-✓ src/lib/__tests__/resume-ai-pipeline.test.ts (5 tests)
-    ✓ parses candidate resume text into structured fields
-    ✓ identifies missing critical fields in incomplete profiles
-    ✓ merges parsed resume into user profile accurately
-    ✓ matches and ranks suggested jobs based on candidate skills and role
-    ✓ sanitizes garbled binary stream text into clean strings
-✓ src/lib/__tests__/reminders-calendar.test.ts (2 tests)
-    ✓ fetches seeded color-coded calendar reminders for candidate
-    ✓ allows candidate to schedule a new interview round on calendar
-✓ src/lib/__tests__/applications-service.test.ts (6 tests)
-✓ src/lib/__tests__/reminders-service.test.ts (3 tests)
 ✓ src/lib/__tests__/documents-service.test.ts (3 tests)
+✓ src/lib/ai.test.ts (6 tests)
+✓ src/lib/__tests__/voice-assistant.test.ts (11 tests)
+✓ src/lib/__tests__/reminders-service.test.ts (3 tests)
+✓ src/lib/__tests__/applications-service.test.ts (15 tests)
+    ✓ createApplication validation checks
+    ✓ CRUD workflow (create, read, update, delete)
+    ✓ URL Scheme Security (rejects javascript:, data:, vbscript:)
+    ✓ Demo data isolation & cross-user privacy enforcement
+✓ src/lib/__tests__/career-intelligence.test.ts (21 tests)
+    ✓ 6-factor deterministic readiness scoring & factor breakdown
+    ✓ Skill proof hierarchy (Claimed -> Resume -> Project -> Verified)
+    ✓ Living Career Twin fit & STAR interview simulation integration
+    ✓ Next Best Action determination & action execution feedback loop
+    ✓ Deterministic fallback when job matchScore is missing
+✓ src/lib/__tests__/resume-ai-pipeline.test.ts (9 tests)
+    ✓ AI resume parsing & structured field extraction
+    ✓ Profile gap detection for missing application items
+    ✓ Zod AI response schema validation & type coercion
+    ✓ Deterministic parser fallback when AI output is malformed/unavailable
+✓ src/lib/__tests__/profile-mapping.test.ts (2 tests)
 ✓ src/lib/__tests__/dashboard-service.test.ts (1 test)
+✓ src/lib/__tests__/autofill-pipeline.test.ts (5 tests)
+✓ src/lib/__tests__/reminders-calendar.test.ts (2 tests)
 
-Test Files  7 passed (7)
-     Tests  26 passed (26)
+Test Files  11 passed (11)
+     Tests  78 passed (78)
 ```
 
 ---
 
 ## 📄 License
 This project is open source and available under the [MIT License](LICENSE).
+
