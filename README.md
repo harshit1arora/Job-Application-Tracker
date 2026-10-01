@@ -5,12 +5,11 @@
 ![JobPilot AI Tracker Banner](https://img.shields.io/badge/JobPilot-AI%20Career%20Copilot-blueviolet?style=for-the-badge&logo=rocket)
 ![React 19](https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
-![.NET 8](https://img.shields.io/badge/.NET%208-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![OpenRouter AI](https://img.shields.io/badge/OpenRouter-AI%20LLM-purple?style=for-the-badge&logo=openai)
 ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Tests Passed](https://img.shields.io/badge/Tests-26%2F26%20Passed-brightgreen?style=for-the-badge)
+![Tests Passed](https://img.shields.io/badge/Tests-78%2F78%20Passed-brightgreen?style=for-the-badge)
 
-**JobPilot watches 50,000+ career pages across Workday, Greenhouse, Lever, and Ashby, parses your résumé, detects missing application fields, scores compatibility, generates 8–10 line tailored first-person cover letters, auto-fills application forms with 1 click, and tracks interview stages in an interactive color-coded calendar.**
+**JobPilot parses your résumé, detects missing application fields, scores candidate readiness and career intelligence, generates tailored first-person cover letters, provides 1-click clipboard auto-fill, and tracks application pipelines and interview timelines in an interactive color-coded calendar.**
 
 [Live Dashboard Demo](http://localhost:5173/dashboard) • [Browse Jobs](http://localhost:5173/browse) • [Interview Tracker](http://localhost:5173/tracker) • [Candidate Profile](http://localhost:5173/profile)
 
@@ -56,22 +55,21 @@ flowchart TB
         CalendarTracker <--> Applications
     end
 
-    subgraph Integration["🌐 External Career Portals & API"]
+    subgraph Integration["🌐 External Career Portals & Data Sync"]
         Portals["Greenhouse / Lever / Ashby / Workday / LinkedIn"]
-        DotNetApi[".NET 8 Web API Backend\n(REST Endpoints & Application Models)"]
-        Firebase["Firebase / LocalStorage Sync"]
+        DataSync["Unified Local & Persistent Data Adapter\n(api-client / localStorage / Firestore)"]
 
         Dashboard --> Portals
         BrowseJobs --> Portals
-        Applications <--> DotNetApi
-        CalendarTracker <--> DotNetApi
-        ProfileHub <--> Firebase
+        Applications <--> DataSync
+        CalendarTracker <--> DataSync
+        ProfileHub <--> DataSync
     end
 ```
 
 ---
 
-## 🌟 Unique "WOW" Features (That Don't Exist in Standard Trackers)
+## 🌟 Key Capabilities
 
 ### 1. ⚡ In-Browser Mozilla PDF.js & FlateDecode Stream Engine
 - **Zero Binary Corruption**: Decodes modern compressed PDF streams (`FlateDecode`), font tables, glyph mappings, and XML paragraphs (`.docx`) client-side without sending raw files to an untrusted server.
@@ -82,10 +80,9 @@ flowchart TB
 - **Master Bundle Copy**: Copies all application responses in a single structured clipboard payload.
 - **Floating Quick-Fill Widget**: Docked assistant that stays on screen while candidate completes forms across external tabs.
 
-### 3. ✍️ Tailored 8–10 Line First-Person Cover Letter Generator
+### 3. ✍️ Tailored First-Person Cover Letter Generator
 - **Zero Generic Advice**: Never outputs generic resume tips or advice.
-- **Direct & Personalized**: Produces an authentic, role-specific first-person letter starting directly with:
-  > *"Hi, I'm Alex Carter applying for the Senior Full Stack Engineer position at Stripe. I'm interested in joining Stripe because of your team's commitment to building cutting-edge, high-impact products..."*
+- **Direct & Personalized**: Produces an authentic, role-specific first-person letter tailored to the job description and candidate background.
 
 ### 4. 📅 Color-Coded Interview & Process Timeline Calendar
 - **🟢 Emerald Green (`bg-emerald-500`)**: Scheduled Interviews *(Technical System Design, Live Coding, Onsite Loop)*.
@@ -94,17 +91,9 @@ flowchart TB
 - **🟣 Purple (`bg-purple-500`)**: Status Updates and Offer Decision Deadlines.
 - Features real-time count filter pills, interactive monthly grid, day agenda drawer, and built-in event scheduler.
 
-### 5. 🎯 Conversational AI Missing Field Gap Assistant
-- Automatically identifies incomplete profile data (missing phone number, target role, city, or skills) before applying.
-- Modal allows candidate to fill missing items in seconds with live synchronization back to their profile.
-
-### 6. 🪟 Executive Dashboard with Circular Score Rings
-- 4 pastel-themed match cards (🟡 Warm Amber, 🟢 Mint Green, 🟣 Soft Violet, 🔴 Light Rose) with animated SVG circular percentage rings (`71%`, `64%`, `60%`, `58%`).
-- Clean light mode default styling with high-contrast slate typography.
-
-### 7. 🔙 Master Multi-Page Navigation with "Back to Website"
-- Dedicated URLs for `/dashboard`, `/browse`, `/applications`, `/inbox`, `/tracker`, `/profile`, `/settings`.
-- Top **`← Back to Website`** return button to seamlessly switch between the application tracker and landing page.
+### 5. 🎯 Career Intelligence & Next Best Action
+- Deterministic candidate-to-job matching, skill proof auditing, and career twin fit calculation with automatic fallback when AI is unavailable.
+- Action loop updates candidate proof and recalculates readiness upon completing verified tasks.
 
 ---
 
@@ -118,18 +107,19 @@ Job-Application-Tracker/
 │   │   │   ├── dashboard-sidebar.tsx  # Left sidebar with active state & Back button
 │   │   │   ├── apply-portal-modal.tsx # 1-Click Auto-Fill sheet & Cover Letter
 │   │   │   ├── interview-calendar-modal.tsx # Color-coded interactive calendar
-│   │   │   ├── missing-fields-modal.tsx # AI Gap Assistant
+│   │   │   ├── job-career-intelligence-panel.tsx # Career intelligence & readiness
 │   │   │   ├── quick-fill-widget.tsx  # Floating multi-tab form helper
 │   │   │   ├── suggested-jobs-section.tsx # Job discovery cards & filters
 │   │   │   └── landing/               # Marketing Landing Page Components
 │   │   ├── lib/                       # Core Logic & Services
-│   │   │   ├── ai.ts                  # OpenRouter LLM, parser, & cover letter generator
+│   │   │   ├── ai.ts                  # OpenRouter LLM, parser, & schema validation
+│   │   │   ├── career-intelligence.ts # Deterministic Career Intelligence engine
 │   │   │   ├── resume-parser.ts       # Mozilla PDF.js & DOCX text extraction
 │   │   │   ├── jobs-catalog.ts        # Curated real-world ATS job openings
 │   │   │   ├── profile.ts             # User Profile & Gap Detection helpers
-│   │   │   ├── applications-service.ts# Application CRUD & API integration
+│   │   │   ├── applications-service.ts# Application CRUD & validation
 │   │   │   ├── reminders-service.ts   # Interview calendar reminders data layer
-│   │   │   └── __tests__/             # Vitest Automated Test Suite (26 tests)
+│   │   │   └── __tests__/             # Vitest Automated Test Suite (78 tests)
 │   │   ├── routes/                    # TanStack File-Based Routes
 │   │   │   ├── index.tsx              # Landing Page (/)
 │   │   │   ├── dashboard.tsx          # Executive Dashboard (/dashboard)
@@ -142,13 +132,6 @@ Job-Application-Tracker/
 │   │   │   └── settings.tsx           # Preferences & JSON Export (/settings)
 │   │   └── styles.css                 # Tailwind CSS v4 & OKLCH Design Tokens
 │   └── package.json
-│
-├── Backend/                           # .NET 8 Web API
-│   └── JobTracker.Api/
-│       ├── Controllers/               # REST API Controllers (Applications, Reminders)
-│       ├── Models/                    # Application, Reminder, Document C# DTOs
-│       ├── Services/                  # In-Memory & Firestore Repository services
-│       └── Program.cs                 # ASP.NET Core application entry point
 │
 ├── firestore.rules                    # Firebase Security Rules
 └── README.md                          # Master Project Documentation

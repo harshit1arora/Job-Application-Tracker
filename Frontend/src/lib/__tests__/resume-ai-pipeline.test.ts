@@ -66,3 +66,71 @@ describe("Resume AI Pipeline & Missing Field Detector", () => {
     expect(cleaned).toContain("Senior Software Engineer");
   });
 });
+
+describe("AI Resume Schema Validation & Fallback Robustness (P1-D)", () => {
+  it("validates a completely valid AI resume response", async () => {
+    const { aiResumeProfileSchema } = await import("../ai");
+    const validAiOutput = {
+      fullName: "Sarah Connor",
+      email: "sarah@skynet-defense.com",
+      phone: "+1 555 123 4567",
+      city: "Los Angeles, CA",
+      ageOrExperience: "8+ Years Experience",
+      targetRole: "Security Operations Engineer",
+      skills: ["Cybersecurity", "Network Architecture", "Python"],
+      education: "BS Computer Science, UCLA",
+      linkedin: "https://linkedin.com/in/sarahconnor",
+      portfolio: "https://github.com/sarahconnor",
+      summary: "Experienced security operations leader.",
+    };
+
+    const result = aiResumeProfileSchema.safeParse(validAiOutput);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fullName).toBe("Sarah Connor");
+      expect(result.data.skills).toEqual(["Cybersecurity", "Network Architecture", "Python"]);
+    }
+  });
+
+  it("coerces comma-separated skills string into a typed string array", async () => {
+    const { aiResumeProfileSchema } = await import("../ai");
+    const aiOutputWithSkillsString = {
+      fullName: "John Doe",
+      email: "john@example.com",
+      skills: "Python, JavaScript, Docker, Kubernetes",
+    };
+
+    const result = aiResumeProfileSchema.safeParse(aiOutputWithSkillsString);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(Array.isArray(result.data.skills)).toBe(true);
+      expect(result.data.skills).toEqual(["Python", "JavaScript", "Docker", "Kubernetes"]);
+    }
+  });
+
+  it("safely handles missing optional fields with defaults", async () => {
+    const { aiResumeProfileSchema } = await import("../ai");
+    const minimalOutput = {
+      fullName: "Minimal Dev",
+    };
+
+    const result = aiResumeProfileSchema.safeParse(minimalOutput);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fullName).toBe("Minimal Dev");
+      expect(result.data.email).toBe("");
+      expect(result.data.skills).toEqual([]);
+      expect(result.data.linkedin).toBe("");
+    }
+  });
+
+  it("activates deterministic parser when AI returns malformed JSON or is unavailable", async () => {
+    const rawText = "Taylor Smith\nSoftware Developer\nEmail: taylor.smith@devmail.com\nPhone: (555) 789-0123\nSkills: Go, Kubernetes, Terraform\nSan Francisco, CA";
+    const parsed = await parseResumeWithAi(rawText);
+
+    expect(parsed).toBeDefined();
+    expect(parsed.email).toBe("taylor.smith@devmail.com");
+    expect(parsed.phone).toBe("(555) 789-0123");
+    expect(parsed.fullName).toContain("Taylor");
+  });
+});

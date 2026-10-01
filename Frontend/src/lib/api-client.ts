@@ -165,7 +165,7 @@ export async function fetchApplications(
 
   // Local fallback
   let apps = getLocalStore<ApplicationDocument>(LOCAL_APPS_KEY, INITIAL_SEED_APPLICATIONS);
-  apps = apps.filter((a) => a.userId === userId || a.userId === "demo-user");
+  apps = apps.filter((a) => a.userId === userId);
 
   if (filters?.status && (filters.status as string) !== "All") {
     apps = apps.filter((a) => a.status === filters.status);
@@ -194,7 +194,7 @@ export async function fetchApplication(
 
   // Local fallback
   const apps = getLocalStore<ApplicationDocument>(LOCAL_APPS_KEY, INITIAL_SEED_APPLICATIONS);
-  const found = apps.find((a) => a.id === applicationId);
+  const found = apps.find((a) => a.id === applicationId && a.userId === userId);
   return found || null;
 }
 
@@ -253,7 +253,7 @@ export async function updateApplicationApi(
 
   // Local fallback
   const apps = getLocalStore<ApplicationDocument>(LOCAL_APPS_KEY, INITIAL_SEED_APPLICATIONS);
-  const idx = apps.findIndex((a) => a.id === applicationId);
+  const idx = apps.findIndex((a) => a.id === applicationId && a.userId === userId);
   if (idx === -1) {
     throw new AppError("NOT_FOUND", "Application not found");
   }
@@ -282,7 +282,7 @@ export async function deleteApplicationApi(
 
   // Local fallback
   const apps = getLocalStore<ApplicationDocument>(LOCAL_APPS_KEY, INITIAL_SEED_APPLICATIONS);
-  const filtered = apps.filter((a) => a.id !== applicationId);
+  const filtered = apps.filter((a) => !(a.id === applicationId && a.userId === userId));
   setLocalStore(LOCAL_APPS_KEY, filtered);
 }
 
@@ -303,7 +303,7 @@ export async function fetchDocuments(
 
   // Local fallback
   let docs = getLocalStore<DocumentMetadata>(LOCAL_DOCS_KEY, []);
-  docs = docs.filter((d) => d.userId === userId || d.userId === "demo-user");
+  docs = docs.filter((d) => d.userId === userId);
   if (applicationId) {
     docs = docs.filter((d) => d.applicationId === applicationId);
   }
@@ -360,7 +360,7 @@ export async function deleteDocumentApi(userId: string, documentId: string): Pro
 
   // Local fallback
   const docs = getLocalStore<DocumentMetadata>(LOCAL_DOCS_KEY, []);
-  const filtered = docs.filter((d) => d.id !== documentId);
+  const filtered = docs.filter((d) => !(d.id === documentId && d.userId === userId));
   setLocalStore(LOCAL_DOCS_KEY, filtered);
 }
 
@@ -438,7 +438,7 @@ export async function fetchReminders(
 
   // Local fallback
   let rems = getLocalStore<ReminderDocument>(LOCAL_REMS_KEY, INITIAL_SEED_REMINDERS);
-  rems = rems.filter((r) => r.userId === userId || r.userId === "demo-user");
+  rems = rems.filter((r) => r.userId === userId);
   if (applicationId) rems = rems.filter((r) => r.applicationId === applicationId);
   if (isCompleted !== undefined) rems = rems.filter((r) => r.isCompleted === isCompleted);
 
@@ -492,7 +492,7 @@ export async function updateReminderApi(
 
   // Local fallback
   const rems = getLocalStore<ReminderDocument>(LOCAL_REMS_KEY, []);
-  const idx = rems.findIndex((r) => r.id === reminderId);
+  const idx = rems.findIndex((r) => r.id === reminderId && r.userId === userId);
   if (idx === -1) {
     throw new AppError("NOT_FOUND", "Reminder not found");
   }
@@ -516,7 +516,7 @@ export async function deleteReminderApi(userId: string, reminderId: string): Pro
   if (res.ok) return;
 
   const rems = getLocalStore<ReminderDocument>(LOCAL_REMS_KEY, []);
-  const filtered = rems.filter((r) => r.id !== reminderId);
+  const filtered = rems.filter((r) => !(r.id === reminderId && r.userId === userId));
   setLocalStore(LOCAL_REMS_KEY, filtered);
 }
 

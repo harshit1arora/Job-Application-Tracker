@@ -8,8 +8,14 @@ import { toast } from "sonner";
 import { AppError } from "@/lib/types";
 import { ArrowLeft, Loader2, Save, Trash2, Building2, Briefcase, Calendar, MapPin, DollarSign, ClipboardCopy, Sparkles, Copy, X, ExternalLink } from "lucide-react";
 import { DocumentsSection } from "@/components/documents-section";
-import { getProfile, autofillText } from "@/lib/profile";
+import { getProfile, autofillText, type UserProfile } from "@/lib/profile";
 import { generateCoverLetter } from "@/lib/ai";
+import { JobCareerIntelligencePanel } from "@/components/job-career-intelligence-panel";
+import {
+  computeUnifiedCareerIntelligence,
+  type UnifiedCareerIntelligence,
+} from "@/lib/career-intelligence";
+import { CURATED_JOBS_CATALOG } from "@/lib/jobs-catalog";
 
 export const Route = createFileRoute("/applications/$applicationId")({
   component: ApplicationDetailsPage,
@@ -21,9 +27,43 @@ function ApplicationDetailsPage() {
   const navigate = useNavigate();
 
   const [application, setApplication] = useState<ApplicationDocument | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [intelligence, setIntelligence] = useState<UnifiedCareerIntelligence | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Recompute Career Intelligence
+  const refreshIntelligence = (appDoc: ApplicationDocument, userProf: UserProfile) => {
+    const matchingCatalogJob = CURATED_JOBS_CATALOG.find(
+      (j) =>
+        j.company.toLowerCase() === appDoc.company.toLowerCase() ||
+        j.role.toLowerCase() === appDoc.jobTitle.toLowerCase()
+    );
+    const requiredSkills = matchingCatalogJob?.requiredSkills || [
+      "TypeScript",
+      "React",
+      "Node.js",
+      "Docker",
+      "REST APIs",
+    ];
+
+    const intel = computeUnifiedCareerIntelligence(
+      userProf,
+      {
+        id: appDoc.id,
+        role: appDoc.jobTitle,
+        company: appDoc.company,
+        description: appDoc.jobDescription,
+        requiredSkills,
+        matchScore: appDoc.matchScore,
+      },
+      appDoc,
+      [],
+      user?.id
+    );
+    setIntelligence(intel);
+  };
 
   // AI Cover Letter modal state
   const [showAiModal, setShowAiModal] = useState(false);
@@ -59,6 +99,9 @@ function ApplicationDetailsPage() {
           return;
         }
         setApplication(data);
+        const p = getProfile(user.id);
+        setProfile(p);
+        refreshIntelligence(data, p);
       } catch (error) {
         console.error("Failed to load application:", error);
         toast.error("Failed to load application details.");
@@ -318,6 +361,44 @@ function ApplicationDetailsPage() {
             </p>
           </div>
         </div>
+
+        {/* AI Career Intelligence (Predictor, Proof, Twin, Next-Best-Action) */}
+        {intelligence && profile && (
+          <div className="mb-8">
+            <JobCareerIntelligencePanel
+              intelligence={intelligence}
+              profile={profile}
+              job={{
+                id: application.id,
+                role: application.jobTitle,
+                company: application.company,
+                description: application.jobDescription,
+                requiredSkills: intelligence.skillProofs.map((sp) => sp.skill).slice(0, 5),
+              }}
+              userId={user?.id}
+              onRefreshIntelligence={async () => {
+                if (user?.id && applicationId) {
+                  const latestApp = await getApplication(user.id, applicationId);
+                  const latestProfile = getProfile(user.id);
+                  if (latestApp) {
+                    setApplication(latestApp);
+                  }
+                  setProfile(latestProfile);
+                  refreshIntelligence(latestApp || application, latestProfile);
+                }
+              }}
+              onStartTask={(action) => {
+                if (action.actionType === "ADD_PROJECT" || action.actionType === "UPDATE_RESUME") {
+                  navigate({ to: "/profile" });
+                } else if (action.actionType === "FOLLOW_UP") {
+                  notesRef.current?.focus();
+                } else if (action.actionType === "APPLY_NOW" && application.applicationUrl) {
+                  window.open(application.applicationUrl, "_blank", "noopener,noreferrer");
+                }
+              }}
+            />
+          </div>
+        )}
 
         {/* Form Section */}
         <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-8">

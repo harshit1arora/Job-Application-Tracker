@@ -5,6 +5,7 @@ import {
   getAutofillFieldMap,
   getMissingProfileFields,
   saveProfile,
+  getProfile,
   extractFirstAndLastName,
   generateBrowserAutofillScript,
 } from "@/lib/profile";
@@ -35,6 +36,11 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
+import { JobCareerIntelligencePanel } from "./job-career-intelligence-panel";
+import {
+  computeUnifiedCareerIntelligence,
+  type UnifiedCareerIntelligence,
+} from "@/lib/career-intelligence";
 import type { SuggestedJob } from "@/lib/types";
 
 interface ApplyPortalModalProps {
@@ -80,13 +86,31 @@ export function ApplyPortalModal({
   onApplyAndTrack,
   onClose,
 }: ApplyPortalModalProps) {
-  const [activeTab, setActiveTab] = useState<"form" | "coverLetter" | "script">("form");
+  const [activeTab, setActiveTab] = useState<"form" | "intelligence" | "coverLetter" | "script">("form");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
   const [coverLetter, setCoverLetter] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
+
+  // Compute Unified Career Intelligence for this role
+  const intelligence = useMemo(() => {
+    return computeUnifiedCareerIntelligence(
+      profile,
+      {
+        id: job.id,
+        role: job.role,
+        company: job.company,
+        description: job.description,
+        requiredSkills: job.requiredSkills || ["Software Engineering"],
+        matchScore: job.matchScore ?? 92,
+      },
+      null,
+      [],
+      userId
+    );
+  }, [profile, job, userId]);
 
   // Initialize editable form state from user's parsed profile
   const initialNames = useMemo(() => extractFirstAndLastName(profile.fullName), [profile.fullName]);
@@ -414,6 +438,15 @@ export function ApplyPortalModal({
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab("intelligence")}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === "intelligence" ? "bg-primary text-black shadow-xs" : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <ShieldCheck size={12} /> Career Intelligence
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab("coverLetter")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "coverLetter" ? "bg-primary text-black shadow-xs" : "text-gray-400 hover:text-white"
@@ -738,6 +771,26 @@ export function ApplyPortalModal({
                   />
                 </div>
               </div>
+            </div>
+          ) : activeTab === "intelligence" ? (
+            /* Career Intelligence Tab */
+            <div className="space-y-4">
+              <JobCareerIntelligencePanel
+                intelligence={intelligence}
+                profile={profile}
+                job={{
+                  id: job.id,
+                  role: job.role,
+                  company: job.company,
+                  description: job.description,
+                  requiredSkills: job.requiredSkills,
+                  experienceLevel: job.experienceLevel,
+                }}
+                userId={userId}
+                onRefreshIntelligence={() => {
+                  onProfileUpdated?.(getProfile(userId));
+                }}
+              />
             </div>
           ) : (
             /* Cover Letter Tab */

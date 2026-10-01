@@ -46,6 +46,10 @@ export const createApplicationSchema = z.object({
   applicationUrl: z
     .string()
     .url("Please enter a valid URL")
+    .refine(
+      (value) => !value || /^https?:\/\//i.test(value),
+      "Application URL must use http:// or https://"
+    )
     .or(z.literal(""))
     .optional(),
 

@@ -76,3 +76,96 @@ describe("applications-service — CRUD workflow", () => {
     expect(afterDelete).toBeNull();
   });
 });
+
+describe("applications-service — URL Scheme Security (P1-C)", () => {
+  it("accepts valid https application URLs", async () => {
+    const app = await createApplication("test-user-url-1", {
+      ...VALID_INPUT,
+      applicationUrl: "https://jobs.lever.co/stripe/123",
+    });
+    expect(app.applicationUrl).toBe("https://jobs.lever.co/stripe/123");
+  });
+
+  it("accepts valid http application URLs", async () => {
+    const app = await createApplication("test-user-url-2", {
+      ...VALID_INPUT,
+      applicationUrl: "http://careers.example.com/job/456",
+    });
+    expect(app.applicationUrl).toBe("http://careers.example.com/job/456");
+  });
+
+  it("accepts empty string application URL", async () => {
+    const app = await createApplication("test-user-url-3", {
+      ...VALID_INPUT,
+      applicationUrl: "",
+    });
+    expect(app.applicationUrl).toBeUndefined();
+  });
+
+  it("rejects dangerous javascript: scheme", async () => {
+    await expect(
+      createApplication("test-user-url-sec", {
+        ...VALID_INPUT,
+        applicationUrl: "javascript:alert(document.cookie)",
+      })
+    ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
+  });
+
+  it("rejects dangerous data: scheme", async () => {
+    await expect(
+      createApplication("test-user-url-sec", {
+        ...VALID_INPUT,
+        applicationUrl: "data:text/html,<script>alert(1)</script>",
+      })
+    ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
+  });
+
+  it("rejects dangerous vbscript: scheme", async () => {
+    await expect(
+      createApplication("test-user-url-sec", {
+        ...VALID_INPUT,
+        applicationUrl: "vbscript:msgbox(1)",
+      })
+    ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
+  });
+});
+
+describe("applications-service — Demo Data Isolation & Cross-User Security (P0-B)", () => {
+  it("demo-user sees seed applications", async () => {
+    const apps = await getApplications("demo-user");
+    expect(apps.length).toBeGreaterThanOrEqual(1);
+    expect(apps.every((a) => a.userId === "demo-user")).toBe(true);
+  });
+
+  it("real-user-A does NOT see demo applications", async () => {
+    const apps = await getApplications("real-user-A");
+    expect(apps.some((a) => a.userId === "demo-user")).toBe(false);
+  });
+
+  it("real-user-B does NOT see user-A applications", async () => {
+    // User A creates an application
+    const appA = await createApplication("real-user-A", {
+      company: "Company Alpha",
+      jobTitle: "Alpha Engineer",
+      applicationSource: "LinkedIn",
+      status: "Applied",
+    });
+
+    // User B checks their applications
+    const appsB = await getApplications("real-user-B");
+    expect(appsB.some((a) => a.id === appA.id)).toBe(false);
+    expect(appsB.some((a) => a.company === "Company Alpha")).toBe(false);
+
+    // User B cannot fetch User A's application by ID
+    const directFetchByB = await getApplication("real-user-B", appA.id);
+    expect(directFetchByB).toBeNull();
+
+    // User B cannot update User A's application
+    await expect(
+      updateApplication("real-user-B", appA.id, { status: "Interview" })
+    ).rejects.toMatchObject({ type: "NOT_FOUND" });
+
+    // Clean up
+    await deleteApplication("real-user-A", appA.id);
+  });
+});

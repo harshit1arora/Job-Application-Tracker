@@ -13,6 +13,14 @@
 
 import type { ParsedResumeProfile } from "./types";
 
+export interface CandidateProject {
+  id?: string | undefined;
+  name: string;
+  description: string;
+  technologies: string[];
+  link?: string | undefined;
+}
+
 export interface UserProfile {
   fullName: string;
   firstName?: string | undefined;
@@ -36,6 +44,7 @@ export interface UserProfile {
   relocationOk?: string | undefined; // "Yes" | "No"
   skills?: string[] | undefined;
   education?: string | undefined;
+  projects?: CandidateProject[] | undefined;
   linkedin: string;
   portfolio: string;
   github?: string | undefined;
@@ -69,6 +78,7 @@ export const EMPTY_PROFILE: UserProfile = {
   relocationOk: "Yes",
   skills: [],
   education: "",
+  projects: [],
   linkedin: "",
   portfolio: "",
   github: "",
@@ -139,6 +149,7 @@ export function mergeParsedResumeIntoProfile(current: UserProfile, parsed: Parse
     targetRole: parsed.targetRole || current.targetRole,
     skills: parsed.skills && parsed.skills.length > 0 ? parsed.skills : (current.skills || []),
     education: parsed.education || current.education,
+    projects: current.projects || [],
     linkedin: parsed.linkedin || current.linkedin,
     portfolio: parsed.portfolio || current.portfolio,
     github: current.github || (parsed.portfolio?.includes("github.com") ? parsed.portfolio : ""),

@@ -3,7 +3,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { MissingFieldsModal } from "@/components/missing-fields-modal";
-import { getProfile, saveProfile, mergeParsedResumeIntoProfile, getMissingProfileFields, type UserProfile } from "@/lib/profile";
+import {
+  getProfile,
+  saveProfile,
+  mergeParsedResumeIntoProfile,
+  getMissingProfileFields,
+  type UserProfile,
+  type CandidateProject,
+} from "@/lib/profile";
 import { parseResumeWithAi } from "@/lib/ai";
 import { extractTextFromFile, SAMPLE_RESUME_PRESET } from "@/lib/resume-parser";
 import { toast } from "sonner";
@@ -17,6 +24,9 @@ import {
   AlertTriangle,
   Loader2,
   Save,
+  Plus,
+  Code2,
+  ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
@@ -33,6 +43,12 @@ function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [skillsInput, setSkillsInput] = useState("");
+  const [projects, setProjects] = useState<CandidateProject[]>([]);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDesc, setNewProjectDesc] = useState("");
+  const [newProjectTech, setNewProjectTech] = useState("");
+  const [newProjectLink, setNewProjectLink] = useState("");
+  const [showAddProject, setShowAddProject] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showMissingModal, setShowMissingModal] = useState(false);
@@ -53,6 +69,7 @@ function ProfilePage() {
       setProfile(initial);
       setResumeText(initial.resumeText || "");
       setSkillsInput((initial.skills || []).join(", "));
+      setProjects(initial.projects || []);
     }
   }, [user, isAuthenticated, navigate]);
 
@@ -138,6 +155,51 @@ function ProfilePage() {
     toast.success("Résumé and profile data cleared.");
   };
 
+  const handleAddProject = () => {
+    if (!newProjectName.trim()) {
+      toast.error("Project name is required.");
+      return;
+    }
+    const techArray = newProjectTech
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const newProj: CandidateProject = {
+      id: `proj-${Date.now()}`,
+      name: newProjectName.trim(),
+      description: newProjectDesc.trim(),
+      technologies: techArray,
+      link: newProjectLink.trim() || undefined,
+    };
+
+    const updatedProjects = [...projects, newProj];
+    setProjects(updatedProjects);
+    if (user && profile) {
+      const updated = { ...profile, projects: updatedProjects };
+      saveProfile(user.id, updated);
+      setProfile(updated);
+    }
+
+    setNewProjectName("");
+    setNewProjectDesc("");
+    setNewProjectTech("");
+    setNewProjectLink("");
+    setShowAddProject(false);
+    toast.success(`Project "${newProj.name}" added to candidate evidence!`);
+  };
+
+  const handleRemoveProject = (index: number) => {
+    const updated = projects.filter((_, i) => i !== index);
+    setProjects(updated);
+    if (user && profile) {
+      const updatedProfile = { ...profile, projects: updated };
+      saveProfile(user.id, updatedProfile);
+      setProfile(updatedProfile);
+    }
+    toast.success("Project removed.");
+  };
+
   const handleManualSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
@@ -151,6 +213,7 @@ function ProfilePage() {
     const updated: UserProfile = {
       ...profile,
       skills,
+      projects,
       resumeText,
     };
 
@@ -384,6 +447,149 @@ function ProfilePage() {
                   </select>
                 </div>
               </div>
+            </div>
+
+            {/* Candidate Projects & Technical Proof Card */}
+            <div className="rounded-2xl border border-border/80 bg-white dark:bg-[#111622] p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-border/70 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Code2 size={16} className="text-primary" /> Candidate Projects & Practical Evidence
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Demonstrate applied experience with technologies. Directly impacts Skill Proof Scores and Application Readiness.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProject(!showAddProject)}
+                  className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+                >
+                  <Plus size={13} /> Add Project
+                </button>
+              </div>
+
+              {/* Add Project Form Drawer/Modal */}
+              {showAddProject && (
+                <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-3 animate-in fade-in">
+                  <h4 className="text-xs font-bold text-foreground">New Project Evidence</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Project Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Distributed Task Queue"
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">GitHub / Live Link</label>
+                      <input
+                        type="url"
+                        placeholder="https://github.com/..."
+                        value={newProjectLink}
+                        onChange={(e) => setNewProjectLink(e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Technologies Used (comma separated) *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. React, TypeScript, Docker, Redis, PostgreSQL"
+                      value={newProjectTech}
+                      onChange={(e) => setNewProjectTech(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Brief Description & Architecture</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Describe architectural challenges solved and measurable metrics..."
+                      value={newProjectDesc}
+                      onChange={(e) => setNewProjectDesc(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:border-primary focus:outline-none resize-none"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProject(false)}
+                      className="px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground border border-border rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddProject}
+                      className="px-3.5 py-1.5 text-xs font-bold text-primary-foreground bg-primary hover:opacity-90 rounded-lg"
+                    >
+                      Save Project Evidence
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Projects List */}
+              {projects.length === 0 ? (
+                <div className="text-center py-6 border border-dashed border-border rounded-xl text-xs text-muted-foreground">
+                  No projects logged yet. Add your projects to strengthen Skill Proof scores across jobs.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {projects.map((proj, idx) => (
+                    <div
+                      key={proj.id || idx}
+                      className="p-3.5 rounded-xl border border-border bg-secondary/20 flex flex-col justify-between space-y-2"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-foreground text-xs">{proj.name}</h4>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProject(idx)}
+                            className="text-muted-foreground hover:text-destructive p-1 rounded"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        {proj.description && (
+                          <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                            {proj.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-border/60 flex items-center justify-between flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1">
+                          {proj.technologies.map((t, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] font-medium bg-background px-1.5 py-0.5 rounded border border-border text-foreground/80"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                        {proj.link && (
+                          <a
+                            href={proj.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline inline-flex items-center gap-0.5 text-[10px]"
+                          >
+                            <ExternalLink size={10} /> Link
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Raw Resume Text Card */}

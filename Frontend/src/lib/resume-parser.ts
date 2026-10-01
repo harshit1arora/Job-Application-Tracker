@@ -68,10 +68,9 @@ async function extractTextFromPdfUsingPdfJs(buffer: ArrayBuffer): Promise<string
   }
 
   const data = new Uint8Array(buffer);
-  const loadingTask = pdfjsLib.getDocument({
+  const loadingTask = (pdfjsLib as any).getDocument({
     data,
     useSystemFonts: true,
-    isEvalSupported: false,
   });
 
   const pdfDoc = await loadingTask.promise;

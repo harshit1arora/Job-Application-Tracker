@@ -304,7 +304,33 @@ Candidate Background: ${resumeHighlights || "Experienced developer skilled in Ty
   return buildTailoredCoverLetter(name, comp, role, jobDescription, resumeHighlights);
 }
 
+import { z } from "zod";
 import type { ParsedResumeProfile, SuggestedJob } from "./types";
+
+export const aiResumeProfileSchema = z.object({
+  fullName: z.string().optional().default(""),
+  email: z.string().optional().default(""),
+  phone: z.string().optional().default(""),
+  city: z.string().optional().default(""),
+  ageOrExperience: z.string().optional().default(""),
+  targetRole: z.string().optional().default(""),
+  skills: z
+    .union([
+      z.array(z.string()),
+      z.string().transform((str) =>
+        str
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      ),
+    ])
+    .optional()
+    .default([]),
+  education: z.string().optional().default(""),
+  linkedin: z.string().optional().default(""),
+  portfolio: z.string().optional().default(""),
+  summary: z.string().optional().default(""),
+});
 
 /**
  * Intelligent AI Resume Parser:
@@ -345,22 +371,27 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
       const content = res?.choices?.[0]?.message?.content;
       if (content) {
         const jsonStr = content.replace(/```json/g, "").replace(/```/g, "").trim();
-        const parsed = JSON.parse(jsonStr) as Partial<ParsedResumeProfile>;
-        if (parsed.fullName || parsed.email || parsed.skills) {
-          return {
-            fullName: parsed.fullName || extractName(resumeText),
-            email: parsed.email || extractEmail(resumeText),
-            phone: parsed.phone || extractPhone(resumeText),
-            city: parsed.city || extractLocation(resumeText),
-            ageOrExperience: parsed.ageOrExperience || extractExperience(resumeText),
-            targetRole: parsed.targetRole || extractTargetRole(resumeText),
-            skills: Array.isArray(parsed.skills) && parsed.skills.length > 0 ? parsed.skills : extractSkills(resumeText),
-            education: parsed.education || extractEducation(resumeText),
-            linkedin: parsed.linkedin || extractLink(resumeText, "linkedin"),
-            portfolio: parsed.portfolio || extractLink(resumeText, "github") || extractLink(resumeText, "portfolio"),
-            summary: parsed.summary || resumeText.slice(0, 180),
-            rawResumeText: resumeText,
-          };
+        const rawParsed = JSON.parse(jsonStr);
+        const validation = aiResumeProfileSchema.safeParse(rawParsed);
+
+        if (validation.success) {
+          const parsed = validation.data;
+          if (parsed.fullName || parsed.email || parsed.skills.length > 0) {
+            return {
+              fullName: parsed.fullName || extractName(resumeText),
+              email: parsed.email || extractEmail(resumeText),
+              phone: parsed.phone || extractPhone(resumeText),
+              city: parsed.city || extractLocation(resumeText),
+              ageOrExperience: parsed.ageOrExperience || extractExperience(resumeText),
+              targetRole: parsed.targetRole || extractTargetRole(resumeText),
+              skills: parsed.skills.length > 0 ? parsed.skills : extractSkills(resumeText),
+              education: parsed.education || extractEducation(resumeText),
+              linkedin: parsed.linkedin || extractLink(resumeText, "linkedin"),
+              portfolio: parsed.portfolio || extractLink(resumeText, "github") || extractLink(resumeText, "portfolio"),
+              summary: parsed.summary || resumeText.slice(0, 180),
+              rawResumeText: resumeText,
+            };
+          }
         }
       }
     } catch {

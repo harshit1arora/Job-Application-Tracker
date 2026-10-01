@@ -18,6 +18,12 @@ import { ApplyPortalModal } from "@/components/apply-portal-modal";
 import { QuickFillWidget } from "@/components/quick-fill-widget";
 import { InterviewCalendarModal } from "@/components/interview-calendar-modal";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { JobCareerIntelligencePanel } from "@/components/job-career-intelligence-panel";
+import {
+  computeDashboardCareerIntelligence,
+  executeActionCompletion,
+  type NextBestAction,
+} from "@/lib/career-intelligence";
 import {
   LayoutDashboard,
   Search,
@@ -398,6 +404,11 @@ function DashboardPage() {
     ? profile.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "AM";
 
+  // Dashboard Application Intelligence Aggregation (Single source of truth via career-intelligence engine)
+  const dashboardIntelligence = useMemo(() => {
+    return computeDashboardCareerIntelligence(profile, suggestedJobs, applications, user?.id);
+  }, [profile, suggestedJobs, applications, user?.id]);
+
   if (!isAuthenticated && !user) {
     return (
       <div className="min-h-screen bg-[#f8f9fb] dark:bg-background text-foreground flex items-center justify-center p-4">
@@ -490,6 +501,148 @@ function DashboardPage() {
             })}
           </div>
         </section>
+
+        {/* Application Intelligence Section */}
+        {dashboardIntelligence && !dashboardIntelligence.hasSufficientData && (
+          <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 p-5 sm:p-6 shadow-xs space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+              <AlertTriangle size={15} /> Application Intelligence — More Information Needed
+            </div>
+            <h3 className="text-base font-bold text-foreground">
+              Add your résumé to calculate application readiness.
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
+              Once your résumé or skills are parsed, JobPilot calculates your application success score, evidence strength, Career Twin role fit, and prioritized Next Best Actions across all jobs.
+            </p>
+            <div className="pt-1">
+              <Link
+                to="/profile"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:opacity-90 transition-opacity"
+              >
+                Upload / Add Résumé <ArrowUpRight size={13} />
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {dashboardIntelligence && dashboardIntelligence.hasSufficientData && (
+          <section className="rounded-2xl border border-border/80 bg-white dark:bg-[#111622] p-5 sm:p-6 shadow-xs space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider mb-0.5">
+                  <Sparkles size={14} /> Application Intelligence
+                </div>
+                <h3 className="text-lg font-black tracking-tight text-foreground">
+                  Career Readiness & Active Recommendations
+                </h3>
+              </div>
+            </div>
+
+            {/* 4 KPI Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-xl border border-border bg-[#f8f9fb] dark:bg-[#151c2a]">
+                <span className="text-[11px] font-semibold text-muted-foreground block">
+                  Average Application Readiness
+                </span>
+                <span className="text-2xl font-black text-foreground mt-1 block">
+                  {dashboardIntelligence.avgReadiness} <span className="text-xs text-muted-foreground font-normal">/ 100</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                  Aggregated across live catalog roles
+                </span>
+              </div>
+
+              {dashboardIntelligence.topOpportunity && (
+                <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/20">
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 block">
+                    Top Opportunity
+                  </span>
+                  <span className="text-sm font-bold text-foreground mt-1 truncate block">
+                    {dashboardIntelligence.topOpportunity.job.company}
+                  </span>
+                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block">
+                    {dashboardIntelligence.topOpportunity.success.score}/100 Readiness
+                  </span>
+                </div>
+              )}
+
+              {dashboardIntelligence.needsAttention && (
+                <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20">
+                  <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block">
+                    Needs Attention
+                  </span>
+                  <span className="text-sm font-bold text-foreground mt-1 truncate block">
+                    {dashboardIntelligence.needsAttention.job.company}
+                  </span>
+                  <span className="text-xs font-black text-amber-600 dark:text-amber-400 block">
+                    {dashboardIntelligence.needsAttention.success.score}/100 Readiness
+                  </span>
+                </div>
+              )}
+
+              {dashboardIntelligence.weakestSkill && (
+                <div className="p-3.5 rounded-xl border border-rose-500/20 bg-rose-500/5 dark:bg-rose-950/20">
+                  <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 block">
+                    Weakest Evidence Skill
+                  </span>
+                  <span className="text-sm font-bold text-foreground mt-1 block">
+                    {dashboardIntelligence.weakestSkill.skill}
+                  </span>
+                  <span className="text-xs font-black text-rose-600 dark:text-rose-400 block">
+                    {dashboardIntelligence.weakestSkill.score}/100 Proof
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Next Best Action Card on Dashboard */}
+            {dashboardIntelligence.nextAction && (
+              <div className="p-4 rounded-xl border border-primary/25 bg-gradient-to-r from-primary/5 to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                    Your Next Best Action
+                  </span>
+                  <h4 className="text-sm font-bold text-foreground">
+                    → {dashboardIntelligence.nextAction.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardIntelligence.nextAction.reason}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (user?.id && profile && dashboardIntelligence.nextAction) {
+                        const res = executeActionCompletion(user.id, dashboardIntelligence.nextAction, profile);
+                        if (res.success) {
+                          toast.success(res.message);
+                          setProfile(getProfile(user.id));
+                        } else {
+                          toast.error(res.message);
+                        }
+                      }
+                    }}
+                    className="px-3.5 py-2 rounded-xl border border-border bg-secondary hover:bg-secondary/80 text-foreground font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Mark Complete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (dashboardIntelligence.topOpportunity) {
+                        setSelectedApplyJob(dashboardIntelligence.topOpportunity.job);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:opacity-90 shrink-0 cursor-pointer shadow-sm"
+                  >
+                    View Role Intelligence
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Middle Quick Actions & Profile Status Pill Bar */}
         <section className="rounded-2xl border border-border/70 bg-white dark:bg-[#111622] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
@@ -600,9 +753,8 @@ function DashboardPage() {
                       </td>
                     </tr>
                   ) : (
-                    applications.map((app, idx) => {
+                    applications.map((app) => {
                       const rowConfig = getStatusRowConfig(app.status);
-                      const isReady = idx % 2 === 0;
 
                       return (
                         <tr
@@ -634,12 +786,32 @@ function DashboardPage() {
 
                           {/* Résumé Status */}
                           <td className="py-4 px-6 text-foreground font-medium">
-                            {isReady ? "Ready" : "Default"}
+                            {profile?.resumeText && profile.resumeText.trim().length > 30 ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                Ready
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                                Missing
+                              </span>
+                            )}
                           </td>
 
                           {/* Cover Letter Status */}
                           <td className="py-4 px-6 text-foreground font-medium">
-                            {isReady ? "Ready" : "Off"}
+                            {app.notes && (app.notes.includes("--- AI Cover Letter ---") || app.notes.includes("Cover Letter")) ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                Generated
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                                Not generated
+                              </span>
+                            )}
                           </td>
 
                           {/* Status with Colored Dot */}
