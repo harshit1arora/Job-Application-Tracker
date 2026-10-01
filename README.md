@@ -59,10 +59,15 @@ flowchart TB
         Portals["Greenhouse / Lever / Ashby / Workday / LinkedIn"]
         DataSync["Unified Local & Persistent Data Adapter\n(api-client / localStorage / Firestore)"]
 
-        Dashboard --> Portals
-        BrowseJobs --> Portals
         Applications <--> DataSync
-        CalendarTrac## 🌟 Comprehensive Features & Capabilities
+        CalendarTracker <--> DataSync
+        ProfileHub <--> DataSync
+    end
+```
+
+---
+
+## 🌟 Comprehensive Features & Capabilities
 
 ### 1. ⚡ Client-Side PDF.js & FlateDecode Stream Engine
 - **Zero Binary Stream Corruption**: Employs Mozilla PDF.js (`pdfjs-dist`) for in-browser client-side parsing of modern compressed PDF streams (`FlateDecode`), font tables, glyph mappings, and `.docx` XML archives without sending raw documents to external servers.
