@@ -107,10 +107,11 @@ flowchart TB
 - Filter pills, monthly grid, day agenda drawer, and modal for adding new dates.
 
 ### 6. 🔒 Production Security, Data Isolation & Fault Tolerance
-- **Strict Cross-User Isolation**: User accounts are strictly scoped; seed demo data is restricted strictly to `demo-user`, preventing cross-account state leakage.
+- **Firebase Authentication & ID Tokens**: Replaced raw local-storage pseudo-auth with full Firebase Auth. The frontend explicitly negotiates short-lived ID tokens (JWT) which the FastAPI backend securely verifies via the Firebase Admin SDK (`auth.verify_id_token`).
+- **Strict Cross-User Isolation**: User accounts and database queries are strictly scoped using the decoded `uid` directly from verified Firebase tokens. Development `X-User-Id` bypasses are disabled in production (`DEMO_MODE=false`).
+- **Secure File Validation**: `/api/documents/upload` enforces strict server-side MIME-type/extension filtering and a 5MB maximum upload limit, preventing disk exhaustion and malicious executable uploads.
 - **Protocol Security**: Zod validation restricts application URLs strictly to `http://` and `https://`, blocking malicious schemes (`javascript:`, `data:`, `vbscript:`).
 - **Zod AI Schema Validation & Fallback**: AI extraction is parsed against strict runtime schemas with automatic deterministic fallback if LLM inference times out or fails.
-- **Honest Application Tracking**: Real-time status indicators derived from actual profile text and persisted application data, removing synthetic readiness defaults.
 
 ---
 
@@ -233,10 +234,13 @@ API runs locally on `http://localhost:5117` and is automatically proxied by Vite
 
 1. **Backend via Render**: 
    - A `render.yaml` configuration is included. Connect this repository to Render and create a new **Blueprint**. Render will deploy the FastAPI backend.
+   - The config automatically mounts a 1GB persistent disk to `/var/data` for the SQLite database and uploaded user resumes, ensuring they survive redeploys.
    - Note the resulting URL (e.g., `https://job-tracker-backend.onrender.com`).
+   - You must manually configure `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `CORS_ORIGINS` in your Render Environment dashboard.
 2. **Frontend via Vercel**: 
    - Import the `Frontend` folder as your project root in Vercel. 
-   - Add the environment variable `VITE_API_URL` set to your Render URL appended with `/api` (e.g. `https://job-tracker-backend.onrender.com/api`).
+   - Add the environment variable `VITE_API_URL` set to your Render URL (e.g. `https://job-tracker-backend.onrender.com/api`).
+   - Also add `VITE_DEMO_MODE=false` and all required `VITE_FIREBASE_*` configuration variables.
    
 ---
 
@@ -256,7 +260,7 @@ npm test
 cd Backend_FastAPI
 pytest
 ```
-- Passes 5/5 integration tests covering CRUD operations, physical document uploads, stats generation, and cross-user isolation.
+- Passes 6/6 integration tests covering CRUD operations, physical document uploads, stats generation, cross-user isolation, and production authentication rejection (`test_production_auth_rejection`).
 
 **Frontend Tests (Vitest)**
 ```bash

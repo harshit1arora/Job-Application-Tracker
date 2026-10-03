@@ -86,7 +86,9 @@ export function ApplyPortalModal({
   onApplyAndTrack,
   onClose,
 }: ApplyPortalModalProps) {
-  const [activeTab, setActiveTab] = useState<"form" | "intelligence" | "coverLetter" | "script">("form");
+  const [activeTab, setActiveTab] = useState<"form" | "intelligence" | "coverLetter" | "script">(
+    "form",
+  );
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
   const [coverLetter, setCoverLetter] = useState<string>("");
@@ -108,7 +110,7 @@ export function ApplyPortalModal({
       },
       null,
       [],
-      userId
+      userId,
     );
   }, [profile, job, userId]);
 
@@ -121,7 +123,9 @@ export function ApplyPortalModal({
     email: profile.email || "",
     phone: profile.phone || "",
     countryCode: profile.countryCode || "+1",
-    country: profile.country || (COUNTRY_OPTIONS.includes(profile.location) ? profile.location : "United States"),
+    country:
+      profile.country ||
+      (COUNTRY_OPTIONS.includes(profile.location) ? profile.location : "United States"),
     locationCity: profile.city || profile.location || "San Francisco, CA",
     resumeFileName: profile.resumeFileName || "Alex_Carter_Resume.pdf",
     hybridScheduleOk: profile.hybridScheduleOk || "Yes",
@@ -187,11 +191,13 @@ export function ApplyPortalModal({
       setIsGeneratingLetter(true);
       try {
         const letter = await generateCoverLetter(
-          formData.firstName ? `${formData.firstName} ${formData.lastName}`.trim() : profile.fullName || "Candidate",
+          formData.firstName
+            ? `${formData.firstName} ${formData.lastName}`.trim()
+            : profile.fullName || "Candidate",
           job.company,
           job.role,
           job.description,
-          profile.skills?.join(", ") || profile.resumeText || "React, TypeScript, Next.js, Node.js"
+          profile.skills?.join(", ") || profile.resumeText || "React, TypeScript, Next.js, Node.js",
         );
         if (isMounted) setCoverLetter(letter);
       } catch {
@@ -259,7 +265,9 @@ export function ApplyPortalModal({
     };
     const script = generateBrowserAutofillScript(currentProf);
     await navigator.clipboard.writeText(script);
-    toast.success("1-Click Browser Autofill Script copied! Run in browser console on any career portal.");
+    toast.success(
+      "1-Click Browser Autofill Script copied! Run in browser console on any career portal.",
+    );
   };
 
   // Submit and track application
@@ -294,7 +302,9 @@ export function ApplyPortalModal({
       await onApplyAndTrack(job);
 
       setIsSubmitted(true);
-      toast.success(`Application submitted for ${job.role} at ${job.company}! Details saved to memory for next application.`);
+      toast.success(
+        `Application submitted for ${job.role} at ${job.company}! Details saved to memory for next application.`,
+      );
     } catch (err: any) {
       toast.error(err?.message || "Failed to submit application.");
     } finally {
@@ -347,10 +357,16 @@ export function ApplyPortalModal({
               <span className="text-[11px] text-emerald-400">100% Ready</span>
             </div>
             <p className="text-[11px] leading-relaxed text-gray-300">
-              ✨ All details you filled (Country: <strong className="text-white">{formData.country}</strong>, Phone: <strong className="text-white">{formData.phone}</strong>, Hybrid: <strong className="text-white">{formData.hybridScheduleOk}</strong>, Visa: <strong className="text-white">{formData.sponsorshipRequired}</strong>) are now permanently saved.
+              ✨ All details you filled (Country:{" "}
+              <strong className="text-white">{formData.country}</strong>, Phone:{" "}
+              <strong className="text-white">{formData.phone}</strong>, Hybrid:{" "}
+              <strong className="text-white">{formData.hybridScheduleOk}</strong>, Visa:{" "}
+              <strong className="text-white">{formData.sponsorshipRequired}</strong>) are now
+              permanently saved.
             </p>
             <p className="text-[11px] text-gray-400">
-              When you click <strong>"Apply"</strong> on any other job next, all these fields will be <strong>automatically pre-filled</strong>!
+              When you click <strong>"Apply"</strong> on any other job next, all these fields will
+              be <strong>automatically pre-filled</strong>!
             </p>
           </div>
 
@@ -389,13 +405,16 @@ export function ApplyPortalModal({
                 {job.company}
               </span>
               <span className="text-xs text-muted-foreground">• {job.source}</span>
-              <span className="text-xs text-emerald-400 font-bold">• {job.matchScore ?? 92}% Match</span>
+              <span className="text-xs text-emerald-400 font-bold">
+                • {job.matchScore ?? 92}% Match
+              </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
               Apply Now.
             </h2>
             <p className="text-xs text-gray-400">
-              Tell us why you'd be a good fit for the <strong className="text-white">{job.role}</strong> role.
+              Tell us why you'd be a good fit for the{" "}
+              <strong className="text-white">{job.role}</strong> role.
             </p>
           </div>
 
@@ -416,7 +435,9 @@ export function ApplyPortalModal({
             </div>
             <div>
               <span className="font-bold text-white">AI Résumé Autofill Active:</span>{" "}
-              <span className="text-emerald-400 font-semibold">{filledCount}/{totalFields} fields completed</span>
+              <span className="text-emerald-400 font-semibold">
+                {filledCount}/{totalFields} fields completed
+              </span>
               {lastSavedField && (
                 <span className="ml-2 text-[10px] text-amber-400 font-medium animate-pulse">
                   (💾 Saved {lastSavedField} to profile memory)
@@ -431,7 +452,9 @@ export function ApplyPortalModal({
                 type="button"
                 onClick={() => setActiveTab("form")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === "form" ? "bg-primary text-black shadow-xs" : "text-gray-400 hover:text-white"
+                  activeTab === "form"
+                    ? "bg-primary text-black shadow-xs"
+                    : "text-gray-400 hover:text-white"
                 }`}
               >
                 Application Form
@@ -440,7 +463,9 @@ export function ApplyPortalModal({
                 type="button"
                 onClick={() => setActiveTab("intelligence")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  activeTab === "intelligence" ? "bg-primary text-black shadow-xs" : "text-gray-400 hover:text-white"
+                  activeTab === "intelligence"
+                    ? "bg-primary text-black shadow-xs"
+                    : "text-gray-400 hover:text-white"
                 }`}
               >
                 <ShieldCheck size={12} /> Career Intelligence
@@ -449,7 +474,9 @@ export function ApplyPortalModal({
                 type="button"
                 onClick={() => setActiveTab("coverLetter")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  activeTab === "coverLetter" ? "bg-primary text-black shadow-xs" : "text-gray-400 hover:text-white"
+                  activeTab === "coverLetter"
+                    ? "bg-primary text-black shadow-xs"
+                    : "text-gray-400 hover:text-white"
                 }`}
               >
                 <Sparkles size={12} /> AI Cover Letter
@@ -526,7 +553,9 @@ export function ApplyPortalModal({
                         <Check size={10} /> Auto-filled
                       </span>
                     ) : (
-                      <span className="text-[10px] text-amber-400 font-medium">⚠️ Fill to remember</span>
+                      <span className="text-[10px] text-amber-400 font-medium">
+                        ⚠️ Fill to remember
+                      </span>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -573,7 +602,10 @@ export function ApplyPortalModal({
                   <button
                     type="button"
                     onClick={() => {
-                      const newName = prompt("Enter resume file name or version:", formData.resumeFileName);
+                      const newName = prompt(
+                        "Enter resume file name or version:",
+                        formData.resumeFileName,
+                      );
                       if (newName) handleFieldChange("resumeFileName", newName);
                     }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-200 transition-colors"
@@ -588,7 +620,8 @@ export function ApplyPortalModal({
               <div className="rounded-2xl border border-white/10 bg-[#121826]/50 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-xs font-semibold text-gray-200 leading-relaxed">
-                    Are you currently based in any of these countries? Please note these are the only countries where we are accepting applications
+                    Are you currently based in any of these countries? Please note these are the
+                    only countries where we are accepting applications
                   </p>
                   <span className="shrink-0 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                     💾 Saved for next jobs
@@ -626,7 +659,8 @@ export function ApplyPortalModal({
               <div className="rounded-2xl border border-white/10 bg-[#121826]/50 p-4 space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-xs font-semibold text-gray-200">
-                    Are you able to work from our London/Regional office on a hybrid schedule, 3 days a week?
+                    Are you able to work from our London/Regional office on a hybrid schedule, 3
+                    days a week?
                   </p>
                   <span className="shrink-0 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                     💾 Auto-remembered
@@ -702,13 +736,19 @@ export function ApplyPortalModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-gray-300">LinkedIn Profile URL</label>
+                    <label className="text-xs font-semibold text-gray-300">
+                      LinkedIn Profile URL
+                    </label>
                     <button
                       type="button"
                       onClick={() => handleCopy("LinkedIn", formData.linkedin)}
                       className="text-[10px] text-gray-400 hover:text-white flex items-center gap-1"
                     >
-                      {copiedField === "LinkedIn" ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                      {copiedField === "LinkedIn" ? (
+                        <Check size={11} className="text-emerald-400" />
+                      ) : (
+                        <Copy size={11} />
+                      )}
                       Copy
                     </button>
                   </div>
@@ -723,13 +763,19 @@ export function ApplyPortalModal({
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-gray-300">GitHub / Portfolio URL</label>
+                    <label className="text-xs font-semibold text-gray-300">
+                      GitHub / Portfolio URL
+                    </label>
                     <button
                       type="button"
                       onClick={() => handleCopy("Portfolio", formData.portfolio)}
                       className="text-[10px] text-gray-400 hover:text-white flex items-center gap-1"
                     >
-                      {copiedField === "Portfolio" ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                      {copiedField === "Portfolio" ? (
+                        <Check size={11} className="text-emerald-400" />
+                      ) : (
+                        <Copy size={11} />
+                      )}
                       Copy
                     </button>
                   </div>
@@ -801,7 +847,8 @@ export function ApplyPortalModal({
                     <Sparkles size={15} className="text-primary" /> AI Tailored Cover Note
                   </h3>
                   <p className="text-xs text-gray-400">
-                    Customized specifically for <strong className="text-white">{job.company}</strong> and the{" "}
+                    Customized specifically for{" "}
+                    <strong className="text-white">{job.company}</strong> and the{" "}
                     <strong className="text-white">{job.role}</strong> position.
                   </p>
                 </div>
@@ -815,7 +862,7 @@ export function ApplyPortalModal({
                         job.company,
                         job.role,
                         job.description,
-                        profile.skills?.join(", ") || profile.resumeText
+                        profile.skills?.join(", ") || profile.resumeText,
                       );
                       setCoverLetter(letter);
                       toast.success("Regenerated fresh cover letter!");
@@ -828,7 +875,11 @@ export function ApplyPortalModal({
                   disabled={isGeneratingLetter}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors"
                 >
-                  {isGeneratingLetter ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  {isGeneratingLetter ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={13} />
+                  )}
                   Regenerate
                 </button>
               </div>

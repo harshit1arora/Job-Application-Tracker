@@ -145,7 +145,7 @@ function FormattedMessageContent({
               {lines.map((line, lIdx) => {
                 const match = line.match(/^(\d+)\.\s*(.*)/);
                 const num = match && match[1] ? match[1] : `${lIdx + 1}`;
-                const text = (match && match[2]) ? match[2] : line;
+                const text = match && match[2] ? match[2] : line;
                 return (
                   <div key={lIdx} className="flex items-start gap-2.5">
                     <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
@@ -319,7 +319,7 @@ export function ChatWidget() {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
       });
     },
-    [navigate, cancelAutoSend]
+    [navigate, cancelAutoSend],
   );
 
   // Send message forward reference
@@ -353,7 +353,7 @@ export function ChatWidget() {
         }
       }, durationMs);
     },
-    [cancelAutoSend]
+    [cancelAutoSend],
   );
 
   // Voice Assistant Hook
@@ -497,7 +497,7 @@ export function ChatWidget() {
         toolCompany,
         toolRole,
         `Responsibilities for ${toolRole} at ${toolCompany}`,
-        userProfile?.skills?.join(", ")
+        userProfile?.skills?.join(", "),
       );
       setActiveTab("chat");
       setMessages((prev) => [
@@ -527,33 +527,76 @@ export function ChatWidget() {
     switch (currentPath) {
       case "/tracker":
         return [
-          { label: "📊 Stage Workflow", prompt: "Explain the job tracker stages and how to organize my applications." },
-          { label: "📅 Interview Prep", prompt: "How do I schedule an interview reminder and prepare for technical screening?" },
-          { label: "🧭 Next Steps", prompt: "What should I focus on next in my application pipeline?" },
+          {
+            label: "📊 Stage Workflow",
+            prompt: "Explain the job tracker stages and how to organize my applications.",
+          },
+          {
+            label: "📅 Interview Prep",
+            prompt: "How do I schedule an interview reminder and prepare for technical screening?",
+          },
+          {
+            label: "🧭 Next Steps",
+            prompt: "What should I focus on next in my application pipeline?",
+          },
         ];
       case "/browse":
         return [
-          { label: "⚡ How Auto-Apply Works", prompt: "How does JobPilot auto-apply to Workday and Greenhouse jobs?" },
-          { label: "🎯 Match Scores", prompt: "How do match scores get calculated against my profile?" },
-          { label: "📄 Jump to Résumé", prompt: "Take me to my profile to review my parsed skills." },
+          {
+            label: "⚡ How Auto-Apply Works",
+            prompt: "How does JobPilot auto-apply to Workday and Greenhouse jobs?",
+          },
+          {
+            label: "🎯 Match Scores",
+            prompt: "How do match scores get calculated against my profile?",
+          },
+          {
+            label: "📄 Jump to Résumé",
+            prompt: "Take me to my profile to review my parsed skills.",
+          },
         ];
       case "/profile":
         return [
-          { label: "✨ ATS Score Tips", prompt: "Give me actionable tips to optimize my résumé for ATS parsers." },
-          { label: "🔍 PDF Extraction", prompt: "How does JobPilot extract skills and work experience from my PDF?" },
+          {
+            label: "✨ ATS Score Tips",
+            prompt: "Give me actionable tips to optimize my résumé for ATS parsers.",
+          },
+          {
+            label: "🔍 PDF Extraction",
+            prompt: "How does JobPilot extract skills and work experience from my PDF?",
+          },
           { label: "💼 Matched Jobs", prompt: "Take me to browse jobs that match my target role." },
         ];
       case "/inbox":
         return [
-          { label: "✉️ Recruiter Reply", prompt: "Give me a professional email template to reply to a recruiter interview request." },
-          { label: "⏰ Follow-up Template", prompt: "How should I follow up on an application after 7 days of no response?" },
+          {
+            label: "✉️ Recruiter Reply",
+            prompt:
+              "Give me a professional email template to reply to a recruiter interview request.",
+          },
+          {
+            label: "⏰ Follow-up Template",
+            prompt: "How should I follow up on an application after 7 days of no response?",
+          },
         ];
       default:
         return [
-          { label: "🚀 Quick 1-Min Tour", prompt: "Take me on a quick tour of JobPilot's superpowers!" },
-          { label: "🎙️ Voice Commands", prompt: "What voice commands can I use to switch pages and navigate?" },
-          { label: "✍️ Draft Cover Letter", prompt: "Help me write a persuasive 8-line cover letter." },
-          { label: "🎯 Mock Interview", prompt: "Start a mock interview session with 3 common engineering questions." },
+          {
+            label: "🚀 Quick 1-Min Tour",
+            prompt: "Take me on a quick tour of JobPilot's superpowers!",
+          },
+          {
+            label: "🎙️ Voice Commands",
+            prompt: "What voice commands can I use to switch pages and navigate?",
+          },
+          {
+            label: "✍️ Draft Cover Letter",
+            prompt: "Help me write a persuasive 8-line cover letter.",
+          },
+          {
+            label: "🎯 Mock Interview",
+            prompt: "Start a mock interview session with 3 common engineering questions.",
+          },
         ];
     }
   };
@@ -648,7 +691,9 @@ export function ChatWidget() {
                 Live • STT Ready
               </span>
               <span>•</span>
-              <kbd className="text-[10px] font-mono opacity-80 bg-secondary/80 px-1 rounded">Ctrl+J</kbd>
+              <kbd className="text-[10px] font-mono opacity-80 bg-secondary/80 px-1 rounded">
+                Ctrl+J
+              </kbd>
             </div>
           </div>
         </div>
@@ -662,7 +707,11 @@ export function ChatWidget() {
               if (isSpeaking) stopSpeaking();
               setAutoReadTts(!autoReadTts);
             }}
-            title={autoReadTts ? "Auto-TTS Readout: ON (Click to disable)" : "Auto-TTS Readout: OFF (Click to enable)"}
+            title={
+              autoReadTts
+                ? "Auto-TTS Readout: ON (Click to disable)"
+                : "Auto-TTS Readout: OFF (Click to enable)"
+            }
             className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold transition-all ${
               autoReadTts
                 ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
@@ -848,7 +897,8 @@ export function ChatWidget() {
                   </button>
                 </div>
                 <p className="mt-1 text-muted-foreground leading-relaxed">
-                  Try speaking to switch pages hands-free, or click below to launch the 1-minute guided tour.
+                  Try speaking to switch pages hands-free, or click below to launch the 1-minute
+                  guided tour.
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <button
@@ -873,14 +923,17 @@ export function ChatWidget() {
 
             {/* Conversation Messages */}
             {messages.map((m) => (
-              <div key={m.id} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+              <div
+                key={m.id}
+                className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
+              >
                 <div
                   className={`group relative max-w-[90%] rounded-2xl px-4 py-3 text-xs leading-relaxed transition-all shadow-xs ${
                     m.role === "user"
                       ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-xs"
                       : m.isVoiceNav
-                      ? "bg-emerald-500/10 border border-emerald-500/30 text-foreground rounded-bl-xs"
-                      : "bg-secondary/70 border border-border/60 text-foreground rounded-bl-xs"
+                        ? "bg-emerald-500/10 border border-emerald-500/30 text-foreground rounded-bl-xs"
+                        : "bg-secondary/70 border border-border/60 text-foreground rounded-bl-xs"
                   }`}
                 >
                   {/* Rich formatted message content */}
@@ -959,8 +1012,10 @@ export function ChatWidget() {
                 <div>
                   <p className="font-bold">Offline Intelligence Mode Active</p>
                   <p className="mt-0.5 opacity-90">
-                    Smart local career strategies, voice navigation, and resume tips are fully operational. Add{" "}
-                    <code className="font-mono font-bold">VITE_OPENROUTER_API_KEY</code> for live LLM completions.
+                    Smart local career strategies, voice navigation, and resume tips are fully
+                    operational. Add{" "}
+                    <code className="font-mono font-bold">VITE_OPENROUTER_API_KEY</code> for live
+                    LLM completions.
                   </p>
                 </div>
               </div>
@@ -1061,7 +1116,9 @@ export function ChatWidget() {
                   }}
                   rows={1}
                   placeholder={
-                    isListening ? "Listening to your voice..." : "Ask career question or type 'go to tracker'…"
+                    isListening
+                      ? "Listening to your voice..."
+                      : "Ask career question or type 'go to tracker'…"
                   }
                   className="max-h-24 w-full resize-none rounded-xl border border-input bg-background px-3.5 py-2.5 text-xs focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-muted-foreground/70"
                 />
@@ -1092,7 +1149,9 @@ export function ChatWidget() {
                 type="button"
                 onClick={toggleListening}
                 style={{
-                  transform: isListening ? `scale(${1 + Math.min(audioLevel, 100) * 0.003})` : undefined,
+                  transform: isListening
+                    ? `scale(${1 + Math.min(audioLevel, 100) * 0.003})`
+                    : undefined,
                 }}
                 className={`relative z-10 grid h-24 w-24 place-items-center rounded-full transition-all duration-200 cursor-pointer shadow-xl ${
                   isListening
@@ -1164,9 +1223,7 @@ export function ChatWidget() {
                     <span>Auto-sending in {autoSendCountdown.toFixed(1)}s</span>
                   )}
                 </div>
-                <p className="text-xs font-semibold text-foreground italic">
-                  "{transcript}"
-                </p>
+                <p className="text-xs font-semibold text-foreground italic">"{transcript}"</p>
                 <div className="pt-1 flex gap-2">
                   <button
                     type="button"
@@ -1201,7 +1258,12 @@ export function ChatWidget() {
                 { label: "Dashboard", cmd: "Go to Dashboard", route: "/dashboard", icon: "📊" },
                 { label: "Browse Jobs", cmd: "Browse Jobs", route: "/browse", icon: "🔍" },
                 { label: "Job Tracker", cmd: "Go to Tracker", route: "/tracker", icon: "📋" },
-                { label: "Applications", cmd: "Show Applications", route: "/applications", icon: "📁" },
+                {
+                  label: "Applications",
+                  cmd: "Show Applications",
+                  route: "/applications",
+                  icon: "📁",
+                },
                 { label: "Inbox Messages", cmd: "Open Inbox", route: "/inbox", icon: "✉️" },
                 { label: "Profile & Résumé", cmd: "Edit Résumé", route: "/profile", icon: "👤" },
               ].map((item, i) => (
@@ -1227,7 +1289,10 @@ export function ChatWidget() {
                       <p className="text-[10px] text-muted-foreground">{item.route}</p>
                     </div>
                   </div>
-                  <ArrowRight size={12} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                  <ArrowRight
+                    size={12}
+                    className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+                  />
                 </button>
               ))}
             </div>
@@ -1296,7 +1361,9 @@ export function ChatWidget() {
                 type="button"
                 onClick={() => {
                   setActiveTab("chat");
-                  void send("Start a mock behavioral interview for a Senior Software Engineer. Ask question 1.");
+                  void send(
+                    "Start a mock behavioral interview for a Senior Software Engineer. Ask question 1.",
+                  );
                 }}
                 className="flex-1 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
               >
@@ -1306,7 +1373,9 @@ export function ChatWidget() {
                 type="button"
                 onClick={() => {
                   setActiveTab("chat");
-                  void send("Start a mock technical system design interview for a Fullstack Engineer. Ask question 1.");
+                  void send(
+                    "Start a mock technical system design interview for a Fullstack Engineer. Ask question 1.",
+                  );
                 }}
                 className="flex-1 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
               >

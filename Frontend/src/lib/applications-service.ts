@@ -51,7 +51,7 @@ import {
 } from "./api-client";
 
 function extractFieldErrors(
-  zodErrors: { path: (string | number)[]; message: string }[]
+  zodErrors: { path: (string | number)[]; message: string }[],
 ): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const issue of zodErrors) {
@@ -65,14 +65,14 @@ function extractFieldErrors(
 
 export async function createApplication(
   userId: string,
-  input: CreateApplicationInput
+  input: CreateApplicationInput,
 ): Promise<ApplicationDocument> {
   const result = createApplicationSchema.safeParse(input);
   if (!result.success) {
     throw new AppError(
       "VALIDATION_ERROR",
       "Invalid application data",
-      extractFieldErrors(result.error.errors)
+      extractFieldErrors(result.error.errors),
     );
   }
 
@@ -81,14 +81,14 @@ export async function createApplication(
 
 export async function getApplications(
   userId: string,
-  filters?: ApplicationFilters
+  filters?: ApplicationFilters,
 ): Promise<ApplicationDocument[]> {
   return await fetchApplications(userId, filters);
 }
 
 export async function getApplication(
   userId: string,
-  applicationId: string
+  applicationId: string,
 ): Promise<ApplicationDocument | null> {
   return await fetchApplication(userId, applicationId);
 }
@@ -96,24 +96,20 @@ export async function getApplication(
 export async function updateApplication(
   userId: string,
   applicationId: string,
-  changes: UpdateApplicationInput
+  changes: UpdateApplicationInput,
 ): Promise<ApplicationDocument> {
   const result = updateApplicationSchema.safeParse(changes);
   if (!result.success) {
     throw new AppError(
       "VALIDATION_ERROR",
       "Invalid update data",
-      extractFieldErrors(result.error.errors)
+      extractFieldErrors(result.error.errors),
     );
   }
 
   return await updateApplicationApi(userId, applicationId, result.data as UpdateApplicationInput);
 }
 
-export async function deleteApplication(
-  userId: string,
-  applicationId: string
-): Promise<void> {
+export async function deleteApplication(userId: string, applicationId: string): Promise<void> {
   await deleteApplicationApi(userId, applicationId);
 }
-

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import type { SkillProof, SkillVerificationChallenge, SkillVerificationEvaluation } from "@/lib/career-intelligence";
+import type {
+  SkillProof,
+  SkillVerificationChallenge,
+  SkillVerificationEvaluation,
+} from "@/lib/career-intelligence";
 import {
   generateSkillChallenge,
   evaluateSkillVerificationAnswer,
@@ -38,7 +42,9 @@ export function SkillProofSection({
   const [candidateAnswer, setCandidateAnswer] = useState("");
   const [isLoadingChallenge, setIsLoadingChallenge] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<SkillVerificationEvaluation | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<SkillVerificationEvaluation | null>(
+    null,
+  );
 
   // Handle ESC key to close challenge modal
   useEffect(() => {
@@ -77,7 +83,7 @@ export function SkillProofSection({
       const res = await evaluateSkillVerificationAnswer(
         activeChallengeSkill,
         challenge,
-        candidateAnswer
+        candidateAnswer,
       );
       setEvaluationResult(res);
 
@@ -86,10 +92,13 @@ export function SkillProofSection({
           userId,
           activeChallengeSkill,
           res.score,
-          res.passed ? "passed" : "failed"
+          res.passed ? "passed" : "failed",
         );
         if (res.passed) {
-          markActionCompletedInStorage(userId, `act-verify-${normalizeSkill(activeChallengeSkill)}`);
+          markActionCompletedInStorage(
+            userId,
+            `act-verify-${normalizeSkill(activeChallengeSkill)}`,
+          );
         }
       }
 
@@ -122,7 +131,8 @@ export function SkillProofSection({
             <ShieldCheck size={14} /> Evidence-Based Skill Proof
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Moves beyond unverified claims: audits résumé mentions, candidate project repos, micro-tasks, and technical verification.
+            Moves beyond unverified claims: audits résumé mentions, candidate project repos,
+            micro-tasks, and technical verification.
           </p>
         </div>
       </div>
@@ -145,7 +155,9 @@ export function SkillProofSection({
               {/* Header: Skill Name & Score */}
               <div className="flex items-center justify-between">
                 <span className="font-black text-sm text-foreground">{item.skill}</span>
-                <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${scoreBadgeColor}`}>
+                <span
+                  className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${scoreBadgeColor}`}
+                >
                   {item.score} / 100
                 </span>
               </div>
@@ -199,8 +211,8 @@ export function SkillProofSection({
                   {item.verified
                     ? "Verified via challenge"
                     : item.evidence.verificationStatus === "failed"
-                    ? "Failed previous challenge"
-                    : "Unverified claim"}
+                      ? "Failed previous challenge"
+                      : "Unverified claim"}
                 </span>
 
                 <button
@@ -273,13 +285,18 @@ export function SkillProofSection({
                   <span className="font-bold text-foreground uppercase tracking-wider text-[10px] block pt-1">
                     Question
                   </span>
-                  <p className="text-sm font-bold text-foreground leading-relaxed">{challenge.question}</p>
+                  <p className="text-sm font-bold text-foreground leading-relaxed">
+                    {challenge.question}
+                  </p>
                 </div>
 
                 {/* Candidate Answer Box */}
                 {!evaluationResult ? (
                   <div className="space-y-3">
-                    <label htmlFor="challenge-answer-input" className="block font-semibold text-foreground">
+                    <label
+                      htmlFor="challenge-answer-input"
+                      className="block font-semibold text-foreground"
+                    >
                       Your Technical Approach:
                     </label>
                     <textarea
@@ -305,7 +322,11 @@ export function SkillProofSection({
                         disabled={isEvaluating || !candidateAnswer.trim()}
                         className="px-4 py-2 text-xs font-bold text-primary-foreground bg-primary hover:opacity-90 rounded-xl flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                       >
-                        {isEvaluating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                        {isEvaluating ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={13} />
+                        )}
                         Submit & Evaluate Evidence
                       </button>
                     </div>
@@ -321,15 +342,20 @@ export function SkillProofSection({
                             : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
                         }`}
                       >
-                        {evaluationResult.score}/100 — {evaluationResult.passed ? "Passed ✓" : "Needs Review"}
+                        {evaluationResult.score}/100 —{" "}
+                        {evaluationResult.passed ? "Passed ✓" : "Needs Review"}
                       </span>
                     </div>
 
-                    <p className="text-muted-foreground leading-relaxed">{evaluationResult.feedback}</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {evaluationResult.feedback}
+                    </p>
 
                     {evaluationResult.positivePoints.length > 0 && (
                       <div className="space-y-1">
-                        <p className="font-bold text-emerald-600 dark:text-emerald-400">Strengths Demonstrated:</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                          Strengths Demonstrated:
+                        </p>
                         {evaluationResult.positivePoints.map((pt, i) => (
                           <p key={i} className="text-muted-foreground flex items-center gap-1.5">
                             <CheckCircle2 size={12} className="text-emerald-500 shrink-0" /> {pt}
@@ -340,7 +366,9 @@ export function SkillProofSection({
 
                     {evaluationResult.improvementPoints.length > 0 && (
                       <div className="space-y-1">
-                        <p className="font-bold text-amber-600 dark:text-amber-400">Growth Opportunities:</p>
+                        <p className="font-bold text-amber-600 dark:text-amber-400">
+                          Growth Opportunities:
+                        </p>
                         {evaluationResult.improvementPoints.map((pt, i) => (
                           <p key={i} className="text-muted-foreground flex items-center gap-1.5">
                             <span className="text-amber-500 font-bold shrink-0">•</span> {pt}

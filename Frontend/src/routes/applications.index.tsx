@@ -63,7 +63,7 @@ function ApplicationsPage() {
     company: string,
     role: string,
     source: ApplicationSource,
-    url?: string
+    url?: string,
   ) => {
     if (!user) return;
     try {
@@ -139,7 +139,10 @@ function ApplicationsPage() {
         {/* Filter and Search Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#111622] p-4 rounded-2xl border border-border/80 shadow-xs">
           <div className="relative flex-1 max-w-md">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
             <input
               type="text"
               placeholder="Search company, role or keywords..."
@@ -151,7 +154,9 @@ function ApplicationsPage() {
 
           {/* Status Tabs */}
           <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
-            {(["All", "Applied", "Interview", "Under Review", "Saved", "Offer", "Rejected"] as const).map((status) => (
+            {(
+              ["All", "Applied", "Interview", "Under Review", "Saved", "Offer", "Rejected"] as const
+            ).map((status) => (
               <button
                 key={status}
                 type="button"
@@ -241,7 +246,7 @@ function ApplicationsPage() {
                       <td className="py-4 px-6">
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getStatusBadge(
-                            app.status
+                            app.status,
                           )}`}
                         >
                           {app.status}
@@ -285,10 +290,7 @@ function ApplicationsPage() {
 
       {/* Add Modal */}
       {showAddModal && (
-        <AddAppModal
-          onClose={() => setShowAddModal(false)}
-          onSubmit={handleAddApplication}
-        />
+        <AddAppModal onClose={() => setShowAddModal(false)} onSubmit={handleAddApplication} />
       )}
     </div>
   );
@@ -316,7 +318,7 @@ function AddAppModal({
           companyRef.current.value,
           roleRef.current.value,
           platformRef.current.value as ApplicationSource,
-          urlRef.current?.value || undefined
+          urlRef.current?.value || undefined,
         );
       } finally {
         setIsSubmitting(false);
@@ -356,7 +358,9 @@ function AddAppModal({
           </div>
 
           <div>
-            <label className="block font-semibold text-muted-foreground mb-1">Source Platform</label>
+            <label className="block font-semibold text-muted-foreground mb-1">
+              Source Platform
+            </label>
             <select
               ref={platformRef}
               defaultValue="Greenhouse"
@@ -372,7 +376,9 @@ function AddAppModal({
           </div>
 
           <div>
-            <label className="block font-semibold text-muted-foreground mb-1">Career Portal URL (Optional)</label>
+            <label className="block font-semibold text-muted-foreground mb-1">
+              Career Portal URL (Optional)
+            </label>
             <input
               type="url"
               ref={urlRef}

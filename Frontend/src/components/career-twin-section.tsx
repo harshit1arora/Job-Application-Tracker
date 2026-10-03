@@ -138,7 +138,8 @@ export function CareerTwinLiteSection({
             Role Fit: {careerTwin.roleFitScore} / 100 for {job.role}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Living interpretation mapping your projects ({careerTwin.projects.length}) and {careerTwin.experienceYears}+ YOE to {job.company}'s requirements.
+            Living interpretation mapping your projects ({careerTwin.projects.length}) and{" "}
+            {careerTwin.experienceYears}+ YOE to {job.company}'s requirements.
           </p>
         </div>
 
@@ -165,8 +166,13 @@ export function CareerTwinLiteSection({
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Completed on {new Date(careerTwin.interviewPerformance.completedAt).toLocaleDateString()} covering topics:{" "}
-            <strong className="text-foreground">{careerTwin.interviewPerformance.evaluatedTopics.join(", ")}</strong>.
+            Completed on{" "}
+            {new Date(careerTwin.interviewPerformance.completedAt).toLocaleDateString()} covering
+            topics:{" "}
+            <strong className="text-foreground">
+              {careerTwin.interviewPerformance.evaluatedTopics.join(", ")}
+            </strong>
+            .
           </p>
         </div>
       )}
@@ -288,7 +294,10 @@ export function CareerTwinLiteSection({
                 {/* Candidate Answer Box */}
                 {!evaluation ? (
                   <div className="space-y-3">
-                    <label htmlFor="interview-answer-input" className="block font-semibold text-foreground">
+                    <label
+                      htmlFor="interview-answer-input"
+                      className="block font-semibold text-foreground"
+                    >
                       Your Technical Answer:
                     </label>
                     <textarea
@@ -312,7 +321,11 @@ export function CareerTwinLiteSection({
                           disabled={isEvaluating || !candidateAnswer.trim()}
                           className="px-4 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl flex items-center gap-1.5 disabled:opacity-50 shadow-md shadow-violet-500/20 cursor-pointer"
                         >
-                          {isEvaluating ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                          {isEvaluating ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Send size={13} />
+                          )}
                           Evaluate Response
                         </button>
                       </div>
@@ -321,7 +334,9 @@ export function CareerTwinLiteSection({
                 ) : (
                   <div className="space-y-4 pt-2 border-t border-border">
                     <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-border">
-                      <span className="font-bold text-foreground">Interview Coaching Evaluation</span>
+                      <span className="font-bold text-foreground">
+                        Interview Coaching Evaluation
+                      </span>
                       <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30">
                         {evaluation.score}/100 Performance
                       </span>
@@ -331,7 +346,9 @@ export function CareerTwinLiteSection({
 
                     {evaluation.strengths.length > 0 && (
                       <div className="space-y-1">
-                        <p className="font-bold text-emerald-600 dark:text-emerald-400">Response Strengths:</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                          Response Strengths:
+                        </p>
                         {evaluation.strengths.map((st, i) => (
                           <p key={i} className="text-muted-foreground flex items-center gap-1.5">
                             <CheckCircle2 size={12} className="text-emerald-500 shrink-0" /> {st}
@@ -342,7 +359,9 @@ export function CareerTwinLiteSection({
 
                     {evaluation.improvements.length > 0 && (
                       <div className="space-y-1">
-                        <p className="font-bold text-amber-600 dark:text-amber-400">Coaching Improvements:</p>
+                        <p className="font-bold text-amber-600 dark:text-amber-400">
+                          Coaching Improvements:
+                        </p>
                         {evaluation.improvements.map((imp, i) => (
                           <p key={i} className="text-muted-foreground flex items-center gap-1.5">
                             <span className="text-amber-500 font-bold shrink-0">•</span> {imp}
@@ -353,8 +372,12 @@ export function CareerTwinLiteSection({
 
                     {evaluation.suggestedFollowUp && (
                       <div className="p-2.5 rounded-lg bg-secondary/50 border border-border">
-                        <p className="font-bold text-foreground text-[11px] mb-0.5">Potential Recruiter Follow-up:</p>
-                        <p className="text-muted-foreground italic">{evaluation.suggestedFollowUp}</p>
+                        <p className="font-bold text-foreground text-[11px] mb-0.5">
+                          Potential Recruiter Follow-up:
+                        </p>
+                        <p className="text-muted-foreground italic">
+                          {evaluation.suggestedFollowUp}
+                        </p>
                       </div>
                     )}
 
@@ -364,7 +387,9 @@ export function CareerTwinLiteSection({
                         onClick={nextQuestion}
                         className="px-4 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl flex items-center gap-1 cursor-pointer"
                       >
-                        {currentIdx + 1 < questions.length ? "Next Question" : "Complete Simulation"}
+                        {currentIdx + 1 < questions.length
+                          ? "Next Question"
+                          : "Complete Simulation"}
                         <ChevronRight size={13} />
                       </button>
                     </div>

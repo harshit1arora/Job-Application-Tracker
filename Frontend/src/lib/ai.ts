@@ -56,18 +56,28 @@ function generateLocalChatReply(userMessage: string): string {
   const q = userMessage.toLowerCase();
 
   // First-time onboarding / Tour / Getting started
-  if (q.includes("tour") || q.includes("start") || q.includes("how does this work") || q.includes("first time") || q.includes("help me get started") || q.includes("guide")) {
-    return "🚀 **Welcome to JobPilot! Here is how to get the most out of your job search:**\n\n" +
+  if (
+    q.includes("tour") ||
+    q.includes("start") ||
+    q.includes("how does this work") ||
+    q.includes("first time") ||
+    q.includes("help me get started") ||
+    q.includes("guide")
+  ) {
+    return (
+      "🚀 **Welcome to JobPilot! Here is how to get the most out of your job search:**\n\n" +
       "1. **Upload & Parse Résumé** (`/profile`): Upload your PDF or paste text. Our AI auto-extracts your skills, target roles, and experience.\n" +
       "2. **Browse & Auto-Match Jobs** (`/browse`): Filter 50,000+ live jobs indexed across Workday, Greenhouse, Lever, and Ashby with AI match scores.\n" +
       "3. **Track with Kanban** (`/tracker`): Move applications smoothly across *Applied*, *Screening*, *Interview*, *Offer*, and *Archived* columns.\n" +
       "4. **AI Quick Tools**: Ask me to draft tailored cover letters, run mock interview questions, or calculate match scores anytime!\n" +
-      "5. **Voice Navigation**: Click the mic or press `Ctrl+J` and say *'Go to Tracker'*, *'Browse Jobs'*, or *'Edit Résumé'*.";
+      "5. **Voice Navigation**: Click the mic or press `Ctrl+J` and say *'Go to Tracker'*, *'Browse Jobs'*, or *'Edit Résumé'*."
+    );
   }
 
   // Voice navigation help
   if (q.includes("voice") || q.includes("speech") || q.includes("stt") || q.includes("commands")) {
-    return "🎙️ **JobPilot Voice Commands**:\n\n" +
+    return (
+      "🎙️ **JobPilot Voice Commands**:\n\n" +
       "Simply click the **Mic icon** (or press `Ctrl+J`) and speak naturally:\n" +
       "• *'Go to Dashboard'* → Main analytics & activity overview\n" +
       "• *'Browse Jobs'* → Real-time job listings catalog\n" +
@@ -76,64 +86,95 @@ function generateLocalChatReply(userMessage: string): string {
       "• *'Open Inbox'* → Recruiter messages & status updates\n" +
       "• *'Edit Résumé'* → Profile builder, PDF parser & ATS optimization\n" +
       "• *'Open Settings'* → Account & theme preferences\n\n" +
-      "You can also dictate any question directly into the chat!";
+      "You can also dictate any question directly into the chat!"
+    );
   }
 
   // Job Tracker / Kanban explanation
-  if (q.includes("tracker") || q.includes("kanban") || q.includes("stages") || q.includes("pipeline") || q.includes("columns")) {
-    return "📊 **Job Tracker Workflow**:\n\n" +
+  if (
+    q.includes("tracker") ||
+    q.includes("kanban") ||
+    q.includes("stages") ||
+    q.includes("pipeline") ||
+    q.includes("columns")
+  ) {
+    return (
+      "📊 **Job Tracker Workflow**:\n\n" +
       "Your Kanban board organizes opportunities through 5 key stages:\n" +
       "• **Applied**: Jobs submitted via JobPilot or manually logged.\n" +
       "• **Screening**: Recruiter phone screens and initial assessments scheduled.\n" +
       "• **Interview**: Technical rounds, hiring manager chats, and presentations.\n" +
       "• **Offer**: Congratulations! Track compensation and deadlines here.\n" +
       "• **Archived / Rejected**: Keep historical records to learn and refine.\n\n" +
-      "💡 *Tip: Drag and drop cards, or click any card to view detailed notes, add interview reminders, and draft tailored follow-ups!*";
+      "💡 *Tip: Drag and drop cards, or click any card to view detailed notes, add interview reminders, and draft tailored follow-ups!*"
+    );
   }
 
   // Auto-Apply / Quick Fill
-  if (q.includes("auto apply") || q.includes("quick fill") || q.includes("portal") || q.includes("apply")) {
-    return "⚡ **JobPilot Auto-Apply & Quick-Fill**:\n\n" +
+  if (
+    q.includes("auto apply") ||
+    q.includes("quick fill") ||
+    q.includes("portal") ||
+    q.includes("apply")
+  ) {
+    return (
+      "⚡ **JobPilot Auto-Apply & Quick-Fill**:\n\n" +
       "When applying on external company portals (Workday, Greenhouse, Lever, Ashby):\n" +
       "• **1-Click Profile Sync**: Pulls your verified contact details, work history, and portfolio links directly from your `/profile`.\n" +
       "• **Custom Cover Letters**: Generates an 8-10 line tailored letter mapped to the specific job requirements.\n" +
-      "• **Missing Field Detection**: Highlights any required fields (e.g. sponsorship, notice period) before final submission.";
+      "• **Missing Field Detection**: Highlights any required fields (e.g. sponsorship, notice period) before final submission."
+    );
   }
 
   if (q.includes("resume") || q.includes("résumé") || q.includes("cv") || q.includes("ats")) {
-    return "💡 **ATS Résumé Optimization Framework**:\n\n" +
+    return (
+      "💡 **ATS Résumé Optimization Framework**:\n\n" +
       "1. **Impact Metrics**: Use *'Action Verb + Task + Measurable Result'* (e.g., *'Architected real-time WebSocket service reducing latency by 35%'*).\n" +
       "2. **Keyword Mirroring**: Ensure critical skills and tech stack terms from the target job description appear naturally in your bullets.\n" +
-      "3. **Clean Formatting**: Use standard single-column headings (Experience, Skills, Education) so ATS scanners parse every field with 100% fidelity.";
+      "3. **Clean Formatting**: Use standard single-column headings (Experience, Skills, Education) so ATS scanners parse every field with 100% fidelity."
+    );
   }
 
-  if (q.includes("interview") || q.includes("question") || q.includes("prep") || q.includes("mock")) {
-    return "🎯 **Interview Preparation Playbook**:\n\n" +
+  if (
+    q.includes("interview") ||
+    q.includes("question") ||
+    q.includes("prep") ||
+    q.includes("mock")
+  ) {
+    return (
+      "🎯 **Interview Preparation Playbook**:\n\n" +
       "1. **STAR Method**: Structure behavioral answers around **S**ituation, **T**ask, **A**ction, and **R**esult.\n" +
       "2. **Top Behavioral Questions**:\n" +
       "   • *'Tell me about a time you resolved a major production incident under pressure.'*\n" +
       "   • *'Describe a situation where you had a technical disagreement with a team member.'*\n" +
       "3. **System Design & Architecture**: Practice discussing trade-offs (scalability vs latency, SQL vs NoSQL, caching strategies).\n" +
-      "4. **Reverse Interviewing**: Ask the panel: *'What does success look like in the first 90 days for this role?'*";
+      "4. **Reverse Interviewing**: Ask the panel: *'What does success look like in the first 90 days for this role?'*"
+    );
   }
 
   if (q.includes("cover letter") || q.includes("letter") || q.includes("application")) {
-    return "✍️ **High-Converting Cover Letter Formula**:\n\n" +
+    return (
+      "✍️ **High-Converting Cover Letter Formula**:\n\n" +
       "• **Hook (Lines 1-2)**: State the role and why you admire their product or engineering culture.\n" +
       "• **Core Proof (Lines 3-6)**: 2 specific achievements with real numbers that solve their immediate pain points.\n" +
       "• **Call to Action (Lines 7-8)**: Express enthusiasm for an introductory conversation.\n\n" +
-      "💡 *Tip: Head over to any job on `/browse` or use our quick tool below to draft one instantly!*";
+      "💡 *Tip: Head over to any job on `/browse` or use our quick tool below to draft one instantly!*"
+    );
   }
 
   if (q.includes("salary") || q.includes("negotiat") || q.includes("offer") || q.includes("comp")) {
-    return "💼 **Salary Negotiation Strategy**:\n\n" +
+    return (
+      "💼 **Salary Negotiation Strategy**:\n\n" +
       "• **Anchor High**: Benchmark on Levels.fyi and Glassdoor. Provide a range where your target is at the floor.\n" +
       "• **Look at Total Comp**: Consider base salary, equity/RSUs, signing bonus, remote stipend, and 401(k) match.\n" +
-      "• **Competing Leverage**: If you have multiple interviews in flight, mention your timeline to accelerate offer deadlines.";
+      "• **Competing Leverage**: If you have multiple interviews in flight, mention your timeline to accelerate offer deadlines."
+    );
   }
 
-  return "👋 I'm your **JobPilot Career Copilot**! I can help you tailor your résumé for ATS, generate custom cover letters, practice role-specific interview questions, or navigate across JobPilot with voice commands.\n\n" +
-    "How can I assist your job hunt today?";
+  return (
+    "👋 I'm your **JobPilot Career Copilot**! I can help you tailor your résumé for ATS, generate custom cover letters, practice role-specific interview questions, or navigate across JobPilot with voice commands.\n\n" +
+    "How can I assist your job hunt today?"
+  );
 }
 
 /**
@@ -169,7 +210,9 @@ export async function embed(texts: string[]): Promise<number[][]> {
 
 /** Cosine similarity of two equal-length vectors. Returns 0 for a zero vector. */
 export function cosineSim(a: number[], b: number[]): number {
-  let dot = 0, na = 0, nb = 0;
+  let dot = 0,
+    na = 0,
+    nb = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i]! * b[i]!;
     na += a[i]! * a[i]!;
@@ -183,7 +226,8 @@ export function cosineSim(a: number[], b: number[]): number {
  * Maps a raw cosine similarity to a readable 5–99% match score.
  */
 export function scoreFromSimilarity(sim: number): number {
-  const LO = 0.3, HI = 0.85;
+  const LO = 0.3,
+    HI = 0.85;
   const pct = ((sim - LO) / (HI - LO)) * 94 + 5;
   return Math.max(5, Math.min(99, Math.round(pct)));
 }
@@ -191,7 +235,11 @@ export function scoreFromSimilarity(sim: number): number {
 /** Fallback heuristic similarity based on term and keyword overlap */
 function heuristicMatch(resume: string, jobText: string): number {
   const tokenize = (str: string) =>
-    str.toLowerCase().replace(/[^a-z0-9+#]/g, " ").split(/\s+/).filter((w) => w.length > 2);
+    str
+      .toLowerCase()
+      .replace(/[^a-z0-9+#]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2);
 
   const rWords = new Set(tokenize(resume));
   const jWords = tokenize(jobText);
@@ -233,7 +281,7 @@ export function buildTailoredCoverLetter(
   company: string,
   jobTitle: string,
   jobDescription?: string,
-  resumeHighlights?: string
+  resumeHighlights?: string,
 ): string {
   const name = applicantName?.trim() || "Alex Carter";
   const comp = company?.trim() || "your team";
@@ -259,7 +307,7 @@ export async function generateCoverLetter(
   company: string,
   jobTitle: string,
   jobDescription?: string,
-  resumeHighlights?: string
+  resumeHighlights?: string,
 ): Promise<string> {
   const name = applicantName?.trim() || "Alex Carter";
   const comp = company?.trim() || "Company";
@@ -281,11 +329,15 @@ Candidate Background: ${resumeHighlights || "Experienced developer skilled in Ty
 
     for (const model of CHAT_MODELS) {
       try {
-        const data = await orFetch("/chat/completions", {
-          model,
-          messages: prompt,
-          max_tokens: 500,
-        }, 1800);
+        const data = await orFetch(
+          "/chat/completions",
+          {
+            model,
+            messages: prompt,
+            max_tokens: 500,
+          },
+          1800,
+        );
         const content = data?.choices?.[0]?.message?.content;
         if (
           content &&
@@ -321,7 +373,7 @@ export const aiResumeProfileSchema = z.object({
         str
           .split(",")
           .map((s) => s.trim())
-          .filter(Boolean)
+          .filter(Boolean),
       ),
     ])
     .optional()
@@ -366,11 +418,14 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
           ],
           max_tokens: 600,
         },
-        1200
+        1200,
       );
       const content = res?.choices?.[0]?.message?.content;
       if (content) {
-        const jsonStr = content.replace(/```json/g, "").replace(/```/g, "").trim();
+        const jsonStr = content
+          .replace(/```json/g, "")
+          .replace(/```/g, "")
+          .trim();
         const rawParsed = JSON.parse(jsonStr);
         const validation = aiResumeProfileSchema.safeParse(rawParsed);
 
@@ -387,7 +442,10 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
               skills: parsed.skills.length > 0 ? parsed.skills : extractSkills(resumeText),
               education: parsed.education || extractEducation(resumeText),
               linkedin: parsed.linkedin || extractLink(resumeText, "linkedin"),
-              portfolio: parsed.portfolio || extractLink(resumeText, "github") || extractLink(resumeText, "portfolio"),
+              portfolio:
+                parsed.portfolio ||
+                extractLink(resumeText, "github") ||
+                extractLink(resumeText, "portfolio"),
               summary: parsed.summary || resumeText.slice(0, 180),
               rawResumeText: resumeText,
             };
@@ -411,7 +469,11 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
     education: extractEducation(resumeText),
     linkedin: extractLink(resumeText, "linkedin"),
     portfolio: extractLink(resumeText, "github") || extractLink(resumeText, "portfolio"),
-    summary: resumeText.split("\n").filter((l) => l.trim().length > 20)[0]?.slice(0, 200) || "Experienced software professional",
+    summary:
+      resumeText
+        .split("\n")
+        .filter((l) => l.trim().length > 20)[0]
+        ?.slice(0, 200) || "Experienced software professional",
     rawResumeText: resumeText,
   };
 }
@@ -428,13 +490,25 @@ function extractPhone(text: string): string {
 }
 
 function extractName(text: string): string {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   for (const line of lines.slice(0, 5)) {
-    if (line.length > 2 && line.length < 35 && !line.includes("@") && !line.includes("http") && !/resume|curriculum|phone|email/i.test(line)) {
+    if (
+      line.length > 2 &&
+      line.length < 35 &&
+      !line.includes("@") &&
+      !line.includes("http") &&
+      !/resume|curriculum|phone|email/i.test(line)
+    ) {
       const raw = line.replace(/[^a-zA-Z\s.'-]/g, "").trim();
       // If all-caps, convert to Title Case
       if (raw === raw.toUpperCase() && raw.length > 3) {
-        return raw.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+        return raw.replace(
+          /\w\S*/g,
+          (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase(),
+        );
       }
       return raw;
     }
@@ -443,7 +517,9 @@ function extractName(text: string): string {
 }
 
 function extractLocation(text: string): string {
-  const match = text.match(/(?:Location|Address|Based in|City)[:\s]*([A-Za-z\s,]+(?:CA|NY|TX|WA|Bengaluru|London|Remote|San Francisco|New York|Austin)[A-Za-z\s,]*)/i);
+  const match = text.match(
+    /(?:Location|Address|Based in|City)[:\s]*([A-Za-z\s,]+(?:CA|NY|TX|WA|Bengaluru|London|Remote|San Francisco|New York|Austin)[A-Za-z\s,]*)/i,
+  );
   if (match && match[1]) return match[1].trim();
   if (/San Francisco/i.test(text)) return "San Francisco, CA";
   if (/New York/i.test(text)) return "New York, NY";
@@ -464,10 +540,17 @@ function extractExperience(text: string): string {
 
 function extractTargetRole(text: string): string {
   const roles = [
-    "Full Stack Engineer", "Senior Full Stack Engineer", "Frontend Engineer",
-    "Lead Frontend Engineer", "Backend Developer", "Software Engineer",
-    "AI Platform Engineer", "DevOps Engineer", "Machine Learning Engineer",
-    "Product Designer", "Data Engineer"
+    "Full Stack Engineer",
+    "Senior Full Stack Engineer",
+    "Frontend Engineer",
+    "Lead Frontend Engineer",
+    "Backend Developer",
+    "Software Engineer",
+    "AI Platform Engineer",
+    "DevOps Engineer",
+    "Machine Learning Engineer",
+    "Product Designer",
+    "Data Engineer",
   ];
   for (const role of roles) {
     if (new RegExp(role, "i").test(text)) return role;
@@ -477,10 +560,30 @@ function extractTargetRole(text: string): string {
 
 function extractSkills(text: string): string[] {
   const commonSkills = [
-    "TypeScript", "JavaScript", "React", "Next.js", "Node.js", "Python",
-    "C#", ".NET", "ASP.NET Core", "Tailwind CSS", "PostgreSQL", "MongoDB",
-    "Redis", "Docker", "Kubernetes", "AWS", "Firebase", "GraphQL", "REST APIs",
-    "Git", "CI/CD", "Distributed Systems", "Machine Learning", "OpenAI"
+    "TypeScript",
+    "JavaScript",
+    "React",
+    "Next.js",
+    "Node.js",
+    "Python",
+    "C#",
+    ".NET",
+    "ASP.NET Core",
+    "Tailwind CSS",
+    "PostgreSQL",
+    "MongoDB",
+    "Redis",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "Firebase",
+    "GraphQL",
+    "REST APIs",
+    "Git",
+    "CI/CD",
+    "Distributed Systems",
+    "Machine Learning",
+    "OpenAI",
   ];
   const found: string[] = [];
   for (const skill of commonSkills) {
@@ -493,7 +596,9 @@ function extractSkills(text: string): string[] {
 }
 
 function extractEducation(text: string): string {
-  const match = text.match(/(?:Bachelor|Master|B\.S\.|M\.S\.|B\.Tech|Degree)[^\n,.]*(?:in|,)[^\n.]+/i);
+  const match = text.match(
+    /(?:Bachelor|Master|B\.S\.|M\.S\.|B\.Tech|Degree)[^\n,.]*(?:in|,)[^\n.]+/i,
+  );
   if (match) return match[0].trim();
   return "B.S. in Computer Science";
 }
@@ -509,52 +614,61 @@ function extractLink(text: string, domain: string): string {
  */
 export async function suggestJobsForResume(
   profile: ParsedResumeProfile,
-  catalog: SuggestedJob[]
+  catalog: SuggestedJob[],
 ): Promise<SuggestedJob[]> {
   const candidateSkills = new Set(profile.skills.map((s) => s.toLowerCase()));
-  const candidateText = `${profile.targetRole} ${profile.skills.join(" ")} ${profile.summary || ""}`.toLowerCase();
+  const candidateText =
+    `${profile.targetRole} ${profile.skills.join(" ")} ${profile.summary || ""}`.toLowerCase();
 
-  return catalog.map((job) => {
-    let score = 60;
-    const reasons: string[] = [];
+  return catalog
+    .map((job) => {
+      let score = 60;
+      const reasons: string[] = [];
 
-    // Role similarity
-    if (candidateText.includes(job.role.toLowerCase()) || job.role.toLowerCase().includes(profile.targetRole.toLowerCase())) {
-      score += 18;
-      reasons.push(`Direct alignment with your target role (${profile.targetRole})`);
-    }
-
-    // Skills overlap
-    let matchedSkillsCount = 0;
-    for (const reqSkill of job.requiredSkills) {
-      if (candidateSkills.has(reqSkill.toLowerCase()) || candidateText.includes(reqSkill.toLowerCase())) {
-        matchedSkillsCount++;
+      // Role similarity
+      if (
+        candidateText.includes(job.role.toLowerCase()) ||
+        job.role.toLowerCase().includes(profile.targetRole.toLowerCase())
+      ) {
+        score += 18;
+        reasons.push(`Direct alignment with your target role (${profile.targetRole})`);
       }
-    }
 
-    const skillRatio = matchedSkillsCount / Math.max(1, job.requiredSkills.length);
-    score += Math.round(skillRatio * 20);
+      // Skills overlap
+      let matchedSkillsCount = 0;
+      for (const reqSkill of job.requiredSkills) {
+        if (
+          candidateSkills.has(reqSkill.toLowerCase()) ||
+          candidateText.includes(reqSkill.toLowerCase())
+        ) {
+          matchedSkillsCount++;
+        }
+      }
 
-    if (matchedSkillsCount > 0) {
-      reasons.push(`${matchedSkillsCount}/${job.requiredSkills.length} required skills matched (${job.requiredSkills.slice(0, 3).join(", ")})`);
-    }
+      const skillRatio = matchedSkillsCount / Math.max(1, job.requiredSkills.length);
+      score += Math.round(skillRatio * 20);
 
-    // Location compatibility
-    if (
-      job.location.toLowerCase().includes("remote") ||
-      (profile.city && job.location.toLowerCase().includes(profile.city.toLowerCase()))
-    ) {
-      score += 5;
-      reasons.push(`Location compatible (${job.location})`);
-    }
+      if (matchedSkillsCount > 0) {
+        reasons.push(
+          `${matchedSkillsCount}/${job.requiredSkills.length} required skills matched (${job.requiredSkills.slice(0, 3).join(", ")})`,
+        );
+      }
 
-    const finalScore = Math.min(99, Math.max(45, score));
-    return {
-      ...job,
-      matchScore: finalScore,
-      matchReasons: reasons.length > 0 ? reasons : ["Core engineering competencies match"],
-    };
-  }).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+      // Location compatibility
+      if (
+        job.location.toLowerCase().includes("remote") ||
+        (profile.city && job.location.toLowerCase().includes(profile.city.toLowerCase()))
+      ) {
+        score += 5;
+        reasons.push(`Location compatible (${job.location})`);
+      }
+
+      const finalScore = Math.min(99, Math.max(45, score));
+      return {
+        ...job,
+        matchScore: finalScore,
+        matchReasons: reasons.length > 0 ? reasons : ["Core engineering competencies match"],
+      };
+    })
+    .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 }
-
-

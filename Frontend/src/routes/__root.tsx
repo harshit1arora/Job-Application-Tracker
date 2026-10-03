@@ -82,7 +82,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "JobPilot watches 50,000+ career pages across Workday, Greenhouse, Lever, Ashby, and submits tailored applications automatically.",
       },
       { name: "author", content: "JobPilot" },
-      { property: "og:title", content: "JobPilot — The AI agent that applies to every job that fits you" },
+      {
+        property: "og:title",
+        content: "JobPilot — The AI agent that applies to every job that fits you",
+      },
       {
         property: "og:description",
         content:

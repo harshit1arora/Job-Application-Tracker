@@ -22,7 +22,12 @@ const PLANS = [
     price: 69,
     tagline: "For an active, full-time search.",
     apps: "400 applications per 30-day cycle",
-    features: ["Everything in Starter", "iMessage + WhatsApp agent", "Cover letters", "Priority queue"],
+    features: [
+      "Everything in Starter",
+      "iMessage + WhatsApp agent",
+      "Cover letters",
+      "Priority queue",
+    ],
     popular: true,
   },
   {
@@ -30,7 +35,12 @@ const PLANS = [
     price: 149,
     tagline: "Maximum coverage, every ATS.",
     apps: "1,200 applications per 30-day cycle",
-    features: ["Everything in Pro", "MCP + CLI access", "Recruiter inbox routing", "Founder support"],
+    features: [
+      "Everything in Pro",
+      "MCP + CLI access",
+      "Recruiter inbox routing",
+      "Founder support",
+    ],
     popular: false,
   },
 ];

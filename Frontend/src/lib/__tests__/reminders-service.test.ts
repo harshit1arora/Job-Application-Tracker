@@ -18,13 +18,13 @@ const VALID_INPUT = {
 describe("createReminder — validation", () => {
   it("throws VALIDATION_ERROR when reminderDate is empty", async () => {
     await expect(
-      createReminder("user-1", { ...VALID_INPUT, reminderDate: "" })
+      createReminder("user-1", { ...VALID_INPUT, reminderDate: "" }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
   it("throws VALIDATION_ERROR when type is invalid", async () => {
     await expect(
-      createReminder("user-1", { ...VALID_INPUT, type: "party" as any })
+      createReminder("user-1", { ...VALID_INPUT, type: "party" as any }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 });
@@ -32,8 +32,16 @@ describe("createReminder — validation", () => {
 describe("reminders-service — CRUD workflow", () => {
   it("creates, marks complete, updates and deletes a reminder", async () => {
     const { createApplicationApi } = await import("../api-client");
-    const app = await createApplicationApi("test-user-rems", { company: "C", jobTitle: "T", applicationSource: "LinkedIn", status: "Applied" });
-    const reminder = await createReminder("test-user-rems", { ...VALID_INPUT, applicationId: app.id });
+    const app = await createApplicationApi("test-user-rems", {
+      company: "C",
+      jobTitle: "T",
+      applicationSource: "LinkedIn",
+      status: "Applied",
+    });
+    const reminder = await createReminder("test-user-rems", {
+      ...VALID_INPUT,
+      applicationId: app.id,
+    });
     expect(reminder.id).toBeDefined();
     expect(reminder.isCompleted).toBe(false);
 

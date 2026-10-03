@@ -20,11 +20,7 @@ interface SuggestedJobsSectionProps {
   onApplyClick: (job: SuggestedJob) => void;
 }
 
-export function SuggestedJobsSection({
-  jobs,
-  profile,
-  onApplyClick,
-}: SuggestedJobsSectionProps) {
+export function SuggestedJobsSection({ jobs, profile, onApplyClick }: SuggestedJobsSectionProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [platformFilter, setPlatformFilter] = useState<ApplicationSource | "All">("All");
 
@@ -54,14 +50,18 @@ export function SuggestedJobsSection({
             Recommended Roles for Your Profile
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Ranked based on your parsed résumé skills, experience, and target title ({profile.targetRole || "Software Engineer"}).
+            Ranked based on your parsed résumé skills, experience, and target title (
+            {profile.targetRole || "Software Engineer"}).
           </p>
         </div>
 
         {/* Filter controls */}
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
             <input
               type="text"
               placeholder="Search role, company or skill..."
@@ -111,7 +111,9 @@ export function SuggestedJobsSection({
                     <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-[11px] font-medium bg-background text-foreground/80">
                       {job.source}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">Posted {job.postedDate || "recently"}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Posted {job.postedDate || "recently"}
+                    </span>
                   </div>
 
                   <h3 className="text-sm font-semibold text-foreground">{job.role}</h3>
@@ -124,7 +126,9 @@ export function SuggestedJobsSection({
                     <span>•</span>
                     <span className="font-medium text-foreground/90">{job.salaryRange}</span>
                     <span>•</span>
-                    <span className="text-foreground/70">{job.experienceLevel || "Mid-Senior"}</span>
+                    <span className="text-foreground/70">
+                      {job.experienceLevel || "Mid-Senior"}
+                    </span>
                   </div>
 
                   <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">

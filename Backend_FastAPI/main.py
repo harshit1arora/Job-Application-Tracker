@@ -1,7 +1,7 @@
 import os
 import uuid
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,13 +10,26 @@ from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./jobtracker.db"
+from auth import get_current_user_id
+
+DATA_DIR = os.environ.get("DATA_DIR", "./data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(DATA_DIR, 'jobtracker.db')}")
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+MAX_FILE_SIZE = 5 * 1024 * 1024
+ALLOWED_MIME_TYPES = {
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "text/plain": ".txt"
+}
 
 # ---------------------------------------------------------
 # SQLAlchemy Models
@@ -79,9 +92,11 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="JobTracker FastAPI")
 
+CORS_ORIGINS = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:4173").split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=CORS_ORIGINS, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,18 +108,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-DEVELOPMENT_MODE = os.environ.get("DEMO_MODE", "true").lower() == "true"
-
-def get_user_id(x_user_id: str = Header(None, alias="X-User-Id")):
-    if not DEVELOPMENT_MODE:
-        # In a real production environment, this would verify a Firebase ID Token 
-        # from an Authorization header using the firebase-admin SDK.
-        raise HTTPException(status_code=401, detail="X-User-Id raw authentication is only allowed in DEVELOPMENT_MODE")
-        
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="X-User-Id header missing")
-    return x_user_id
 
 # ---------------------------------------------------------
 # Pydantic Schemas
@@ -213,7 +216,7 @@ def get_applications(
     status: Optional[str] = None,
     applicationSource: Optional[str] = None,
     search: Optional[str] = None,
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     query = db.query(ApplicationDB).filter(ApplicationDB.userId == user_id)
@@ -231,15 +234,15 @@ def get_applications(
     return apps
 
 @app.get("/api/applications/{app_id}", response_model=ApplicationOut)
-def get_application(app_id: str, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def get_application(app_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     app_doc = db.query(ApplicationDB).filter(ApplicationDB.id == app_id, ApplicationDB.userId == user_id).first()
     if not app_doc:
         raise HTTPException(status_code=404, detail="Application not found")
     return app_doc
 
 @app.post("/api/applications", response_model=ApplicationOut, status_code=201)
-def create_application(app_in: ApplicationCreate, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
-    now = datetime.utcnow().isoformat() + "Z"
+def create_application(app_in: ApplicationCreate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     new_app = ApplicationDB(
         id=f"app-{uuid.uuid4().hex[:10]}",
         userId=user_id,
@@ -253,7 +256,7 @@ def create_application(app_in: ApplicationCreate, user_id: str = Depends(get_use
     return new_app
 
 @app.patch("/api/applications/{app_id}", response_model=ApplicationOut)
-def update_application(app_id: str, app_in: ApplicationUpdate, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def update_application(app_id: str, app_in: ApplicationUpdate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     app_doc = db.query(ApplicationDB).filter(ApplicationDB.id == app_id, ApplicationDB.userId == user_id).first()
     if not app_doc:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -262,13 +265,13 @@ def update_application(app_id: str, app_in: ApplicationUpdate, user_id: str = De
     for key, value in update_data.items():
         setattr(app_doc, key, value)
     
-    app_doc.updatedAt = datetime.utcnow().isoformat() + "Z"
+    app_doc.updatedAt = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     db.commit()
     db.refresh(app_doc)
     return app_doc
 
 @app.delete("/api/applications/{app_id}", status_code=204)
-def delete_application(app_id: str, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def delete_application(app_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     app_doc = db.query(ApplicationDB).filter(ApplicationDB.id == app_id, ApplicationDB.userId == user_id).first()
     if not app_doc:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -290,7 +293,7 @@ def delete_application(app_id: str, user_id: str = Depends(get_user_id), db: Ses
 # ---------------------------------------------------------
 
 @app.get("/api/documents", response_model=List[DocumentOut])
-def get_documents(applicationId: Optional[str] = None, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def get_documents(applicationId: Optional[str] = None, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     query = db.query(DocumentDB).filter(DocumentDB.userId == user_id)
     if applicationId:
         query = query.filter(DocumentDB.applicationId == applicationId)
@@ -301,9 +304,19 @@ def upload_document(
     file: UploadFile = File(...),
     applicationId: Optional[str] = Form(None),
     displayName: Optional[str] = Form(None),
-    user_id: str = Depends(get_user_id),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=422, detail="Unsupported file type")
+        
+    file.file.seek(0, os.SEEK_END)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large (max 5MB)")
+
     if applicationId:
         app_doc = db.query(ApplicationDB).filter(ApplicationDB.id == applicationId, ApplicationDB.userId == user_id).first()
         if not app_doc:
@@ -312,16 +325,19 @@ def upload_document(
     file_id = uuid.uuid4().hex
     safe_filename = "".join(c for c in (file.filename or "") if c.isalnum() or c in " ._-")
     if not safe_filename:
-        safe_filename = "document.file"
+        safe_filename = "document" + ALLOWED_MIME_TYPES.get(file.content_type, ".file")
         
     storage_path = os.path.join(UPLOAD_DIR, f"{file_id}_{safe_filename}")
     
-    with open(storage_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    file_size = os.path.getsize(storage_path)
+    try:
+        with open(storage_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        if os.path.exists(storage_path):
+            os.remove(storage_path)
+        raise HTTPException(status_code=500, detail="Failed to save file")
     
-    now = datetime.utcnow().isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     new_doc = DocumentDB(
         id=f"doc-{file_id[:10]}",
         userId=user_id,
@@ -341,10 +357,10 @@ def upload_document(
 @app.get("/api/documents/{doc_id}/download")
 def download_document(
     doc_id: str,
-    userId: str = Query(..., alias="userId"), # Need this from query string because it's a direct browser link
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    doc = db.query(DocumentDB).filter(DocumentDB.id == doc_id, DocumentDB.userId == userId).first()
+    doc = db.query(DocumentDB).filter(DocumentDB.id == doc_id, DocumentDB.userId == user_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
@@ -354,7 +370,7 @@ def download_document(
     return FileResponse(doc.storageRef, media_type=doc.fileType, filename=doc.fileName)
 
 @app.delete("/api/documents/{doc_id}", status_code=204)
-def delete_document(doc_id: str, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def delete_document(doc_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     doc = db.query(DocumentDB).filter(DocumentDB.id == doc_id, DocumentDB.userId == user_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -374,7 +390,7 @@ def delete_document(doc_id: str, user_id: str = Depends(get_user_id), db: Sessio
 # ---------------------------------------------------------
 
 @app.get("/api/reminders", response_model=List[ReminderOut])
-def get_reminders(applicationId: Optional[str] = None, isCompleted: Optional[bool] = None, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def get_reminders(applicationId: Optional[str] = None, isCompleted: Optional[bool] = None, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     query = db.query(ReminderDB).filter(ReminderDB.userId == user_id)
     if applicationId:
         query = query.filter(ReminderDB.applicationId == applicationId)
@@ -385,12 +401,12 @@ def get_reminders(applicationId: Optional[str] = None, isCompleted: Optional[boo
     return rems
 
 @app.post("/api/reminders", response_model=ReminderOut, status_code=201)
-def create_reminder(rem_in: ReminderCreate, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def create_reminder(rem_in: ReminderCreate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     app_doc = db.query(ApplicationDB).filter(ApplicationDB.id == rem_in.applicationId, ApplicationDB.userId == user_id).first()
     if not app_doc:
         raise HTTPException(status_code=404, detail="Application not found or access denied")
         
-    now = datetime.utcnow().isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     new_rem = ReminderDB(
         id=f"rem-{uuid.uuid4().hex[:10]}",
         userId=user_id,
@@ -404,7 +420,7 @@ def create_reminder(rem_in: ReminderCreate, user_id: str = Depends(get_user_id),
     return new_rem
 
 @app.patch("/api/reminders/{rem_id}", response_model=ReminderOut)
-def update_reminder(rem_id: str, rem_in: ReminderUpdate, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def update_reminder(rem_id: str, rem_in: ReminderUpdate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     rem = db.query(ReminderDB).filter(ReminderDB.id == rem_id, ReminderDB.userId == user_id).first()
     if not rem:
         raise HTTPException(status_code=404, detail="Reminder not found")
@@ -418,7 +434,7 @@ def update_reminder(rem_id: str, rem_in: ReminderUpdate, user_id: str = Depends(
     return rem
 
 @app.delete("/api/reminders/{rem_id}", status_code=204)
-def delete_reminder(rem_id: str, user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def delete_reminder(rem_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     rem = db.query(ReminderDB).filter(ReminderDB.id == rem_id, ReminderDB.userId == user_id).first()
     if not rem:
         raise HTTPException(status_code=404, detail="Reminder not found")
@@ -431,9 +447,9 @@ def delete_reminder(rem_id: str, user_id: str = Depends(get_user_id), db: Sessio
 # ---------------------------------------------------------
 
 @app.get("/api/dashboard/stats", response_model=DashboardStatsOut)
-def get_dashboard_stats(user_id: str = Depends(get_user_id), db: Session = Depends(get_db)):
+def get_dashboard_stats(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     apps = db.query(ApplicationDB).filter(ApplicationDB.userId == user_id).all()
-    today = datetime.utcnow().isoformat()[:10]
+    today = datetime.now(timezone.utc).isoformat()[:10]
     
     byStatus = {
         "saved": len([a for a in apps if a.status == "Saved"]),

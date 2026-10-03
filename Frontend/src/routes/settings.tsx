@@ -45,10 +45,14 @@ function SettingsPage() {
     setIsExporting(true);
     try {
       const apps = await getApplications(user.id);
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(apps, null, 2));
+      const dataStr =
+        "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(apps, null, 2));
       const downloadAnchor = document.createElement("a");
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `jobpilot-applications-${new Date().toISOString().slice(0, 10)}.json`);
+      downloadAnchor.setAttribute(
+        "download",
+        `jobpilot-applications-${new Date().toISOString().slice(0, 10)}.json`,
+      );
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -114,7 +118,9 @@ function SettingsPage() {
                   onChange={(e) => setAiTone(e.target.value)}
                   className="w-full rounded-xl border border-input bg-background p-2 text-xs text-foreground focus:border-primary focus:outline-none"
                 >
-                  <option value="Professional & Technical">Professional & Technical (Recommended)</option>
+                  <option value="Professional & Technical">
+                    Professional & Technical (Recommended)
+                  </option>
                   <option value="Conversational & Direct">Conversational & Direct</option>
                   <option value="High-Impact & Executive">High-Impact & Executive</option>
                 </select>
@@ -124,7 +130,9 @@ function SettingsPage() {
             <div className="pt-2 flex items-center justify-between">
               <div>
                 <p className="font-semibold text-foreground">Remote-First Opportunities</p>
-                <p className="text-[11px] text-muted-foreground">Prioritize 100% remote jobs in match engine</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Prioritize 100% remote jobs in match engine
+                </p>
               </div>
               <input
                 type="checkbox"
@@ -145,7 +153,9 @@ function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-foreground">Interview Calendar Reminders</p>
-                  <p className="text-[11px] text-muted-foreground">Receive browser and email notifications before scheduled rounds</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Receive browser and email notifications before scheduled rounds
+                  </p>
                 </div>
                 <input
                   type="checkbox"
@@ -158,7 +168,9 @@ function SettingsPage() {
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
                 <div>
                   <p className="font-semibold text-foreground">Daily Recruiter Digest</p>
-                  <p className="text-[11px] text-muted-foreground">Summary of high-match job postings matching your résumé</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Summary of high-match job postings matching your résumé
+                  </p>
                 </div>
                 <input
                   type="checkbox"
@@ -179,7 +191,9 @@ function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-foreground">Export All Tracked Applications</p>
-                <p className="text-[11px] text-muted-foreground">Download your complete application dossier, notes, and dates as JSON</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Download your complete application dossier, notes, and dates as JSON
+                </p>
               </div>
               <button
                 type="button"

@@ -1,10 +1,6 @@
 export function MatchBadge({ score, size = 40 }: { score: number; size?: number }) {
   const tone =
-    score >= 70
-      ? "text-emerald-600"
-      : score >= 60
-        ? "text-amber-600"
-        : "text-muted-foreground";
+    score >= 70 ? "text-emerald-600" : score >= 60 ? "text-amber-600" : "text-muted-foreground";
   const r = (size - 6) / 2;
   const c = 2 * Math.PI * r;
 

@@ -3,7 +3,12 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { getApplications } from "@/lib/applications-service";
-import { getReminders, createReminder, deleteReminder, markReminderComplete } from "@/lib/reminders-service";
+import {
+  getReminders,
+  createReminder,
+  deleteReminder,
+  markReminderComplete,
+} from "@/lib/reminders-service";
 import type { ApplicationDocument, ReminderDocument, ReminderType } from "@/lib/types";
 import { toast } from "sonner";
 import {
@@ -74,10 +79,7 @@ function TrackerPage() {
 
   const loadData = async (userId: string) => {
     try {
-      const [apps, rems] = await Promise.all([
-        getApplications(userId),
-        getReminders(userId),
-      ]);
+      const [apps, rems] = await Promise.all([getApplications(userId), getReminders(userId)]);
       setApplications(apps);
       setReminders(rems);
       if (apps.length > 0 && !formAppId) {
@@ -109,7 +111,9 @@ function TrackerPage() {
 
     reminders.forEach((r) => {
       const app = r.applicationId ? appMap.get(r.applicationId) : undefined;
-      const parsedDate = r.reminderDate.includes("T") ? parseISO(r.reminderDate) : new Date(r.reminderDate);
+      const parsedDate = r.reminderDate.includes("T")
+        ? parseISO(r.reminderDate)
+        : new Date(r.reminderDate);
       list.push({
         id: r.id,
         dateStr: format(parsedDate, "yyyy-MM-dd"),
@@ -134,7 +138,10 @@ function TrackerPage() {
             dateStr: a.followUpDate,
             date: parsedDate,
             type,
-            title: a.status === "Interview" ? `${a.company} — Scheduled Interview` : `${a.company} — Process Follow-up`,
+            title:
+              a.status === "Interview"
+                ? `${a.company} — Scheduled Interview`
+                : `${a.company} — Process Follow-up`,
             company: a.company,
             applicationId: a.id,
             isCompleted: false,
@@ -243,7 +250,7 @@ function TrackerPage() {
     try {
       await markReminderComplete(user.id, reminderId);
       setReminders((prev) =>
-        prev.map((r) => (r.id === reminderId ? { ...r, isCompleted: true } : r))
+        prev.map((r) => (r.id === reminderId ? { ...r, isCompleted: true } : r)),
       );
       toast.success("Marked as completed!");
     } catch {
@@ -266,7 +273,8 @@ function TrackerPage() {
               Interview & Process Timeline
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Keep track of scheduled interviews (🟢), follow-ups (🔵), assessment deadlines (🟠), and offers (🟣).
+              Keep track of scheduled interviews (🟢), follow-ups (🔵), assessment deadlines (🟠),
+              and offers (🟣).
             </p>
           </div>
 
@@ -384,10 +392,10 @@ function TrackerPage() {
                       isSelected
                         ? "border-primary bg-primary/10 shadow-xs"
                         : today
-                        ? "border-primary/50 bg-secondary/50"
-                        : isCurrentMonth
-                        ? "border-border/70 bg-background/50 hover:border-primary/40 hover:bg-secondary/30"
-                        : "border-border/30 opacity-40 bg-secondary/10"
+                          ? "border-primary/50 bg-secondary/50"
+                          : isCurrentMonth
+                            ? "border-border/70 bg-background/50 hover:border-primary/40 hover:bg-secondary/30"
+                            : "border-border/30 opacity-40 bg-secondary/10"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -396,8 +404,8 @@ function TrackerPage() {
                           today
                             ? "h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px]"
                             : isSelected
-                            ? "text-primary"
-                            : "text-foreground/90"
+                              ? "text-primary"
+                              : "text-foreground/90"
                         }`}
                       >
                         {format(day, "d")}
@@ -457,7 +465,9 @@ function TrackerPage() {
               <div className="py-12 text-center text-muted-foreground text-xs my-auto">
                 <CalendarIcon size={28} className="mx-auto mb-2 text-muted-foreground/40" />
                 <p className="font-semibold text-foreground">No events on this day</p>
-                <p className="text-[11px] mt-0.5">Click 'Schedule Event' to add an interview or deadline.</p>
+                <p className="text-[11px] mt-0.5">
+                  Click 'Schedule Event' to add an interview or deadline.
+                </p>
               </div>
             ) : (
               <div className="space-y-3 overflow-y-auto max-h-[350px] pr-1">
@@ -505,9 +515,7 @@ function TrackerPage() {
                         <h4 className="text-xs font-bold text-foreground flex items-center gap-1">
                           <Building2 size={12} className="text-muted-foreground" /> {ev.company}
                         </h4>
-                        <p className="text-xs text-foreground/90 font-medium mt-0.5">
-                          {ev.title}
-                        </p>
+                        <p className="text-xs text-foreground/90 font-medium mt-0.5">{ev.title}</p>
                       </div>
 
                       {ev.applicationId && (
@@ -532,14 +540,19 @@ function TrackerPage() {
                   <h4 className="text-xs font-bold text-foreground flex items-center gap-1">
                     <Sparkles size={12} className="text-primary" /> Schedule Event
                   </h4>
-                  <button onClick={() => setShowAddForm(false)} className="p-1 text-muted-foreground">
+                  <button
+                    onClick={() => setShowAddForm(false)}
+                    className="p-1 text-muted-foreground"
+                  >
                     <X size={13} />
                   </button>
                 </div>
 
                 <form onSubmit={handleCreateReminder} className="space-y-2 text-xs">
                   <div>
-                    <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Company</label>
+                    <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
+                      Company
+                    </label>
                     <select
                       value={formAppId}
                       onChange={(e) => setFormAppId(e.target.value)}
@@ -547,14 +560,18 @@ function TrackerPage() {
                       className="w-full rounded-lg border border-input bg-background p-1.5 text-xs text-foreground focus:outline-none"
                     >
                       {applications.map((a) => (
-                        <option key={a.id} value={a.id}>{a.company} — {a.jobTitle}</option>
+                        <option key={a.id} value={a.id}>
+                          {a.company} — {a.jobTitle}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Event Type</label>
+                      <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
+                        Event Type
+                      </label>
                       <select
                         value={formType}
                         onChange={(e) => setFormType(e.target.value as ReminderType)}
@@ -568,7 +585,9 @@ function TrackerPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Date</label>
+                      <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
+                        Date
+                      </label>
                       <input
                         type="date"
                         required
@@ -580,7 +599,9 @@ function TrackerPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">Notes</label>
+                    <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
+                      Notes
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. Technical System Design screening on Zoom"

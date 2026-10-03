@@ -3,13 +3,27 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { Logo } from "@/components/landing/Logo";
-import { ArrowLeft, CheckCircle2, Lock, Mail, User, Briefcase, Eye, EyeOff, Sparkles, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Lock,
+  Mail,
+  User,
+  Briefcase,
+  Eye,
+  EyeOff,
+  Sparkles,
+  ShieldCheck,
+} from "lucide-react";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
       { title: "Sign Up — Create your JobPilot Account" },
-      { name: "description", content: "Create an account and let JobPilot automate your job applications." },
+      {
+        name: "description",
+        content: "Create an account and let JobPilot automate your job applications.",
+      },
     ],
   }),
   component: SignUpPage,
@@ -113,7 +127,10 @@ function SignUpPage() {
       {/* Top Bar */}
       <header className="border-b border-border/50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
             <ArrowLeft size={16} />
             Back to home
           </Link>
@@ -203,7 +220,10 @@ function SignUpPage() {
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                  <User
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={16}
+                  />
                   <input
                     type="text"
                     required
@@ -220,7 +240,10 @@ function SignUpPage() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                  <Mail
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={16}
+                  />
                   <input
                     type="email"
                     required
@@ -237,7 +260,10 @@ function SignUpPage() {
                   Target Job Role
                 </label>
                 <div className="relative">
-                  <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                  <Briefcase
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={16}
+                  />
                   <input
                     type="text"
                     value={targetRole}
@@ -271,7 +297,10 @@ function SignUpPage() {
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                    <Lock
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      size={16}
+                    />
                     <input
                       type={showPassword ? "text" : "password"}
                       required
@@ -295,7 +324,10 @@ function SignUpPage() {
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                    <Lock
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      size={16}
+                    />
                     <input
                       type={showPassword ? "text" : "password"}
                       required

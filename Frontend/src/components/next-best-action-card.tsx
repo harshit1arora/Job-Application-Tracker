@@ -136,7 +136,8 @@ export function NextBestActionCard({
 
               {action.estimatedImpact !== undefined && action.estimatedImpact > 0 && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  <TrendingUp size={12} /> Projected Impact: ~+{action.estimatedImpact} readiness pts
+                  <TrendingUp size={12} /> Projected Impact: ~+{action.estimatedImpact} readiness
+                  pts
                 </span>
               )}
             </div>
@@ -221,12 +222,17 @@ export function NextBestActionCard({
 
             <div className="space-y-3 text-xs">
               <div className="p-3 rounded-xl bg-secondary/40 border border-border">
-                <span className="font-semibold text-foreground block mb-1">Recommended Objective:</span>
+                <span className="font-semibold text-foreground block mb-1">
+                  Recommended Objective:
+                </span>
                 <p className="text-muted-foreground leading-relaxed">{action.suggestedTask}</p>
               </div>
 
               <div>
-                <label htmlFor="micro-task-note" className="block font-semibold text-foreground mb-1">
+                <label
+                  htmlFor="micro-task-note"
+                  className="block font-semibold text-foreground mb-1"
+                >
                   Practical Notes or Link (Optional):
                 </label>
                 <textarea

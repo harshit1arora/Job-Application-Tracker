@@ -21,7 +21,9 @@ export function Hero() {
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <Reveal delay={120}>
           <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            JobPilot parses your résumé, matches top opportunities with AI compatibility scores, auto-fills application details with persistent memory across applications, and tracks your entire interview pipeline in one unified dashboard.
+            JobPilot parses your résumé, matches top opportunities with AI compatibility scores,
+            auto-fills application details with persistent memory across applications, and tracks
+            your entire interview pipeline in one unified dashboard.
           </p>
         </Reveal>
 
@@ -43,7 +45,6 @@ export function Hero() {
           <p className="mt-3 text-sm text-muted-foreground">Free to start. No card required.</p>
         </Reveal>
       </div>
-
 
       <Reveal delay={260}>
         <div className="mt-14">

@@ -6,7 +6,22 @@ import type { ApplicationDocument, ApplicationStatus } from "@/lib/types";
 import { APPLICATION_STATUSES } from "@/lib/types";
 import { toast } from "sonner";
 import { AppError } from "@/lib/types";
-import { ArrowLeft, Loader2, Save, Trash2, Building2, Briefcase, Calendar, MapPin, DollarSign, ClipboardCopy, Sparkles, Copy, X, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Save,
+  Trash2,
+  Building2,
+  Briefcase,
+  Calendar,
+  MapPin,
+  DollarSign,
+  ClipboardCopy,
+  Sparkles,
+  Copy,
+  X,
+  ExternalLink,
+} from "lucide-react";
 import { DocumentsSection } from "@/components/documents-section";
 import { getProfile, autofillText, type UserProfile } from "@/lib/profile";
 import { generateCoverLetter } from "@/lib/ai";
@@ -38,7 +53,7 @@ function ApplicationDetailsPage() {
     const matchingCatalogJob = CURATED_JOBS_CATALOG.find(
       (j) =>
         j.company.toLowerCase() === appDoc.company.toLowerCase() ||
-        j.role.toLowerCase() === appDoc.jobTitle.toLowerCase()
+        j.role.toLowerCase() === appDoc.jobTitle.toLowerCase(),
     );
     const requiredSkills = matchingCatalogJob?.requiredSkills || [
       "TypeScript",
@@ -60,7 +75,7 @@ function ApplicationDetailsPage() {
       },
       appDoc,
       [],
-      user?.id
+      user?.id,
     );
     setIntelligence(intel);
   };
@@ -146,7 +161,9 @@ function ApplicationDetailsPage() {
 
   const handleDelete = async () => {
     if (!user) return;
-    const confirmDelete = window.confirm("Are you sure you want to delete this application? This action cannot be undone.");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this application? This action cannot be undone.",
+    );
     if (!confirmDelete) return;
 
     setIsDeleting(true);
@@ -172,7 +189,7 @@ function ApplicationDetailsPage() {
         application.company,
         application.jobTitle,
         application.jobDescription,
-        profile.resumeText
+        profile.resumeText,
       );
       setAiLetterText(letter);
       toast.success("AI Cover Letter generated!");
@@ -286,7 +303,9 @@ function ApplicationDetailsPage() {
                 </span>
                 <div>
                   <h3 className="text-base font-bold text-foreground">AI Tailored Cover Letter</h3>
-                  <p className="text-xs text-muted-foreground">{application.jobTitle} at {application.company}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {application.jobTitle} at {application.company}
+                  </p>
                 </div>
               </div>
               <button
@@ -320,7 +339,9 @@ function ApplicationDetailsPage() {
                     notesRef.current.value = notesRef.current.value
                       ? `${notesRef.current.value}\n\n--- AI Cover Letter ---\n${aiLetterText}`
                       : aiLetterText;
-                    toast.success("Cover letter added to Application Notes! Click 'Save Changes' to persist.");
+                    toast.success(
+                      "Cover letter added to Application Notes! Click 'Save Changes' to persist.",
+                    );
                     setShowAiModal(false);
                   }
                 }}
@@ -357,7 +378,8 @@ function ApplicationDetailsPage() {
               {application.jobTitle}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Applied via {application.applicationSource} on {new Date(application.createdAt).toLocaleDateString()}
+              Applied via {application.applicationSource} on{" "}
+              {new Date(application.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -402,7 +424,6 @@ function ApplicationDetailsPage() {
 
         {/* Form Section */}
         <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
           {/* Main Info */}
           <div className="md:col-span-2 space-y-6">
             <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -435,16 +456,19 @@ function ApplicationDetailsPage() {
           {/* Sidebar Info */}
           <div className="space-y-6">
             <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col gap-5">
-              
               <div>
-                <label className="block text-xs font-bold tracking-wider uppercase text-muted-foreground mb-2">Status</label>
+                <label className="block text-xs font-bold tracking-wider uppercase text-muted-foreground mb-2">
+                  Status
+                </label>
                 <select
                   ref={statusRef}
                   defaultValue={application.status}
                   className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm font-semibold focus:border-primary focus:outline-none"
                 >
-                  {APPLICATION_STATUSES.map(status => (
-                    <option key={status} value={status}>{status}</option>
+                  {APPLICATION_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -514,7 +538,6 @@ function ApplicationDetailsPage() {
 
             {/* Documents Section */}
             <DocumentsSection applicationId={applicationId} />
-            
           </div>
         </form>
       </main>

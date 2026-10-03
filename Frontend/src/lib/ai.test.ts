@@ -31,10 +31,12 @@ describe("Tailored Cover Letter Generator", () => {
       "Stripe",
       "Senior Full Stack Engineer",
       "Building global payments infrastructure and high-throughput APIs",
-      "TypeScript, React, Node.js, C#"
+      "TypeScript, React, Node.js, C#",
     );
 
-    expect(letter).toContain("Hi, I'm Alex Carter applying for the Senior Full Stack Engineer position at Stripe.");
+    expect(letter).toContain(
+      "Hi, I'm Alex Carter applying for the Senior Full Stack Engineer position at Stripe.",
+    );
     expect(letter).toContain("interested in joining Stripe");
     expect(letter).toContain("Sincerely,\nAlex Carter");
     expect(letter).not.toContain("Resume Optimization Tip");

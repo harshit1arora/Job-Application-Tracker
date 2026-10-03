@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
 
 /**
  * Firebase Web Configuration
@@ -12,14 +17,17 @@ const firebaseConfig = {
   authDomain: (import.meta.env["VITE_FIREBASE_AUTH_DOMAIN"] as string | undefined) || "",
   projectId: (import.meta.env["VITE_FIREBASE_PROJECT_ID"] as string | undefined) || "",
   storageBucket: (import.meta.env["VITE_FIREBASE_STORAGE_BUCKET"] as string | undefined) || "",
-  messagingSenderId: (import.meta.env["VITE_FIREBASE_MESSAGING_SENDER_ID"] as string | undefined) || "",
+  messagingSenderId:
+    (import.meta.env["VITE_FIREBASE_MESSAGING_SENDER_ID"] as string | undefined) || "",
   appId: (import.meta.env["VITE_FIREBASE_APP_ID"] as string | undefined) || "",
 };
 
 // Initialize Firebase App singleton safely
 const isConfigured = Boolean(firebaseConfig.apiKey);
 export const app = isConfigured
-  ? (!getApps().length ? initializeApp(firebaseConfig) : getApp())
+  ? !getApps().length
+    ? initializeApp(firebaseConfig)
+    : getApp()
   : null;
 
 export const auth = app ? getAuth(app) : (null as any);
@@ -33,7 +41,8 @@ export async function signInWithGooglePopup() {
   if (!auth) {
     return {
       success: false,
-      error: "Firebase is not configured. Please create a .env file with your VITE_FIREBASE_API_KEY (see .env.example).",
+      error:
+        "Firebase is not configured. Please create a .env file with your VITE_FIREBASE_API_KEY (see .env.example).",
       code: "auth/not-configured",
     };
   }

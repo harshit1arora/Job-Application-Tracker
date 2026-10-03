@@ -79,13 +79,19 @@ export function QuickFillWidget({ profile }: QuickFillWidgetProps) {
             className="flex items-center justify-between p-2 rounded-xl border border-border/70 bg-background hover:border-primary/50 hover:bg-secondary/40 cursor-pointer transition-all"
           >
             <div className="truncate mr-2">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block">{key}</span>
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
+                {key}
+              </span>
               <span className="text-xs text-foreground truncate block font-medium">
                 {val || <span className="text-muted-foreground/50 italic">Not provided</span>}
               </span>
             </div>
             <span className="text-muted-foreground p-1 shrink-0">
-              {copiedKey === key ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+              {copiedKey === key ? (
+                <Check size={13} className="text-emerald-500" />
+              ) : (
+                <Copy size={13} />
+              )}
             </span>
           </div>
         ))}

@@ -20,18 +20,18 @@ import { chat, type ChatMessage } from "./ai";
 // ---------------------------------------------------------------------------
 
 export type ReadinessCategory =
-  | "Strong Readiness"     // 80–100
-  | "Moderate Readiness"   // 60–79
-  | "Needs Improvement"    // 40–59
+  | "Strong Readiness" // 80–100
+  | "Moderate Readiness" // 60–79
+  | "Needs Improvement" // 40–59
   | "Low Current Readiness"; // 0–39
 
 export interface SuccessScoreBreakdown {
-  resumeMatch: number;        // Weight: 35% (0–100)
-  requiredSkills: number;     // Weight: 20% (0–100)
-  projectRelevance: number;   // Weight: 15% (0–100)
-  experienceRelevance: number;// Weight: 10% (0–100)
-  seniorityFit: number;       // Weight: 10% (0–100)
-  profileCompleteness: number;// Weight: 10% (0–100)
+  resumeMatch: number; // Weight: 35% (0–100)
+  requiredSkills: number; // Weight: 20% (0–100)
+  projectRelevance: number; // Weight: 15% (0–100)
+  experienceRelevance: number; // Weight: 10% (0–100)
+  seniorityFit: number; // Weight: 10% (0–100)
+  profileCompleteness: number; // Weight: 10% (0–100)
 }
 
 export interface ApplicationSuccessResult {
@@ -183,7 +183,9 @@ export interface UnifiedCareerIntelligence {
   nextBestAction: NextBestAction;
 }
 
-export interface DashboardCareerIntelligenceSummary<TJob extends IntelligenceJobInput = IntelligenceJobInput> {
+export interface DashboardCareerIntelligenceSummary<
+  TJob extends IntelligenceJobInput = IntelligenceJobInput,
+> {
   avgReadiness: number;
   topOpportunity: { job: TJob; success: ApplicationSuccessResult } | null;
   needsAttention: { job: TJob; success: ApplicationSuccessResult } | null;
@@ -198,7 +200,10 @@ export interface DashboardCareerIntelligenceSummary<TJob extends IntelligenceJob
 
 export function normalizeSkill(s: string): string {
   if (!s || typeof s !== "string") return "";
-  return s.trim().toLowerCase().replace(/[^a-z0-9+#]/g, "");
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]/g, "");
 }
 
 /**
@@ -208,7 +213,11 @@ export function normalizeSkill(s: string): string {
  */
 export function calculateDeterministicMatchScore(
   profile: UserProfile,
-  job: { description?: string | undefined; requiredSkills?: string[] | undefined; role?: string | undefined }
+  job: {
+    description?: string | undefined;
+    requiredSkills?: string[] | undefined;
+    role?: string | undefined;
+  },
 ): number {
   const resumeText = (profile.resumeText || "").trim();
   const candidateSkills = (profile.skills || []).map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -218,9 +227,13 @@ export function calculateDeterministicMatchScore(
     return 0;
   }
 
-  const jobText = `${job.role || ""} ${job.description || ""} ${(job.requiredSkills || []).join(" ")}`.toLowerCase();
+  const jobText =
+    `${job.role || ""} ${job.description || ""} ${(job.requiredSkills || []).join(" ")}`.toLowerCase();
   const tokenize = (str: string) =>
-    str.replace(/[^a-z0-9+#]/g, " ").split(/\s+/).filter((w) => w.length > 2);
+    str
+      .replace(/[^a-z0-9+#]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2);
 
   const rWords = new Set(tokenize(resumeText));
   candidateSkills.forEach((s) => tokenize(s).forEach((w) => rWords.add(w)));
@@ -295,18 +308,10 @@ export function parseJobSeniorityRequired(jobTitle: string, jobDesc?: string): n
   ) {
     return 6;
   }
-  if (
-    combined.includes("senior") ||
-    combined.includes("sr.") ||
-    combined.includes("sr ")
-  ) {
+  if (combined.includes("senior") || combined.includes("sr.") || combined.includes("sr ")) {
     return 4;
   }
-  if (
-    combined.includes("mid") ||
-    combined.includes("ii") ||
-    combined.includes("level 2")
-  ) {
+  if (combined.includes("mid") || combined.includes("ii") || combined.includes("level 2")) {
     return 2;
   }
   if (
@@ -325,7 +330,10 @@ export function parseJobSeniorityRequired(jobTitle: string, jobDesc?: string): n
 export function safeExtractJsonObject<T>(raw: string): T | null {
   if (!raw || typeof raw !== "string") return null;
   try {
-    const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const cleaned = raw
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
     const firstBrace = cleaned.indexOf("{");
     const lastBrace = cleaned.lastIndexOf("}");
     if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
@@ -346,7 +354,10 @@ export function safeExtractJsonObject<T>(raw: string): T | null {
 export function safeExtractJsonArray<T>(raw: string): T[] | null {
   if (!raw || typeof raw !== "string") return null;
   try {
-    const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const cleaned = raw
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
     const firstBracket = cleaned.indexOf("[");
     const lastBracket = cleaned.lastIndexOf("]");
     if (firstBracket === -1 || lastBracket === -1 || lastBracket <= firstBracket) {
@@ -370,7 +381,7 @@ export function safeExtractJsonArray<T>(raw: string): T[] | null {
 export function calculateApplicationSuccessScore(
   profile: UserProfile,
   job: IntelligenceJobInput,
-  applicationsHistory: ApplicationDocument[] = []
+  applicationsHistory: ApplicationDocument[] = [],
 ): ApplicationSuccessResult {
   const missingDataReasons: string[] = [];
 
@@ -380,7 +391,9 @@ export function calculateApplicationSuccessScore(
   const candidateProjects = profile.projects || [];
 
   if (!hasResume) {
-    missingDataReasons.push("Résumé text is missing — add your résumé to calculate application readiness.");
+    missingDataReasons.push(
+      "Résumé text is missing — add your résumé to calculate application readiness.",
+    );
   }
   if (!hasSkills) {
     missingDataReasons.push("Profile skills are missing — add your key skills in your Profile.");
@@ -419,14 +432,15 @@ export function calculateApplicationSuccessScore(
   // 2. Required Skills Factor (0–100)
   const normCandidateSkills = new Set(candidateSkills.map(normalizeSkill));
   const fullResumeNorm = (profile.resumeText || "").toLowerCase();
-  
+
   let matchedSkillsCount = 0;
   const missingSkillsList: string[] = [];
   const strongMatchedSkills: string[] = [];
 
-  const required = job.requiredSkills && job.requiredSkills.length > 0
-    ? job.requiredSkills
-    : ["Software Engineering", "Problem Solving", "System Architecture"];
+  const required =
+    job.requiredSkills && job.requiredSkills.length > 0
+      ? job.requiredSkills
+      : ["Software Engineering", "Problem Solving", "System Architecture"];
 
   for (const skill of required) {
     const norm = normalizeSkill(skill);
@@ -443,7 +457,7 @@ export function calculateApplicationSuccessScore(
 
   const requiredSkillsFactor = Math.min(
     100,
-    Math.max(0, Math.round((matchedSkillsCount / Math.max(1, required.length)) * 100))
+    Math.max(0, Math.round((matchedSkillsCount / Math.max(1, required.length)) * 100)),
   );
 
   // 3. Project Relevance Factor (0–100)
@@ -453,7 +467,8 @@ export function calculateApplicationSuccessScore(
   if (candidateProjects.length > 0) {
     let relevantProjectCount = 0;
     for (const proj of candidateProjects) {
-      const projText = `${proj.name || ""} ${proj.description || ""} ${(proj.technologies || []).join(" ")}`.toLowerCase();
+      const projText =
+        `${proj.name || ""} ${proj.description || ""} ${(proj.technologies || []).join(" ")}`.toLowerCase();
       let hasHit = false;
       for (const skill of required) {
         if (projText.includes(skill.toLowerCase())) {
@@ -484,7 +499,9 @@ export function calculateApplicationSuccessScore(
   projectRelevanceFactor = Math.min(100, Math.max(0, projectRelevanceFactor));
 
   // 4. Experience Relevance Factor (0–100)
-  const candidateYears = parseYearsOfExperience(profile.yearsOfExperience || profile.ageOrExperience);
+  const candidateYears = parseYearsOfExperience(
+    profile.yearsOfExperience || profile.ageOrExperience,
+  );
   let expFactor = 45;
   if (candidateYears >= 5) expFactor = 92;
   else if (candidateYears >= 3) expFactor = 82;
@@ -522,18 +539,18 @@ export function calculateApplicationSuccessScore(
   // Resume Match — 35%, Required Skills — 20%, Project Relevance — 15%, Experience — 10%, Seniority — 10%, Completeness — 10%
   const rawScore =
     resumeMatchFactor * 0.35 +
-    requiredSkillsFactor * 0.20 +
+    requiredSkillsFactor * 0.2 +
     projectRelevanceFactor * 0.15 +
-    expFactor * 0.10 +
-    seniorityFitFactor * 0.10 +
-    completeness * 0.10;
+    expFactor * 0.1 +
+    seniorityFitFactor * 0.1 +
+    completeness * 0.1;
 
   // Historical application outcome calibration (only if >= 5 past applications)
   let historicalDelta = 0;
   let historicalContext: string | undefined = undefined;
   if (applicationsHistory.length >= 5) {
     const interviewOffers = applicationsHistory.filter(
-      (a) => a.status === "Interview" || a.status === "Offer"
+      (a) => a.status === "Interview" || a.status === "Offer",
     ).length;
     const rate = interviewOffers / applicationsHistory.length;
     if (rate >= 0.4) {
@@ -541,7 +558,8 @@ export function calculateApplicationSuccessScore(
       historicalContext = `Positive past pipeline conversion (${interviewOffers}/${applicationsHistory.length} advanced to Interview/Offer)`;
     } else if (rate <= 0.1 && applicationsHistory.length >= 8) {
       historicalDelta = -2;
-      historicalContext = "Past conversion history indicates higher competition for similar positions";
+      historicalContext =
+        "Past conversion history indicates higher competition for similar positions";
     }
   }
 
@@ -566,23 +584,33 @@ export function calculateApplicationSuccessScore(
     positiveSignals.push(`High resume-to-job similarity (${resumeMatchFactor}%)`);
   }
   if (candidateProjects.length >= 2 || projectTechHits.size >= 2) {
-    positiveSignals.push(`${candidateProjects.length || 2} relevant projects demonstrate required stack`);
+    positiveSignals.push(
+      `${candidateProjects.length || 2} relevant projects demonstrate required stack`,
+    );
   }
   if (seniorityFitFactor >= 85) {
     positiveSignals.push(`Candidate experience level (${candidateYears}+ YOE) fits ${job.role}`);
   }
 
   if (missingSkillsList.length > 0) {
-    areasReducingReadiness.push(`Missing or weakly evidenced required skills: ${missingSkillsList.slice(0, 3).join(", ")}`);
+    areasReducingReadiness.push(
+      `Missing or weakly evidenced required skills: ${missingSkillsList.slice(0, 3).join(", ")}`,
+    );
   }
   if (candidateProjects.length === 0) {
-    areasReducingReadiness.push("No candidate projects documented to prove applied technical competence");
+    areasReducingReadiness.push(
+      "No candidate projects documented to prove applied technical competence",
+    );
   }
   if (seniorityFitFactor < 75) {
-    areasReducingReadiness.push(`Job seniority typically expects ${reqSeniority}+ YOE; profile currently demonstrates ${candidateYears} YOE`);
+    areasReducingReadiness.push(
+      `Job seniority typically expects ${reqSeniority}+ YOE; profile currently demonstrates ${candidateYears} YOE`,
+    );
   }
   if (completeness < 80) {
-    areasReducingReadiness.push("Profile information has missing sections (target role, portfolio, or details)");
+    areasReducingReadiness.push(
+      "Profile information has missing sections (target role, portfolio, or details)",
+    );
   }
 
   return {
@@ -596,8 +624,12 @@ export function calculateApplicationSuccessScore(
       seniorityFit: Math.min(100, Math.max(0, Math.round(seniorityFitFactor))),
       profileCompleteness: Math.min(100, Math.max(0, Math.round(completeness))),
     },
-    positiveSignals: positiveSignals.length > 0 ? positiveSignals : ["Basic qualification criteria met"],
-    areasReducingReadiness: areasReducingReadiness.length > 0 ? areasReducingReadiness : ["Continue reinforcing practical project proof"],
+    positiveSignals:
+      positiveSignals.length > 0 ? positiveSignals : ["Basic qualification criteria met"],
+    areasReducingReadiness:
+      areasReducingReadiness.length > 0
+        ? areasReducingReadiness
+        : ["Continue reinforcing practical project proof"],
     hasSufficientData: true,
     missingDataReasons: [],
     historicalContext,
@@ -610,14 +642,16 @@ export function calculateApplicationSuccessScore(
 
 export const VERIFIED_SKILLS_STORAGE_KEY = (uid: string) => `jobpilot:verified_skills:${uid}`;
 export const SKILL_IMPROVEMENTS_STORAGE_KEY = (uid: string) => `jobpilot:skill_improvements:${uid}`;
-export const INTERVIEW_PERFORMANCE_STORAGE_KEY = (uid: string) => `jobpilot:interview_performance:${uid}`;
+export const INTERVIEW_PERFORMANCE_STORAGE_KEY = (uid: string) =>
+  `jobpilot:interview_performance:${uid}`;
 export const COMPLETED_ACTIONS_STORAGE_KEY = (uid: string) => `jobpilot:completed_actions:${uid}`;
 
 export function getStoredSkillVerifications(
-  uid: string
+  uid: string,
 ): Record<string, { score: number; status: SkillVerificationStatus; date: string }> {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid) return {};
     const raw = storage.getItem(VERIFIED_SKILLS_STORAGE_KEY(uid));
     return raw ? JSON.parse(raw) : {};
@@ -630,10 +664,11 @@ export function saveStoredSkillVerification(
   uid: string,
   skill: string,
   score: number,
-  status: SkillVerificationStatus
+  status: SkillVerificationStatus,
 ): void {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid || !skill) return;
     const current = getStoredSkillVerifications(uid);
     current[skill.toLowerCase()] = {
@@ -649,7 +684,8 @@ export function saveStoredSkillVerification(
 
 export function getStoredSkillImprovements(uid: string): SkillImprovementRecord[] {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid) return [];
     const raw = storage.getItem(SKILL_IMPROVEMENTS_STORAGE_KEY(uid));
     return raw ? JSON.parse(raw) : [];
@@ -658,12 +694,10 @@ export function getStoredSkillImprovements(uid: string): SkillImprovementRecord[
   }
 }
 
-export function saveStoredSkillImprovement(
-  uid: string,
-  improvement: SkillImprovementRecord
-): void {
+export function saveStoredSkillImprovement(uid: string, improvement: SkillImprovementRecord): void {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid || !improvement.skill) return;
     const current = getStoredSkillImprovements(uid);
     current.push(improvement);
@@ -675,10 +709,11 @@ export function saveStoredSkillImprovement(
 
 export function getStoredInterviewPerformance(
   uid: string,
-  jobId?: string
+  jobId?: string,
 ): InterviewPerformanceRecord[] {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid) return [];
     const raw = storage.getItem(INTERVIEW_PERFORMANCE_STORAGE_KEY(uid));
     const list: InterviewPerformanceRecord[] = raw ? JSON.parse(raw) : [];
@@ -693,10 +728,11 @@ export function getStoredInterviewPerformance(
 
 export function saveStoredInterviewPerformance(
   uid: string,
-  record: InterviewPerformanceRecord
+  record: InterviewPerformanceRecord,
 ): void {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid) return;
     const current = getStoredInterviewPerformance(uid);
     current.unshift(record);
@@ -708,7 +744,8 @@ export function saveStoredInterviewPerformance(
 
 export function getCompletedActionIds(uid: string): string[] {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid) return [];
     const raw = storage.getItem(COMPLETED_ACTIONS_STORAGE_KEY(uid));
     return raw ? JSON.parse(raw) : [];
@@ -719,7 +756,8 @@ export function getCompletedActionIds(uid: string): string[] {
 
 export function markActionCompletedInStorage(uid: string, actionId: string): void {
   try {
-    const storage = typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
+    const storage =
+      typeof window !== "undefined" ? window.localStorage : (globalThis as any).localStorage;
     if (!storage || !uid || !actionId) return;
     const list = getCompletedActionIds(uid);
     if (!list.includes(actionId)) {
@@ -739,7 +777,7 @@ export function markActionCompletedInStorage(uid: string, actionId: string): voi
 export function calculateSkillProofScores(
   profile: UserProfile,
   targetSkills?: string[],
-  uid?: string
+  uid?: string,
 ): SkillProof[] {
   const resumeText = (profile.resumeText || "").toLowerCase();
   const projects = profile.projects || [];
@@ -770,7 +808,8 @@ export function calculateSkillProofScores(
     const matchedProjects: string[] = [];
     let hasRepoOrLink = false;
     for (const p of projects) {
-      const pText = `${p.name || ""} ${p.description || ""} ${(p.technologies || []).join(" ")}`.toLowerCase();
+      const pText =
+        `${p.name || ""} ${p.description || ""} ${(p.technologies || []).join(" ")}`.toLowerCase();
       if (pText.includes(skillLower)) {
         matchedProjects.push(p.name);
         if (p.link || profile.github) {
@@ -782,14 +821,16 @@ export function calculateSkillProofScores(
 
     // 3. Completed Improvement Micro-Task Evidence
     const improvementsForSkill = storedImprovements.filter(
-      (imp) => imp.skill.toLowerCase() === skillLower
+      (imp) => imp.skill.toLowerCase() === skillLower,
     );
     const improvementCount = improvementsForSkill.length;
     const hasImprovementEvidence = improvementCount > 0;
 
     // 4. Verification Evidence
     const verification = storedVerifications[skillLower];
-    const verificationStatus: SkillVerificationStatus = verification ? verification.status : "unverified";
+    const verificationStatus: SkillVerificationStatus = verification
+      ? verification.status
+      : "unverified";
     const verificationScore = verification ? verification.score : undefined;
     const isVerified = verificationStatus === "passed";
 
@@ -829,13 +870,16 @@ export function calculateSkillProofScores(
 
     // Strict explicit clamping: 0 <= score <= 100
     const finalScore = Math.min(100, Math.max(0, Math.round(score)));
-    const supported = hasResumeEvidence || hasProjectEvidence || hasImprovementEvidence || isVerified;
+    const supported =
+      hasResumeEvidence || hasProjectEvidence || hasImprovementEvidence || isVerified;
 
     const notes: string[] = [];
     if (hasResumeEvidence) notes.push(`Mentioned in résumé (${resumeMentionCount}x)`);
     if (hasProjectEvidence) notes.push(`Demonstrated in project: ${matchedProjects.join(", ")}`);
-    if (hasImprovementEvidence) notes.push(`Completed ${improvementCount} practical improvement task(s)`);
-    if (!hasProjectEvidence && !hasImprovementEvidence) notes.push("No project currently showcases this technology");
+    if (hasImprovementEvidence)
+      notes.push(`Completed ${improvementCount} practical improvement task(s)`);
+    if (!hasProjectEvidence && !hasImprovementEvidence)
+      notes.push("No project currently showcases this technology");
     if (isVerified) notes.push(`AI technical challenge passed (${verificationScore ?? 85}/100)`);
     else if (verificationStatus === "failed") notes.push("Verification challenge needs retake");
 
@@ -870,32 +914,60 @@ export function calculateSkillProofScores(
 const LOCAL_VERIFICATION_CHALLENGES: Record<string, SkillVerificationChallenge> = {
   react: {
     skill: "React",
-    scenario: "A React component is re-rendering unexpectedly whenever an unrelated parent state updates.",
-    question: "What architectural causes lead to this unnecessary rendering, and how would you investigate and fix it using standard React APIs?",
-    expectedConcepts: ["useMemo", "useCallback", "React.memo", "dependency array", "React DevTools Profiler"],
+    scenario:
+      "A React component is re-rendering unexpectedly whenever an unrelated parent state updates.",
+    question:
+      "What architectural causes lead to this unnecessary rendering, and how would you investigate and fix it using standard React APIs?",
+    expectedConcepts: [
+      "useMemo",
+      "useCallback",
+      "React.memo",
+      "dependency array",
+      "React DevTools Profiler",
+    ],
   },
   typescript: {
     skill: "TypeScript",
-    scenario: "You are designing a generic API client where response models depend dynamically on endpoint parameters.",
-    question: "How do you construct Discriminated Unions or Generic constraints so the compiler prevents invalid property access at compile time?",
+    scenario:
+      "You are designing a generic API client where response models depend dynamically on endpoint parameters.",
+    question:
+      "How do you construct Discriminated Unions or Generic constraints so the compiler prevents invalid property access at compile time?",
     expectedConcepts: ["discriminated union", "generics", "type narrowing", "keyof", "typeof"],
   },
   docker: {
     skill: "Docker",
-    scenario: "A production container image size has ballooned to 1.8GB and deployment times have slowed down significantly.",
-    question: "What containerization techniques and Dockerfile patterns would you apply to optimize caching and shrink image footprint?",
-    expectedConcepts: ["multi-stage builds", ".dockerignore", "alpine", "layer caching", "single responsibility"],
+    scenario:
+      "A production container image size has ballooned to 1.8GB and deployment times have slowed down significantly.",
+    question:
+      "What containerization techniques and Dockerfile patterns would you apply to optimize caching and shrink image footprint?",
+    expectedConcepts: [
+      "multi-stage builds",
+      ".dockerignore",
+      "alpine",
+      "layer caching",
+      "single responsibility",
+    ],
   },
   sql: {
     skill: "SQL",
-    scenario: "A high-frequency endpoint querying customer orders slows down from 20ms to 4.2 seconds under peak load.",
-    question: "How would you diagnose the query bottleneck using EXPLAIN, and what indexing or query refactoring strategies would you implement?",
-    expectedConcepts: ["EXPLAIN ANALYZE", "B-tree index", "composite index", "table scan", "avoid SELECT *"],
+    scenario:
+      "A high-frequency endpoint querying customer orders slows down from 20ms to 4.2 seconds under peak load.",
+    question:
+      "How would you diagnose the query bottleneck using EXPLAIN, and what indexing or query refactoring strategies would you implement?",
+    expectedConcepts: [
+      "EXPLAIN ANALYZE",
+      "B-tree index",
+      "composite index",
+      "table scan",
+      "avoid SELECT *",
+    ],
   },
   python: {
     skill: "Python",
-    scenario: "A backend service needs to process concurrent external API webhooks without blocking the main event loop.",
-    question: "How would you handle high-throughput I/O bound tasks using Python's modern concurrency primitives?",
+    scenario:
+      "A backend service needs to process concurrent external API webhooks without blocking the main event loop.",
+    question:
+      "How would you handle high-throughput I/O bound tasks using Python's modern concurrency primitives?",
     expectedConcepts: ["asyncio", "aiohttp", "coroutine", "thread pool executor", "event loop"],
   },
 };
@@ -948,7 +1020,7 @@ JSON only.`;
 export async function evaluateSkillVerificationAnswer(
   skill: string,
   challenge: SkillVerificationChallenge,
-  candidateAnswer: string
+  candidateAnswer: string,
 ): Promise<SkillVerificationEvaluation> {
   const ans = (candidateAnswer || "").trim().toLowerCase();
 
@@ -962,12 +1034,16 @@ export async function evaluateSkillVerificationAnswer(
       matchedConcepts++;
       positivePoints.push(`Correctly referenced ${concept}`);
     } else {
-      improvementPoints.push(`Consider mentioning ${concept} to demonstrate deeper architectural depth`);
+      improvementPoints.push(
+        `Consider mentioning ${concept} to demonstrate deeper architectural depth`,
+      );
     }
   }
 
   const lengthBonus = Math.min(20, Math.floor(ans.length / 30));
-  const conceptScore = Math.round((matchedConcepts / Math.max(1, challenge.expectedConcepts.length)) * 70);
+  const conceptScore = Math.round(
+    (matchedConcepts / Math.max(1, challenge.expectedConcepts.length)) * 70,
+  );
   const localScore = Math.min(95, Math.max(25, 20 + conceptScore + lengthBonus));
   const localPassed = localScore >= 65;
 
@@ -1019,8 +1095,14 @@ Output JSON only:
     feedback: localPassed
       ? `Demonstrated clear practical command of ${skill} fundamentals and solution structure.`
       : `Answer provides partial context for ${skill} but lacked specific architectural patterns.`,
-    positivePoints: positivePoints.length > 0 ? positivePoints : [`Identified core technical approach for ${skill}`],
-    improvementPoints: improvementPoints.length > 0 ? improvementPoints : ["Provide more concrete code or metric examples"],
+    positivePoints:
+      positivePoints.length > 0
+        ? positivePoints
+        : [`Identified core technical approach for ${skill}`],
+    improvementPoints:
+      improvementPoints.length > 0
+        ? improvementPoints
+        : ["Provide more concrete code or metric examples"],
   };
 }
 
@@ -1033,9 +1115,11 @@ export function buildCareerTwinLite(
   job: IntelligenceJobInput,
   skillProofs: SkillProof[],
   interviewNotes: string[] = [],
-  uid?: string
+  uid?: string,
 ): CareerTwinLiteState {
-  const candidateYears = parseYearsOfExperience(profile.yearsOfExperience || profile.ageOrExperience);
+  const candidateYears = parseYearsOfExperience(
+    profile.yearsOfExperience || profile.ageOrExperience,
+  );
   const projects = profile.projects || [];
 
   // Determine strengths & weaknesses based on actual proof scores & job requirements
@@ -1068,7 +1152,9 @@ export function buildCareerTwinLite(
 
   const notesList = [...interviewNotes];
   if (latestInterview) {
-    notesList.push(`Recent Mock Interview: ${latestInterview.score}/100 on ${new Date(latestInterview.completedAt).toLocaleDateString()}`);
+    notesList.push(
+      `Recent Mock Interview: ${latestInterview.score}/100 on ${new Date(latestInterview.completedAt).toLocaleDateString()}`,
+    );
     if (latestInterview.strengths.length > 0) {
       notesList.push(`Interview Strength: ${latestInterview.strengths[0]}`);
     }
@@ -1076,11 +1162,12 @@ export function buildCareerTwinLite(
 
   // Role fit calculation based on actual requirements vs proof
   const relevantProofs = skillProofs.filter((p) =>
-    job.requiredSkills.some((r) => r.toLowerCase() === p.skill.toLowerCase())
+    job.requiredSkills.some((r) => r.toLowerCase() === p.skill.toLowerCase()),
   );
-  const avgProof = relevantProofs.length > 0
-    ? Math.round(relevantProofs.reduce((acc, p) => acc + p.score, 0) / relevantProofs.length)
-    : 65;
+  const avgProof =
+    relevantProofs.length > 0
+      ? Math.round(relevantProofs.reduce((acc, p) => acc + p.score, 0) / relevantProofs.length)
+      : 65;
 
   const matchScoreValue =
     typeof job.matchScore === "number" && !isNaN(job.matchScore)
@@ -1108,8 +1195,14 @@ export function buildCareerTwinLite(
 
 export async function generateCandidateSpecificInterviewSimulation(
   profile: UserProfile,
-  job: { role: string; company: string; description?: string | undefined; requiredSkills: string[]; experienceLevel?: string | undefined },
-  twin: CareerTwinLiteState
+  job: {
+    role: string;
+    company: string;
+    description?: string | undefined;
+    requiredSkills: string[];
+    experienceLevel?: string | undefined;
+  },
+  twin: CareerTwinLiteState,
 ): Promise<InterviewQuestionItem[]> {
   const featuredProj = twin.projects[0];
   const weakest = twin.weaknesses[0]?.split(" ")[0] || "Architecture";
@@ -1139,9 +1232,10 @@ export async function generateCandidateSpecificInterviewSimulation(
   ];
 
   try {
-    const projectSummary = twin.projects.length > 0
-      ? twin.projects.map((p) => `${p.name} (${p.description})`).join("; ")
-      : "No candidate projects recorded.";
+    const projectSummary =
+      twin.projects.length > 0
+        ? twin.projects.map((p) => `${p.name} (${p.description})`).join("; ")
+        : "No candidate projects recorded.";
 
     const prompt: ChatMessage[] = [
       {
@@ -1185,7 +1279,7 @@ Output JSON array only:
 
 export async function evaluateInterviewSimulationAnswer(
   question: InterviewQuestionItem,
-  answer: string
+  answer: string,
 ): Promise<InterviewEvaluationResult> {
   const ans = (answer || "").trim();
 
@@ -1194,7 +1288,11 @@ export async function evaluateInterviewSimulationAnswer(
   let score = 65;
   if (wordCount > 60) score += 15;
   if (wordCount > 120) score += 10;
-  if (ans.toLowerCase().includes("because") || ans.toLowerCase().includes("trade-off") || ans.toLowerCase().includes("latency")) {
+  if (
+    ans.toLowerCase().includes("because") ||
+    ans.toLowerCase().includes("trade-off") ||
+    ans.toLowerCase().includes("latency")
+  ) {
     score += 5;
   }
   score = Math.min(96, Math.max(40, score));
@@ -1239,11 +1337,15 @@ Output JSON only:
 
   return {
     score,
-    feedback: score >= 75
-      ? "Strong articulation of practical decisions and technical rationale."
-      : "Adequate response, but would benefit from mentioning measurable metrics and architectural trade-offs.",
+    feedback:
+      score >= 75
+        ? "Strong articulation of practical decisions and technical rationale."
+        : "Adequate response, but would benefit from mentioning measurable metrics and architectural trade-offs.",
     strengths: ["Addressed the core inquiry directly", "Clear communication style"],
-    improvements: ["Incorporate the STAR framework (Situation, Task, Action, Result)", "Quantify operational impact with metrics"],
+    improvements: [
+      "Incorporate the STAR framework (Situation, Task, Action, Result)",
+      "Quantify operational impact with metrics",
+    ],
     suggestedFollowUp: `How would your solution behave under 10x traffic spikes?`,
   };
 }
@@ -1258,7 +1360,7 @@ export function determineNextBestAction(
   applicationStatus: ApplicationStatus = "Saved",
   successResult: ApplicationSuccessResult,
   skillProofs: SkillProof[],
-  uid?: string
+  uid?: string,
 ): NextBestAction {
   const completedIds = uid ? new Set(getCompletedActionIds(uid)) : new Set<string>();
   const isDone = (id: string) => completedIds.has(id);
@@ -1266,8 +1368,7 @@ export function determineNextBestAction(
   // 1. Critical Missing Required Skill Check (< 55)
   const weakOrMissingSkills = skillProofs.filter(
     (p) =>
-      job.requiredSkills.some((r) => r.toLowerCase() === p.skill.toLowerCase()) &&
-      p.score < 55
+      job.requiredSkills.some((r) => r.toLowerCase() === p.skill.toLowerCase()) && p.score < 55,
   );
 
   for (const target of weakOrMissingSkills) {
@@ -1320,7 +1421,8 @@ export function determineNextBestAction(
         jobId: job.id,
         actionType: "ADD_PROJECT",
         title: "Add a Relevant Candidate Project",
-        reason: "Recruiters evaluate applied project evidence more heavily than listed skills. Your profile currently has no documented projects.",
+        reason:
+          "Recruiters evaluate applied project evidence more heavily than listed skills. Your profile currently has no documented projects.",
         suggestedTask: `Add a project demonstrating ${job.requiredSkills.slice(0, 2).join(" and ")} to your candidate profile.`,
         targetSkill: job.requiredSkills[0],
         effortMinutes: 15,
@@ -1376,7 +1478,8 @@ export function determineNextBestAction(
         jobId: job.id,
         actionType: "FOLLOW_UP",
         title: "Send a Warm Follow-up to Recruiter",
-        reason: "Your application is under review and exhibits strong qualification alignment. A polite follow-up signals strong interest.",
+        reason:
+          "Your application is under review and exhibits strong qualification alignment. A polite follow-up signals strong interest.",
         suggestedTask: `Draft an introductory check-in on LinkedIn with the engineering hiring manager or recruiter.`,
         effortMinutes: 10,
         estimatedImpact: 4,
@@ -1416,7 +1519,7 @@ export function executeActionCompletion(
     project?: CandidateProject | undefined;
     resumeText?: string | undefined;
     interviewScore?: number | undefined;
-  }
+  },
 ): ActionCompletionResult {
   if (!uid) {
     return {
@@ -1480,7 +1583,8 @@ export function executeActionCompletion(
           actionId: action.id,
           actionType: action.actionType,
           success: false,
-          message: "Please add a project to your profile to substantiate your practical experience.",
+          message:
+            "Please add a project to your profile to substantiate your practical experience.",
         };
       } else {
         customMessage = "Candidate project proof confirmed. Application readiness recalculated!";
@@ -1538,7 +1642,7 @@ export function computeUnifiedCareerIntelligence(
   job: IntelligenceJobInput,
   application?: ApplicationDocument | null,
   applicationsHistory: ApplicationDocument[] = [],
-  uid?: string
+  uid?: string,
 ): UnifiedCareerIntelligence {
   // Step 1: Resume Match
   const rawMatch =
@@ -1548,11 +1652,7 @@ export function computeUnifiedCareerIntelligence(
   const resumeMatch = Math.min(100, Math.max(0, rawMatch));
 
   // Step 2: Application Success Predictor
-  const applicationSuccess = calculateApplicationSuccessScore(
-    profile,
-    job,
-    applicationsHistory
-  );
+  const applicationSuccess = calculateApplicationSuccessScore(profile, job, applicationsHistory);
 
   // Step 3: Skill Proof Scores
   const skillProofs = calculateSkillProofScores(profile, job.requiredSkills, uid);
@@ -1563,7 +1663,7 @@ export function computeUnifiedCareerIntelligence(
     job,
     skillProofs,
     application?.notes ? [application.notes] : [],
-    uid
+    uid,
   );
 
   // Step 5: Next-Best-Action Coach
@@ -1574,7 +1674,7 @@ export function computeUnifiedCareerIntelligence(
     status,
     applicationSuccess,
     skillProofs,
-    uid
+    uid,
   );
 
   return {
@@ -1593,11 +1693,13 @@ export function computeUnifiedCareerIntelligence(
  * Single source of truth for Dashboard Application Intelligence aggregation.
  * Eliminates duplicated scoring code between routes and services.
  */
-export function computeDashboardCareerIntelligence<TJob extends IntelligenceJobInput = IntelligenceJobInput>(
+export function computeDashboardCareerIntelligence<
+  TJob extends IntelligenceJobInput = IntelligenceJobInput,
+>(
   profile: UserProfile | null,
   jobs: TJob[],
   applications: ApplicationDocument[] = [],
-  uid?: string
+  uid?: string,
 ): DashboardCareerIntelligenceSummary<TJob> | null {
   if (!profile) return null;
 
@@ -1614,14 +1716,15 @@ export function computeDashboardCareerIntelligence<TJob extends IntelligenceJobI
   }));
 
   const avgReadiness = Math.round(
-    results.reduce((acc, r) => acc + r.success.score, 0) / Math.max(1, results.length)
+    results.reduce((acc, r) => acc + r.success.score, 0) / Math.max(1, results.length),
   );
 
   const sortedByReadiness = [...results].sort((a, b) => b.success.score - a.success.score);
   const topOpportunity = sortedByReadiness[0] || null;
   const needsAttention = sortedByReadiness[sortedByReadiness.length - 1] || null;
 
-  const allSkills = candidateSkills.length > 0 ? candidateSkills : ["TypeScript", "React", "Node.js", "Docker"];
+  const allSkills =
+    candidateSkills.length > 0 ? candidateSkills : ["TypeScript", "React", "Node.js", "Docker"];
   const proofs = calculateSkillProofScores(profile, allSkills, uid);
   const weakestSkill = proofs.length > 0 ? proofs[proofs.length - 1]! : null;
 
@@ -1632,7 +1735,7 @@ export function computeDashboardCareerIntelligence<TJob extends IntelligenceJobI
         "Saved",
         topOpportunity.success,
         proofs,
-        uid
+        uid,
       )
     : null;
 

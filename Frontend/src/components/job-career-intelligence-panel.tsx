@@ -97,7 +97,10 @@ export function JobCareerIntelligencePanel({
         name: projName.trim(),
         description: projDesc.trim() || "Applied software project",
         technologies: projTech
-          ? projTech.split(",").map((s) => s.trim()).filter(Boolean)
+          ? projTech
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
           : job.requiredSkills.slice(0, 3),
         link: projLink.trim() || undefined,
       };
@@ -145,7 +148,8 @@ export function JobCareerIntelligencePanel({
     );
   }
 
-  let readinessBadge = "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+  let readinessBadge =
+    "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
   if (applicationSuccess.score < 40) {
     readinessBadge = "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30";
   } else if (applicationSuccess.score < 60) {
@@ -180,13 +184,16 @@ export function JobCareerIntelligencePanel({
             <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
               2. Application Readiness
             </span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${readinessBadge}`}>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${readinessBadge}`}
+            >
               {applicationSuccess.category}
             </span>
           </div>
           <div className="my-2">
             <div className="text-3xl font-black text-primary">
-              {applicationSuccess.score} <span className="text-sm font-normal text-muted-foreground">/ 100</span>
+              {applicationSuccess.score}{" "}
+              <span className="text-sm font-normal text-muted-foreground">/ 100</span>
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               Deterministic estimation of current application shortlisting readiness.
@@ -204,10 +211,12 @@ export function JobCareerIntelligencePanel({
           </div>
           <div className="my-2">
             <div className="text-3xl font-black text-violet-600 dark:text-violet-400">
-              {careerTwin.roleFitScore} <span className="text-sm font-normal text-muted-foreground">/ 100</span>
+              {careerTwin.roleFitScore}{" "}
+              <span className="text-sm font-normal text-muted-foreground">/ 100</span>
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              Structured fit across verified skills, projects, and {careerTwin.experienceYears}+ YOE.
+              Structured fit across verified skills, projects, and {careerTwin.experienceYears}+
+              YOE.
             </p>
           </div>
         </div>
@@ -275,7 +284,10 @@ export function JobCareerIntelligencePanel({
               </h4>
               <ul className="space-y-1.5">
                 {applicationSuccess.positiveSignals.map((sig, i) => (
-                  <li key={i} className="text-muted-foreground flex items-start gap-1.5 leading-relaxed">
+                  <li
+                    key={i}
+                    className="text-muted-foreground flex items-start gap-1.5 leading-relaxed"
+                  >
                     <span className="text-emerald-500 font-bold">✓</span> {sig}
                   </li>
                 ))}
@@ -288,7 +300,10 @@ export function JobCareerIntelligencePanel({
               </h4>
               <ul className="space-y-1.5">
                 {applicationSuccess.areasReducingReadiness.map((red, i) => (
-                  <li key={i} className="text-muted-foreground flex items-start gap-1.5 leading-relaxed">
+                  <li
+                    key={i}
+                    className="text-muted-foreground flex items-start gap-1.5 leading-relaxed"
+                  >
                     <span className="text-amber-500 font-bold">⚠</span> {red}
                   </li>
                 ))}
@@ -318,37 +333,49 @@ export function JobCareerIntelligencePanel({
             {showFactorBreakdown && (
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-border text-xs">
                 <div className="p-2.5 rounded-lg bg-card border border-border">
-                  <span className="text-muted-foreground block text-[10px]">Resume Match (35%)</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Resume Match (35%)
+                  </span>
                   <span className="font-bold text-foreground text-sm">
                     {applicationSuccess.breakdown.resumeMatch}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-card border border-border">
-                  <span className="text-muted-foreground block text-[10px]">Required Skills (20%)</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Required Skills (20%)
+                  </span>
                   <span className="font-bold text-foreground text-sm">
                     {applicationSuccess.breakdown.requiredSkills}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-card border border-border">
-                  <span className="text-muted-foreground block text-[10px]">Project Relevance (15%)</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Project Relevance (15%)
+                  </span>
                   <span className="font-bold text-foreground text-sm">
                     {applicationSuccess.breakdown.projectRelevance}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-card border border-border">
-                  <span className="text-muted-foreground block text-[10px]">Experience Relevance (10%)</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Experience Relevance (10%)
+                  </span>
                   <span className="font-bold text-foreground text-sm">
                     {applicationSuccess.breakdown.experienceRelevance}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-card border border-border">
-                  <span className="text-muted-foreground block text-[10px]">Seniority Fit (10%)</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Seniority Fit (10%)
+                  </span>
                   <span className="font-bold text-foreground text-sm">
                     {applicationSuccess.breakdown.seniorityFit}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-card border border-border">
-                  <span className="text-muted-foreground block text-[10px]">Profile Completeness (10%)</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Profile Completeness (10%)
+                  </span>
                   <span className="font-bold text-foreground text-sm">
                     {applicationSuccess.breakdown.profileCompleteness}
                   </span>
@@ -397,10 +424,15 @@ export function JobCareerIntelligencePanel({
                   <Code2 size={18} />
                 </span>
                 <div>
-                  <h3 id="quick-project-modal-title" className="text-base font-bold text-foreground">
+                  <h3
+                    id="quick-project-modal-title"
+                    className="text-base font-bold text-foreground"
+                  >
                     Add Candidate Project Proof
                   </h3>
-                  <p className="text-xs text-muted-foreground">Strengthens practical evidence across your jobs</p>
+                  <p className="text-xs text-muted-foreground">
+                    Strengthens practical evidence across your jobs
+                  </p>
                 </div>
               </div>
               <button
@@ -415,7 +447,10 @@ export function JobCareerIntelligencePanel({
 
             <div className="space-y-3 text-xs">
               <div>
-                <label htmlFor="quick-proj-name" className="block font-semibold text-foreground mb-1">
+                <label
+                  htmlFor="quick-proj-name"
+                  className="block font-semibold text-foreground mb-1"
+                >
                   Project Name *
                 </label>
                 <input
@@ -429,7 +464,10 @@ export function JobCareerIntelligencePanel({
               </div>
 
               <div>
-                <label htmlFor="quick-proj-desc" className="block font-semibold text-foreground mb-1">
+                <label
+                  htmlFor="quick-proj-desc"
+                  className="block font-semibold text-foreground mb-1"
+                >
                   Description & Architecture
                 </label>
                 <textarea
@@ -443,7 +481,10 @@ export function JobCareerIntelligencePanel({
               </div>
 
               <div>
-                <label htmlFor="quick-proj-tech" className="block font-semibold text-foreground mb-1">
+                <label
+                  htmlFor="quick-proj-tech"
+                  className="block font-semibold text-foreground mb-1"
+                >
                   Technologies (comma separated)
                 </label>
                 <input
@@ -451,13 +492,18 @@ export function JobCareerIntelligencePanel({
                   type="text"
                   value={projTech}
                   onChange={(e) => setProjTech(e.target.value)}
-                  placeholder={job.requiredSkills.slice(0, 3).join(", ") || "React, TypeScript, Docker"}
+                  placeholder={
+                    job.requiredSkills.slice(0, 3).join(", ") || "React, TypeScript, Docker"
+                  }
                   className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>
 
               <div>
-                <label htmlFor="quick-proj-link" className="block font-semibold text-foreground mb-1">
+                <label
+                  htmlFor="quick-proj-link"
+                  className="block font-semibold text-foreground mb-1"
+                >
                   Repository or Live URL (Optional)
                 </label>
                 <input

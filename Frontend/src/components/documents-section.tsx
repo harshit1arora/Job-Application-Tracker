@@ -1,22 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { 
-  getDocuments, 
-  uploadDocument, 
-  deleteDocument, 
-  getDocumentDownloadUrl 
+import {
+  getDocuments,
+  uploadDocument,
+  deleteDocument,
+  getDocumentDownloadUrl,
 } from "@/lib/documents-service";
 import type { DocumentMetadata } from "@/lib/types";
 import { toast } from "sonner";
 import { AppError } from "@/lib/types";
-import { 
-  FileText, 
-  Upload, 
-  Trash2, 
-  Download, 
-  Loader2, 
-  File as FileIcon 
-} from "lucide-react";
+import { FileText, Upload, Trash2, Download, Loader2, File as FileIcon } from "lucide-react";
 
 interface DocumentsSectionProps {
   applicationId: string;
@@ -53,10 +46,10 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
     setIsUploading(true);
     try {
       // Create a nice display name (e.g. "Resume.pdf" -> "Resume")
-      const displayName = file.name.split('.').slice(0, -1).join('.');
-      
+      const displayName = file.name.split(".").slice(0, -1).join(".");
+
       const newDoc = await uploadDocument(user.id, file, applicationId, displayName);
-      setDocuments(prev => [newDoc, ...prev]);
+      setDocuments((prev) => [newDoc, ...prev]);
       toast.success("Document uploaded successfully!");
     } catch (error) {
       console.error("Upload error:", error);
@@ -68,7 +61,7 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
@@ -80,7 +73,7 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
 
     try {
       await deleteDocument(user.id, documentId);
-      setDocuments(prev => prev.filter(d => d.id !== documentId));
+      setDocuments((prev) => prev.filter((d) => d.id !== documentId));
       toast.success("Document deleted.");
     } catch (error) {
       console.error("Delete error:", error);
@@ -106,11 +99,11 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   return (
@@ -120,7 +113,7 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
           <FileText size={18} className="text-primary" />
           Documents
         </h3>
-        <button 
+        <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
@@ -128,7 +121,7 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
           {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
           Upload
         </button>
-        <input 
+        <input
           type="file"
           ref={fileInputRef}
           className="hidden"
@@ -145,18 +138,25 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
         <div className="text-center py-6 border-2 border-dashed border-border rounded-xl">
           <FileIcon size={24} className="mx-auto text-muted-foreground/50 mb-2" />
           <p className="text-sm font-medium text-muted-foreground">No documents attached.</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">Upload resumes or cover letters here.</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            Upload resumes or cover letters here.
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-background hover:border-primary/50 transition-colors group">
+            <div
+              key={doc.id}
+              className="flex items-center justify-between p-3 rounded-xl border border-border bg-background hover:border-primary/50 transition-colors group"
+            >
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0">
                   <FileText size={16} />
                 </div>
                 <div className="truncate">
-                  <p className="text-sm font-bold truncate text-foreground">{doc.displayName || doc.fileName}</p>
+                  <p className="text-sm font-bold truncate text-foreground">
+                    {doc.displayName || doc.fileName}
+                  </p>
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                     {formatFileSize(doc.fileSize)} • {new Date(doc.createdAt).toLocaleDateString()}
                   </p>

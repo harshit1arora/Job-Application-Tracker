@@ -25,14 +25,7 @@ export function JobPilotLogo({ size = 28, className = "" }: { size?: number; cla
       </defs>
 
       {/* Hexagonal / Shield AI Badge */}
-      <rect
-        x="2"
-        y="2"
-        width="32"
-        height="32"
-        rx="10"
-        fill="url(#jpGrad)"
-      />
+      <rect x="2" y="2" width="32" height="32" rx="10" fill="url(#jpGrad)" />
       <rect
         x="3"
         y="3"
@@ -45,16 +38,8 @@ export function JobPilotLogo({ size = 28, className = "" }: { size?: number; cla
       />
 
       {/* Pilot / Jet Wings Geometry */}
-      <path
-        d="M18 7L27 21H22L18 16L14 21H9L18 7Z"
-        fill="white"
-        fillOpacity="0.95"
-      />
-      <path
-        d="M18 18L24 28H20L18 24L16 28H12L18 18Z"
-        fill="white"
-        fillOpacity="0.75"
-      />
+      <path d="M18 7L27 21H22L18 16L14 21H9L18 7Z" fill="white" fillOpacity="0.95" />
+      <path d="M18 18L24 28H20L18 24L16 28H12L18 18Z" fill="white" fillOpacity="0.75" />
 
       {/* Center AI Core Pulse */}
       <circle cx="18" cy="19" r="2.5" fill="#38bdf8" />
@@ -82,7 +67,10 @@ export function PlatformLogo({
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className}>
           <rect width="24" height="24" rx="5" fill="#00B27A" />
-          <path d="M7 16V8h3c2.2 0 4 1.8 4 4s-1.8 4-4 4H7zm3-2.5c1 0 1.8-.8 1.8-1.5s-.8-1.5-1.8-1.5H9.2v3H10z" fill="white" />
+          <path
+            d="M7 16V8h3c2.2 0 4 1.8 4 4s-1.8 4-4 4H7zm3-2.5c1 0 1.8-.8 1.8-1.5s-.8-1.5-1.8-1.5H9.2v3H10z"
+            fill="white"
+          />
         </svg>
       );
     case "lever":
@@ -110,7 +98,10 @@ export function PlatformLogo({
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className}>
           <rect width="24" height="24" rx="5" fill="#0A66C2" />
-          <path d="M7 9h2.5v8H7zm1.25-4a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5zM11.5 9H14v1.1c.5-.7 1.4-1.3 2.6-1.3 2.4 0 3.4 1.5 3.4 3.8V17h-2.5v-3.9c0-1-.4-1.7-1.5-1.7-1 0-1.5.8-1.5 1.7V17h-2.5V9z" fill="white" />
+          <path
+            d="M7 9h2.5v8H7zm1.25-4a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5zM11.5 9H14v1.1c.5-.7 1.4-1.3 2.6-1.3 2.4 0 3.4 1.5 3.4 3.8V17h-2.5v-3.9c0-1-.4-1.7-1.5-1.7-1 0-1.5.8-1.5 1.7V17h-2.5V9z"
+            fill="white"
+          />
         </svg>
       );
     default:

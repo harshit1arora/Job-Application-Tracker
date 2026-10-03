@@ -87,7 +87,7 @@ export function Nav() {
               >
                 {l.label}
               </a>
-            )
+            ),
           )}
         </div>
 
@@ -169,7 +169,7 @@ export function Nav() {
                 >
                   {l.label}
                 </a>
-              )
+              ),
             )}
           </div>
           <div className="mt-3 flex gap-2">

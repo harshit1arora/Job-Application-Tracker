@@ -29,4 +29,3 @@ import { fetchDashboardStatsApi } from "./api-client";
 export async function getDashboardStats(userId: string): Promise<DashboardStats> {
   return await fetchDashboardStatsApi(userId);
 }
-

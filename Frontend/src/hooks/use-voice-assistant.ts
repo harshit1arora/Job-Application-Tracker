@@ -19,7 +19,15 @@ const NAVIGATION_INTENTS: Array<{
   {
     route: "/browse",
     label: "Browse Jobs",
-    keywords: ["browse", "browse jobs", "find jobs", "search jobs", "job listings", "explore jobs", "search positions"],
+    keywords: [
+      "browse",
+      "browse jobs",
+      "find jobs",
+      "search jobs",
+      "job listings",
+      "explore jobs",
+      "search positions",
+    ],
   },
   {
     route: "/applications",
@@ -29,17 +37,41 @@ const NAVIGATION_INTENTS: Array<{
   {
     route: "/tracker",
     label: "Job Tracker",
-    keywords: ["tracker", "job tracker", "kanban", "pipeline", "interview stages", "board", "application stages"],
+    keywords: [
+      "tracker",
+      "job tracker",
+      "kanban",
+      "pipeline",
+      "interview stages",
+      "board",
+      "application stages",
+    ],
   },
   {
     route: "/inbox",
     label: "Inbox",
-    keywords: ["inbox", "emails", "messages", "inbox messages", "recruiter emails", "recruiter messages"],
+    keywords: [
+      "inbox",
+      "emails",
+      "messages",
+      "inbox messages",
+      "recruiter emails",
+      "recruiter messages",
+    ],
   },
   {
     route: "/profile",
     label: "Profile & Résumé",
-    keywords: ["profile", "resume", "résumé", "cv", "edit profile", "upload resume", "my resume", "candidate profile"],
+    keywords: [
+      "profile",
+      "resume",
+      "résumé",
+      "cv",
+      "edit profile",
+      "upload resume",
+      "my resume",
+      "candidate profile",
+    ],
   },
   {
     route: "/settings",
@@ -93,7 +125,9 @@ export function matchVoiceNavigation(text: string): NavigationMatch | null {
 
 export function playAcousticTone(type: "start" | "success" | "stop" | "error" = "success") {
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
 
@@ -281,7 +315,9 @@ export function useVoiceAssistant({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       audioContextRef.current = ctx;
@@ -389,8 +425,11 @@ export function useVoiceAssistant({
     const voices = window.speechSynthesis.getVoices();
     const naturalVoice = voices.find(
       (v) =>
-        (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel")) &&
-        v.lang.startsWith("en")
+        (v.name.includes("Natural") ||
+          v.name.includes("Google") ||
+          v.name.includes("Samantha") ||
+          v.name.includes("Daniel")) &&
+        v.lang.startsWith("en"),
     );
     if (naturalVoice) {
       utterance.voice = naturalVoice;

@@ -18,25 +18,25 @@ const VALID_INPUT = {
 describe("createApplication — validation", () => {
   it("throws VALIDATION_ERROR when company is empty", async () => {
     await expect(
-      createApplication("user-1", { ...VALID_INPUT, company: "" })
+      createApplication("user-1", { ...VALID_INPUT, company: "" }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
   it("throws VALIDATION_ERROR when jobTitle is empty", async () => {
     await expect(
-      createApplication("user-1", { ...VALID_INPUT, jobTitle: "" })
+      createApplication("user-1", { ...VALID_INPUT, jobTitle: "" }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
   it("throws VALIDATION_ERROR when applicationSource is invalid", async () => {
     await expect(
-      createApplication("user-1", { ...VALID_INPUT, applicationSource: "FakeBoard" as any })
+      createApplication("user-1", { ...VALID_INPUT, applicationSource: "FakeBoard" as any }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
   it("throws VALIDATION_ERROR when status is invalid", async () => {
     await expect(
-      createApplication("user-1", { ...VALID_INPUT, status: "Ghosted" as any })
+      createApplication("user-1", { ...VALID_INPUT, status: "Ghosted" as any }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
@@ -107,7 +107,7 @@ describe("applications-service — URL Scheme Security (P1-C)", () => {
       createApplication("test-user-url-sec", {
         ...VALID_INPUT,
         applicationUrl: "javascript:alert(document.cookie)",
-      })
+      }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
@@ -116,7 +116,7 @@ describe("applications-service — URL Scheme Security (P1-C)", () => {
       createApplication("test-user-url-sec", {
         ...VALID_INPUT,
         applicationUrl: "data:text/html,<script>alert(1)</script>",
-      })
+      }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 
@@ -125,7 +125,7 @@ describe("applications-service — URL Scheme Security (P1-C)", () => {
       createApplication("test-user-url-sec", {
         ...VALID_INPUT,
         applicationUrl: "vbscript:msgbox(1)",
-      })
+      }),
     ).rejects.toMatchObject({ type: "VALIDATION_ERROR" });
   });
 });
@@ -164,7 +164,7 @@ describe("applications-service — Demo Data Isolation & Cross-User Security (P0
 
     // User B cannot update User A's application
     await expect(
-      updateApplication("real-user-B", appA.id, { status: "Interview" })
+      updateApplication("real-user-B", appA.id, { status: "Interview" }),
     ).rejects.toMatchObject({ type: "NOT_FOUND" });
 
     // Clean up

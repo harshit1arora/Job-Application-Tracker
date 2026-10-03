@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { parseResumeWithAi, suggestJobsForResume } from "../ai";
 import { SAMPLE_RESUME_PRESET, cleanExtractedText } from "../resume-parser";
-import { getMissingProfileFields, mergeParsedResumeIntoProfile, EMPTY_PROFILE, getAutofillFieldMap } from "../profile";
+import {
+  getMissingProfileFields,
+  mergeParsedResumeIntoProfile,
+  EMPTY_PROFILE,
+  getAutofillFieldMap,
+} from "../profile";
 import { CURATED_JOBS_CATALOG } from "../jobs-catalog";
 
 describe("Resume AI Pipeline & Missing Field Detector", () => {
@@ -60,7 +65,8 @@ describe("Resume AI Pipeline & Missing Field Detector", () => {
   });
 
   it("sanitizes garbled binary stream text into clean strings", () => {
-    const garbled = "t äÇÀ¨`g@%âSÉFÝØX0&Y IÜñ`¤¾IòºÒ_ÿHµUAÿrÕÌØþÅ¨uÆÜñc×ó3ûò¥ú:åbö·½CïÕaÊµýÔ\nAlex Carter\nSenior Software Engineer\nEmail: alex@example.com";
+    const garbled =
+      "t äÇÀ¨`g@%âSÉFÝØX0&Y IÜñ`¤¾IòºÒ_ÿHµUAÿrÕÌØþÅ¨uÆÜñc×ó3ûò¥ú:åbö·½CïÕaÊµýÔ\nAlex Carter\nSenior Software Engineer\nEmail: alex@example.com";
     const cleaned = cleanExtractedText(garbled);
     expect(cleaned).toContain("Alex Carter");
     expect(cleaned).toContain("Senior Software Engineer");
@@ -125,7 +131,8 @@ describe("AI Resume Schema Validation & Fallback Robustness (P1-D)", () => {
   });
 
   it("activates deterministic parser when AI returns malformed JSON or is unavailable", async () => {
-    const rawText = "Taylor Smith\nSoftware Developer\nEmail: taylor.smith@devmail.com\nPhone: (555) 789-0123\nSkills: Go, Kubernetes, Terraform\nSan Francisco, CA";
+    const rawText =
+      "Taylor Smith\nSoftware Developer\nEmail: taylor.smith@devmail.com\nPhone: (555) 789-0123\nSkills: Go, Kubernetes, Terraform\nSan Francisco, CA";
     const parsed = await parseResumeWithAi(rawText);
 
     expect(parsed).toBeDefined();

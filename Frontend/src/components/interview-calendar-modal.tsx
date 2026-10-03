@@ -86,7 +86,9 @@ export function InterviewCalendarModal({
     // 1. Explicit Reminders
     reminders.forEach((r) => {
       const app = r.applicationId ? appMap.get(r.applicationId) : undefined;
-      const parsedDate = r.reminderDate.includes("T") ? parseISO(r.reminderDate) : new Date(r.reminderDate);
+      const parsedDate = r.reminderDate.includes("T")
+        ? parseISO(r.reminderDate)
+        : new Date(r.reminderDate);
       list.push({
         id: r.id,
         dateStr: format(parsedDate, "yyyy-MM-dd"),
@@ -113,7 +115,10 @@ export function InterviewCalendarModal({
             dateStr: a.followUpDate,
             date: parsedDate,
             type,
-            title: a.status === "Interview" ? `${a.company} — Interview Round` : `${a.company} — Next Process & Follow-up`,
+            title:
+              a.status === "Interview"
+                ? `${a.company} — Interview Round`
+                : `${a.company} — Next Process & Follow-up`,
             company: a.company,
             applicationId: a.id,
             isCompleted: false,
@@ -227,7 +232,7 @@ export function InterviewCalendarModal({
     try {
       await markReminderComplete(userId, reminderId);
       onRemindersUpdated(
-        reminders.map((r) => (r.id === reminderId ? { ...r, isCompleted: true } : r))
+        reminders.map((r) => (r.id === reminderId ? { ...r, isCompleted: true } : r)),
       );
       toast.success("Marked event as completed!");
     } catch {
@@ -249,7 +254,8 @@ export function InterviewCalendarModal({
                 Interview & Application Timeline Calendar
               </h2>
               <p className="text-xs text-muted-foreground">
-                Track scheduled interviews (🟢), follow-ups (🔵), assessment deadlines (🟠), and offer updates (🟣)
+                Track scheduled interviews (🟢), follow-ups (🔵), assessment deadlines (🟠), and
+                offer updates (🟣)
               </p>
             </div>
           </div>
@@ -320,7 +326,9 @@ export function InterviewCalendarModal({
 
             <button
               type="button"
-              onClick={() => setFilterType(filterType === "application-update" ? "all" : "application-update")}
+              onClick={() =>
+                setFilterType(filterType === "application-update" ? "all" : "application-update")
+              }
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all ${
                 filterType === "application-update"
                   ? "bg-purple-500 text-white border-purple-500"
@@ -328,7 +336,8 @@ export function InterviewCalendarModal({
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-purple-500" />
-              Offers & Updates ({calendarEvents.filter((e) => e.type === "application-update").length})
+              Offers & Updates (
+              {calendarEvents.filter((e) => e.type === "application-update").length})
             </button>
           </div>
 
@@ -392,10 +401,10 @@ export function InterviewCalendarModal({
                       isSelected
                         ? "border-primary bg-primary/10 shadow-sm"
                         : today
-                        ? "border-primary/50 bg-secondary/40"
-                        : isCurrentMonth
-                        ? "border-border/70 bg-background hover:border-primary/40 hover:bg-secondary/20"
-                        : "border-border/30 bg-secondary/10 opacity-40"
+                          ? "border-primary/50 bg-secondary/40"
+                          : isCurrentMonth
+                            ? "border-border/70 bg-background hover:border-primary/40 hover:bg-secondary/20"
+                            : "border-border/30 bg-secondary/10 opacity-40"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -404,8 +413,8 @@ export function InterviewCalendarModal({
                           today
                             ? "h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px]"
                             : isSelected
-                            ? "text-primary"
-                            : "text-foreground/90"
+                              ? "text-primary"
+                              : "text-foreground/90"
                         }`}
                       >
                         {format(day, "d")}

@@ -41,7 +41,10 @@ export function FAQ() {
             </h2>
             <p className="mt-8 max-w-sm text-sm leading-relaxed text-muted-foreground">
               Have something else on your mind? Write to{" "}
-              <a href="mailto:founders@jobpilot.com" className="border-b border-foreground text-foreground">
+              <a
+                href="mailto:founders@jobpilot.com"
+                className="border-b border-foreground text-foreground"
+              >
                 founders@jobpilot.com
               </a>{" "}
               — a real founder will reply.

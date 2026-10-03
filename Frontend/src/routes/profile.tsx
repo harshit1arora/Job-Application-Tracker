@@ -239,7 +239,8 @@ function ProfilePage() {
               Résumé & Profile Settings
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Upload your résumé to automatically parse contact information, skills, and experience for 1-click job auto-fill.
+              Upload your résumé to automatically parse contact information, skills, and experience
+              for 1-click job auto-fill.
             </p>
           </div>
 
@@ -291,7 +292,8 @@ function ProfilePage() {
             <div className="flex items-center gap-2.5 text-xs text-amber-600 dark:text-amber-300">
               <AlertTriangle size={16} className="text-amber-500 shrink-0" />
               <span>
-                <strong>{missing.length} application details missing:</strong> {missing.join(", ")}. Fill them below so employers have your complete contact information.
+                <strong>{missing.length} application details missing:</strong> {missing.join(", ")}.
+                Fill them below so employers have your complete contact information.
               </span>
             </div>
             <button
@@ -314,7 +316,9 @@ function ProfilePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Full Name</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     value={profile.fullName}
@@ -324,7 +328,9 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Email Address</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={profile.email}
@@ -334,7 +340,9 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Phone Number</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Phone Number
+                  </label>
                   <input
                     type="text"
                     value={profile.phone}
@@ -345,18 +353,24 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">City / Location</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    City / Location
+                  </label>
                   <input
                     type="text"
                     value={profile.city || profile.location}
-                    onChange={(e) => setProfile({ ...profile, city: e.target.value, location: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, city: e.target.value, location: e.target.value })
+                    }
                     placeholder="San Francisco, CA or Remote"
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Experience / Age</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Experience / Age
+                  </label>
                   <input
                     type="text"
                     value={profile.ageOrExperience || ""}
@@ -367,7 +381,9 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Target Role / Title</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Target Role / Title
+                  </label>
                   <input
                     type="text"
                     value={profile.targetRole || ""}
@@ -391,7 +407,9 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">LinkedIn Profile</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    LinkedIn Profile
+                  </label>
                   <input
                     type="text"
                     value={profile.linkedin || ""}
@@ -402,7 +420,9 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Portfolio / GitHub</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Portfolio / GitHub
+                  </label>
                   <input
                     type="text"
                     value={profile.portfolio || ""}
@@ -424,7 +444,9 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Hybrid Schedule OK?</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Hybrid Schedule OK?
+                  </label>
                   <select
                     value={profile.hybridScheduleOk || "Yes"}
                     onChange={(e) => setProfile({ ...profile, hybridScheduleOk: e.target.value })}
@@ -436,10 +458,14 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-muted-foreground mb-1">Visa Sponsorship Required?</label>
+                  <label className="block font-semibold text-muted-foreground mb-1">
+                    Visa Sponsorship Required?
+                  </label>
                   <select
                     value={profile.sponsorshipRequired || "No"}
-                    onChange={(e) => setProfile({ ...profile, sponsorshipRequired: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, sponsorshipRequired: e.target.value })
+                    }
                     className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
                   >
                     <option value="No">No (Authorized to work)</option>
@@ -454,10 +480,12 @@ function ProfilePage() {
               <div className="flex items-center justify-between border-b border-border/70 pb-3">
                 <div>
                   <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Code2 size={16} className="text-primary" /> Candidate Projects & Practical Evidence
+                    <Code2 size={16} className="text-primary" /> Candidate Projects & Practical
+                    Evidence
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Demonstrate applied experience with technologies. Directly impacts Skill Proof Scores and Application Readiness.
+                    Demonstrate applied experience with technologies. Directly impacts Skill Proof
+                    Scores and Application Readiness.
                   </p>
                 </div>
                 <button
@@ -475,7 +503,9 @@ function ProfilePage() {
                   <h4 className="text-xs font-bold text-foreground">New Project Evidence</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Project Name *</label>
+                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                        Project Name *
+                      </label>
                       <input
                         type="text"
                         placeholder="e.g. Distributed Task Queue"
@@ -485,7 +515,9 @@ function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">GitHub / Live Link</label>
+                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                        GitHub / Live Link
+                      </label>
                       <input
                         type="url"
                         placeholder="https://github.com/..."
@@ -496,7 +528,9 @@ function ProfilePage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Technologies Used (comma separated) *</label>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Technologies Used (comma separated) *
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. React, TypeScript, Docker, Redis, PostgreSQL"
@@ -506,7 +540,9 @@ function ProfilePage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Brief Description & Architecture</label>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                      Brief Description & Architecture
+                    </label>
                     <textarea
                       rows={2}
                       placeholder="Describe architectural challenges solved and measurable metrics..."
@@ -537,7 +573,8 @@ function ProfilePage() {
               {/* Projects List */}
               {projects.length === 0 ? (
                 <div className="text-center py-6 border border-dashed border-border rounded-xl text-xs text-muted-foreground">
-                  No projects logged yet. Add your projects to strengthen Skill Proof scores across jobs.
+                  No projects logged yet. Add your projects to strengthen Skill Proof scores across
+                  jobs.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -598,7 +635,8 @@ function ProfilePage() {
                 <FileText size={16} className="text-primary" /> Raw Résumé Text
               </h3>
               <p className="text-xs text-muted-foreground">
-                This raw text is used by the AI embedding model to rank match scores against job descriptions.
+                This raw text is used by the AI embedding model to rank match scores against job
+                descriptions.
               </p>
               <textarea
                 rows={8}

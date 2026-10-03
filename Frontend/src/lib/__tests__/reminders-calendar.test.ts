@@ -4,11 +4,32 @@ import { format } from "date-fns";
 
 describe("Interview & Process Calendar Data Layer", () => {
   it("fetches seeded color-coded calendar reminders for candidate", async () => {
-    const app = await createApplicationApi("demo-user", { company: "Company", jobTitle: "Job", applicationSource: "LinkedIn", status: "Applied" });
-    await createReminderApi("demo-user", { applicationId: app.id, type: "interview", reminderDate: "2024-01-01" });
-    await createReminderApi("demo-user", { applicationId: app.id, type: "follow-up", reminderDate: "2024-01-02" });
-    await createReminderApi("demo-user", { applicationId: app.id, type: "deadline", reminderDate: "2024-01-03" });
-    await createReminderApi("demo-user", { applicationId: app.id, type: "interview", reminderDate: "2024-01-04" });
+    const app = await createApplicationApi("demo-user", {
+      company: "Company",
+      jobTitle: "Job",
+      applicationSource: "LinkedIn",
+      status: "Applied",
+    });
+    await createReminderApi("demo-user", {
+      applicationId: app.id,
+      type: "interview",
+      reminderDate: "2024-01-01",
+    });
+    await createReminderApi("demo-user", {
+      applicationId: app.id,
+      type: "follow-up",
+      reminderDate: "2024-01-02",
+    });
+    await createReminderApi("demo-user", {
+      applicationId: app.id,
+      type: "deadline",
+      reminderDate: "2024-01-03",
+    });
+    await createReminderApi("demo-user", {
+      applicationId: app.id,
+      type: "interview",
+      reminderDate: "2024-01-04",
+    });
 
     const rems = await fetchReminders("demo-user", app.id);
     expect(rems.length).toBeGreaterThanOrEqual(4);
@@ -23,7 +44,12 @@ describe("Interview & Process Calendar Data Layer", () => {
   });
 
   it("allows candidate to schedule a new interview round on calendar", async () => {
-    const app = await createApplicationApi("demo-user", { company: "Company", jobTitle: "Job", applicationSource: "LinkedIn", status: "Applied" });
+    const app = await createApplicationApi("demo-user", {
+      company: "Company",
+      jobTitle: "Job",
+      applicationSource: "LinkedIn",
+      status: "Applied",
+    });
     const targetDate = format(new Date(Date.now() + 8 * 86400000), "yyyy-MM-dd");
     const newInterview = await createReminderApi("demo-user", {
       applicationId: app.id,

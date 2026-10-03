@@ -1,10 +1,14 @@
 import os
+os.environ["DEMO_MODE"] = "true"
+os.environ["DATA_DIR"] = "./data"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from main import app, Base, get_db, get_user_id
+from main import app, Base, get_db
+from auth import get_current_user_id
 
 # Use an in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -113,6 +117,20 @@ def test_upload_and_download_document():
     doc_id = response.json()["id"]
     
     # Download doc
-    dl_response = client.get(f"/api/documents/{doc_id}/download?userId=doc-user")
+    dl_response = client.get(f"/api/documents/{doc_id}/download", headers=headers)
     assert dl_response.status_code == 200
     assert dl_response.text == "test content"
+
+def test_production_auth_rejection():
+    # Force DEMO_MODE off to test production behavior
+    import auth
+    auth.DEVELOPMENT_MODE = False
+    
+    headers = {"X-User-Id": "doc-user"}
+    response = client.get("/api/applications", headers=headers)
+    
+    # Reset it so other tests don't break if they run after
+    auth.DEVELOPMENT_MODE = True
+    
+    assert response.status_code == 401
+    assert "Authentication required" in response.text or "Invalid or expired" in response.text

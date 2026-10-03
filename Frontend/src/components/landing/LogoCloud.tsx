@@ -18,7 +18,9 @@ export function LogoCloud() {
     <section className="border-y border-border bg-secondary/40 py-12">
       <div className="mx-auto max-w-7xl px-5">
         <Reveal>
-          <p className="text-sm font-medium text-muted-foreground">Automated Applications Across Major ATS Platforms & Job Portals</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Automated Applications Across Major ATS Platforms & Job Portals
+          </p>
         </Reveal>
         <Reveal delay={80}>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

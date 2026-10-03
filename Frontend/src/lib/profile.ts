@@ -121,7 +121,9 @@ export function getProfile(uid: string): UserProfile {
 
 export function saveProfile(uid: string, profile: UserProfile): void {
   if (typeof window === "undefined") return;
-  const names = extractFirstAndLastName(profile.fullName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim());
+  const names = extractFirstAndLastName(
+    profile.fullName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim(),
+  );
   const updated: UserProfile = {
     ...profile,
     firstName: profile.firstName || names.firstName,
@@ -132,7 +134,10 @@ export function saveProfile(uid: string, profile: UserProfile): void {
 }
 
 /** Merges AI-parsed resume data into profile */
-export function mergeParsedResumeIntoProfile(current: UserProfile, parsed: ParsedResumeProfile): UserProfile {
+export function mergeParsedResumeIntoProfile(
+  current: UserProfile,
+  parsed: ParsedResumeProfile,
+): UserProfile {
   const fullName = parsed.fullName || current.fullName;
   const names = extractFirstAndLastName(fullName);
   return {
@@ -147,7 +152,7 @@ export function mergeParsedResumeIntoProfile(current: UserProfile, parsed: Parse
     ageOrExperience: parsed.ageOrExperience || current.ageOrExperience,
     yearsOfExperience: parsed.ageOrExperience || current.yearsOfExperience || "3+ years",
     targetRole: parsed.targetRole || current.targetRole,
-    skills: parsed.skills && parsed.skills.length > 0 ? parsed.skills : (current.skills || []),
+    skills: parsed.skills && parsed.skills.length > 0 ? parsed.skills : current.skills || [],
     education: parsed.education || current.education,
     projects: current.projects || [],
     linkedin: parsed.linkedin || current.linkedin,
@@ -162,7 +167,8 @@ export function mergeParsedResumeIntoProfile(current: UserProfile, parsed: Parse
 /** Detects empty or incomplete critical fields for job applications */
 export function getMissingProfileFields(p: Partial<UserProfile>): string[] {
   const missing: string[] = [];
-  if (!p.fullName?.trim() && (!p.firstName?.trim() || !p.lastName?.trim())) missing.push("Full Name");
+  if (!p.fullName?.trim() && (!p.firstName?.trim() || !p.lastName?.trim()))
+    missing.push("Full Name");
   if (!p.email?.trim()) missing.push("Email Address");
   if (!p.phone?.trim()) missing.push("Phone Number");
   if (!p.country?.trim()) missing.push("Country");
@@ -187,7 +193,8 @@ export function autofillText(p: UserProfile): string {
     p.phone && `Phone: ${p.phone}`,
     p.country && `Country: ${p.country}`,
     (p.city || p.location) && `City/Location: ${p.city || p.location}`,
-    (p.yearsOfExperience || p.ageOrExperience) && `Experience: ${p.yearsOfExperience || p.ageOrExperience}`,
+    (p.yearsOfExperience || p.ageOrExperience) &&
+      `Experience: ${p.yearsOfExperience || p.ageOrExperience}`,
     p.targetRole && `Target Role: ${p.targetRole}`,
     p.currentCompany && `Current Company: ${p.currentCompany}`,
     p.noticePeriod && `Notice Period: ${p.noticePeriod}`,
@@ -210,18 +217,18 @@ export function getAutofillFieldMap(p: UserProfile): Record<string, string> {
     "Full Name": p.fullName || "",
     "First Name": p.firstName || names.firstName || "",
     "Last Name": p.lastName || names.lastName || "",
-    "Email": p.email || "",
-    "Phone": p.phone || "",
-    "Country": p.country || "United States",
+    Email: p.email || "",
+    Phone: p.phone || "",
+    Country: p.country || "United States",
     "City / Location": p.city || p.location || "",
-    "Experience": p.yearsOfExperience || p.ageOrExperience || "",
+    Experience: p.yearsOfExperience || p.ageOrExperience || "",
     "Target Role": p.targetRole || "",
     "Current Company": p.currentCompany || "",
     "Notice Period": p.noticePeriod || "",
     "Visa Sponsorship": p.sponsorshipRequired || "No",
     "Hybrid Availability": p.hybridScheduleOk || "Yes",
     "Key Skills": (p.skills || []).join(", "),
-    "Education": p.education || "",
+    Education: p.education || "",
     "LinkedIn URL": p.linkedin || "",
     "Portfolio URL": p.portfolio || "",
     "GitHub URL": p.github || "",
@@ -312,4 +319,3 @@ export function generateBrowserAutofillScript(p: UserProfile): string {
   setTimeout(() => toast.remove(), 4000);
 })();`;
 }
-

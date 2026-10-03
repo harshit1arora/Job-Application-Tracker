@@ -48,7 +48,7 @@ export const createApplicationSchema = z.object({
     .url("Please enter a valid URL")
     .refine(
       (value) => !value || /^https?:\/\//i.test(value),
-      "Application URL must use http:// or https://"
+      "Application URL must use http:// or https://",
     )
     .or(z.literal(""))
     .optional(),
@@ -59,20 +59,11 @@ export const createApplicationSchema = z.object({
     .max(5000, "Job description must be 5000 characters or fewer")
     .optional(),
 
-  salaryRange: z
-    .string()
-    .max(50, "Salary range must be 50 characters or fewer")
-    .optional(),
+  salaryRange: z.string().max(50, "Salary range must be 50 characters or fewer").optional(),
 
-  location: z
-    .string()
-    .max(100, "Location must be 100 characters or fewer")
-    .optional(),
+  location: z.string().max(100, "Location must be 100 characters or fewer").optional(),
 
-  notes: z
-    .string()
-    .max(2000, "Notes must be 2000 characters or fewer")
-    .optional(),
+  notes: z.string().max(2000, "Notes must be 2000 characters or fewer").optional(),
 
   followUpDate: z
     .string()
@@ -111,17 +102,12 @@ export const createDocumentSchema = z.object({
     }),
   }),
 
-  fileSize: z
-    .number()
-    .max(MAX_FILE_SIZE_BYTES, "File size must be 5 MB or smaller"),
+  fileSize: z.number().max(MAX_FILE_SIZE_BYTES, "File size must be 5 MB or smaller"),
 
   storageRef: z.string().min(1, "Storage reference is required"),
 
   applicationId: z.string().optional(),
-  displayName: z
-    .string()
-    .max(100, "Display name must be 100 characters or fewer")
-    .optional(),
+  displayName: z.string().max(100, "Display name must be 100 characters or fewer").optional(),
 });
 
 export type CreateDocumentData = z.infer<typeof createDocumentSchema>;
@@ -139,10 +125,7 @@ export const createReminderSchema = z.object({
     errorMap: () => ({ message: "Please select a valid reminder type" }),
   }),
 
-  message: z
-    .string()
-    .max(500, "Message must be 500 characters or fewer")
-    .optional(),
+  message: z.string().max(500, "Message must be 500 characters or fewer").optional(),
 });
 
 export type CreateReminderData = z.infer<typeof createReminderSchema>;

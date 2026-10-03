@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { type UserProfile, EMPTY_PROFILE, generateBrowserAutofillScript, getAutofillFieldMap } from "../profile";
+import {
+  type UserProfile,
+  EMPTY_PROFILE,
+  generateBrowserAutofillScript,
+  getAutofillFieldMap,
+} from "../profile";
 
 describe("Profile Mapping & Autofill Payload", () => {
   it("formats profile payload correctly for autofill field mapping", () => {

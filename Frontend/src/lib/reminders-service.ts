@@ -34,7 +34,7 @@ import {
 
 export async function createReminder(
   userId: string,
-  input: CreateReminderInput
+  input: CreateReminderInput,
 ): Promise<ReminderDocument> {
   const result = createReminderSchema.safeParse(input);
   if (!result.success) {
@@ -53,30 +53,23 @@ export async function createReminder(
 
 export async function getReminders(
   userId: string,
-  applicationId?: string
+  applicationId?: string,
 ): Promise<ReminderDocument[]> {
   return await fetchReminders(userId, applicationId);
 }
 
-export async function markReminderComplete(
-  userId: string,
-  reminderId: string
-): Promise<void> {
+export async function markReminderComplete(userId: string, reminderId: string): Promise<void> {
   await updateReminderApi(userId, reminderId, { isCompleted: true });
 }
 
 export async function updateReminder(
   userId: string,
   reminderId: string,
-  changes: Partial<Pick<CreateReminderInput, "reminderDate" | "type" | "message">>
+  changes: Partial<Pick<CreateReminderInput, "reminderDate" | "type" | "message">>,
 ): Promise<ReminderDocument> {
   return await updateReminderApi(userId, reminderId, changes);
 }
 
-export async function deleteReminder(
-  userId: string,
-  reminderId: string
-): Promise<void> {
+export async function deleteReminder(userId: string, reminderId: string): Promise<void> {
   await deleteReminderApi(userId, reminderId);
 }
-

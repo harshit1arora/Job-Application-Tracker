@@ -40,12 +40,12 @@ import { auth, signInWithGooglePopup, signOutFirebase } from "./firebase";
 // ---------------------------------------------------------------------------
 
 export interface User {
-  id: string;          // Firebase UID (for both email/password and Google users)
+  id: string; // Firebase UID (for both email/password and Google users)
   name: string;
   email: string;
   targetRole?: string;
   avatar?: string;
-  createdAt: string;   // ISO 8601 — from Firebase metadata.creationTime
+  createdAt: string; // ISO 8601 — from Firebase metadata.creationTime
 }
 
 interface AuthContextType {
@@ -182,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ---------------------------------------------------------------------------
   const login = async (
     email: string,
-    password: string
+    password: string,
   ): Promise<{ success: boolean; error?: string }> => {
     if (auth) {
       try {
@@ -190,25 +190,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
       } catch (err) {
         const firebaseErr = err as FirebaseError;
-        if (firebaseErr.code === "auth/invalid-credential" || firebaseErr.code === "auth/wrong-password") {
+        if (
+          firebaseErr.code === "auth/invalid-credential" ||
+          firebaseErr.code === "auth/wrong-password"
+        ) {
           return { success: false, error: mapFirebaseError(firebaseErr.code) };
         }
       }
     }
 
-    // Local authentication fallback
-    const targetRole = localStorage.getItem(TARGET_ROLE_KEY) ?? DEMO_FALLBACK_ROLE;
-    const localUser: User = {
-      id: `user_${email.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
-      name: email.split("@")[0] || "User",
-      email: email.trim().toLowerCase(),
-      targetRole,
-      createdAt: new Date().toISOString(),
-    };
+    // Local authentication fallback ONLY if VITE_DEMO_MODE is true
+    if (import.meta.env.VITE_DEMO_MODE === "true") {
+      const targetRole = localStorage.getItem(TARGET_ROLE_KEY) ?? DEMO_FALLBACK_ROLE;
+      const localUser: User = {
+        id: `user_${email.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
+        name: email.split("@")[0] || "User",
+        email: email.trim().toLowerCase(),
+        targetRole,
+        createdAt: new Date().toISOString(),
+      };
 
-    setUser(localUser);
-    localStorage.setItem("jobpilot_local_user", JSON.stringify(localUser));
-    return { success: true };
+      setUser(localUser);
+      localStorage.setItem("jobpilot_local_user", JSON.stringify(localUser));
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: "Authentication failed. Backend unavailable or invalid credentials.",
+    };
   };
 
   // ---------------------------------------------------------------------------
@@ -225,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const credential = await createUserWithEmailAndPassword(
           auth,
           data.email.trim().toLowerCase(),
-          data.password
+          data.password,
         );
         await updateProfile(credential.user, { displayName: data.name.trim() });
         const targetRole = data.targetRole?.trim() || DEMO_FALLBACK_ROLE;
@@ -249,19 +259,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Local fallback signup
-    const targetRole = data.targetRole?.trim() || DEMO_FALLBACK_ROLE;
-    localStorage.setItem(TARGET_ROLE_KEY, targetRole);
-    const localUser: User = {
-      id: `user_${data.email.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
-      name: data.name.trim(),
-      email: data.email.trim().toLowerCase(),
-      targetRole,
-      createdAt: new Date().toISOString(),
-    };
-    setUser(localUser);
-    localStorage.setItem("jobpilot_local_user", JSON.stringify(localUser));
-    return { success: true };
+    // Local fallback signup ONLY if VITE_DEMO_MODE is true
+    if (import.meta.env.VITE_DEMO_MODE === "true") {
+      const targetRole = data.targetRole?.trim() || DEMO_FALLBACK_ROLE;
+      localStorage.setItem(TARGET_ROLE_KEY, targetRole);
+      const localUser: User = {
+        id: `user_${data.email.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        targetRole,
+        createdAt: new Date().toISOString(),
+      };
+      setUser(localUser);
+      localStorage.setItem("jobpilot_local_user", JSON.stringify(localUser));
+      return { success: true };
+    }
+
+    return { success: false, error: "Signup failed. Backend unavailable or invalid data." };
   };
 
   // ---------------------------------------------------------------------------
@@ -278,6 +292,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // demoLogin — Signs into demo account with zero latency
   // ---------------------------------------------------------------------------
   const demoLogin = (): void => {
+    if (import.meta.env.VITE_DEMO_MODE !== "true") {
+      console.warn("Demo mode is disabled in production.");
+      return;
+    }
+
     const demoUser: User = {
       id: "demo-user",
       name: DEMO_NAME,
@@ -296,7 +315,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await signInWithEmailAndPassword(auth, DEMO_EMAIL, DEMO_PASSWORD);
         } catch {
           try {
-            const credential = await createUserWithEmailAndPassword(auth, DEMO_EMAIL, DEMO_PASSWORD);
+            const credential = await createUserWithEmailAndPassword(
+              auth,
+              DEMO_EMAIL,
+              DEMO_PASSWORD,
+            );
             await updateProfile(credential.user, { displayName: DEMO_NAME });
           } catch {
             // ignore

@@ -47,7 +47,8 @@ const SAMPLE_THREADS: MessageThread[] = [
     sender: "Sarah Jenkins",
     senderRole: "Senior Technical Recruiter",
     subject: "Interview Invitation: Senior Full Stack Engineer Screening",
-    preview: "Hi Alex, our engineering team was impressed by your distributed systems background...",
+    preview:
+      "Hi Alex, our engineering team was impressed by your distributed systems background...",
     body: `Hi Alex,\n\nThanks for applying for the Senior Full Stack Engineer role at Stripe! Our team was really impressed by your background in distributed systems, TypeScript, and developer tooling.\n\nWe'd love to invite you to a 45-minute technical screening with one of our Staff Engineers next Tuesday at 2:00 PM PST.\n\nPlease confirm if this time works for you or suggest an alternative window.\n\nBest regards,\nSarah Jenkins\nTalent Acquisition @ Stripe`,
     date: "10:30 AM",
     unread: true,
@@ -60,7 +61,8 @@ const SAMPLE_THREADS: MessageThread[] = [
     sender: "David Chen",
     senderRole: "Recruiting Coordinator",
     subject: "Update on your Frontend Platform Engineer application",
-    preview: "Hello Alex, your portfolio and application have been forwarded to the Canvas interaction team...",
+    preview:
+      "Hello Alex, your portfolio and application have been forwarded to the Canvas interaction team...",
     body: `Hello Alex,\n\nWe wanted to share an update on your Frontend Platform Engineer application. Your application has successfully passed initial review and has been routed to our hiring manager for the Canvas interaction team.\n\nYou should hear back regarding next round interview scheduling within 2-3 business days.\n\nThanks for your interest in OpenAI!\nDavid Chen`,
     date: "Yesterday",
     unread: true,
@@ -72,7 +74,8 @@ const SAMPLE_THREADS: MessageThread[] = [
     sender: "Elena Rostova",
     senderRole: "Engineering Talent Partner",
     subject: "Next Steps: Software Engineer, Core DX",
-    preview: "Hi Alex, we're reviewing candidate profiles for our edge runtime and bundling teams...",
+    preview:
+      "Hi Alex, we're reviewing candidate profiles for our edge runtime and bundling teams...",
     body: `Hi Alex,\n\nThanks for connecting regarding the Software Engineer position on the Core DX team. We'd like to ask you a quick question about your experience with React 19 and custom build plugins.\n\nCould you reply with a brief summary of a challenging performance bottleneck you resolved in a production web application?\n\nLooking forward to hearing from you!\nElena`,
     date: "2 days ago",
     unread: false,
@@ -92,9 +95,7 @@ function InboxPage() {
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
-    setThreads((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, unread: false } : t))
-    );
+    setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: false } : t)));
   };
 
   const handleAiDraftReply = () => {
@@ -103,11 +104,11 @@ function InboxPage() {
     setTimeout(() => {
       if (selectedThread.type === "interview") {
         setReplyText(
-          `Hi ${selectedThread.sender.split(" ")[0]},\n\nThank you so much for the invitation! That time window works perfectly for me. I'm looking forward to speaking with the team and discussing how my experience can contribute to ${selectedThread.company}.\n\nBest regards,\n${user?.name || "Alex"}`
+          `Hi ${selectedThread.sender.split(" ")[0]},\n\nThank you so much for the invitation! That time window works perfectly for me. I'm looking forward to speaking with the team and discussing how my experience can contribute to ${selectedThread.company}.\n\nBest regards,\n${user?.name || "Alex"}`,
         );
       } else {
         setReplyText(
-          `Hi ${selectedThread.sender.split(" ")[0]},\n\nThank you for the update! Please let me know if you need any additional code samples or technical details from my end.\n\nBest regards,\n${user?.name || "Alex"}`
+          `Hi ${selectedThread.sender.split(" ")[0]},\n\nThank you for the update! Please let me know if you need any additional code samples or technical details from my end.\n\nBest regards,\n${user?.name || "Alex"}`,
         );
       }
       setIsAiGenerating(false);
@@ -125,7 +126,7 @@ function InboxPage() {
     (t) =>
       t.company.toLowerCase().includes(search.toLowerCase()) ||
       t.subject.toLowerCase().includes(search.toLowerCase()) ||
-      t.sender.toLowerCase().includes(search.toLowerCase())
+      t.sender.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -153,7 +154,10 @@ function InboxPage() {
           <div className="lg:col-span-5 border-r border-border/80 flex flex-col">
             <div className="p-3.5 border-b border-border/70">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
                 <input
                   type="text"
                   placeholder="Search messages..."
@@ -172,9 +176,7 @@ function InboxPage() {
                     key={thread.id}
                     onClick={() => handleSelect(thread.id)}
                     className={`p-4 transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-[#f1f3f7] dark:bg-secondary/60"
-                        : "hover:bg-secondary/30"
+                      isSelected ? "bg-[#f1f3f7] dark:bg-secondary/60" : "hover:bg-secondary/30"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -187,7 +189,9 @@ function InboxPage() {
 
                     <h4
                       className={`text-xs truncate ${
-                        thread.unread ? "font-bold text-foreground" : "font-medium text-foreground/80"
+                        thread.unread
+                          ? "font-bold text-foreground"
+                          : "font-medium text-foreground/80"
                       }`}
                     >
                       {thread.subject}
@@ -203,9 +207,7 @@ function InboxPage() {
                           <Video size={10} /> Interview Invite
                         </span>
                       )}
-                      {thread.unread && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
+                      {thread.unread && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                     </div>
                   </div>
                 );
@@ -233,7 +235,9 @@ function InboxPage() {
                     </div>
                   </div>
 
-                  <span className="text-xs text-muted-foreground shrink-0">{selectedThread.date}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {selectedThread.date}
+                  </span>
                 </div>
 
                 {/* Body */}

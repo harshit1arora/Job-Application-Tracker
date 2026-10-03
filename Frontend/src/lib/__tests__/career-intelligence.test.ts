@@ -79,7 +79,8 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
     id: "job-stripe-01",
     company: "Stripe",
     role: "Senior Full Stack Engineer",
-    description: "Build developer platform using React, TypeScript, Node.js, REST APIs, and Docker.",
+    description:
+      "Build developer platform using React, TypeScript, Node.js, REST APIs, and Docker.",
     requiredSkills: ["React", "TypeScript", "Node.js", "Docker", "REST APIs"],
     matchScore: 88,
   };
@@ -164,11 +165,56 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
 
     it("incorporates historical application outcomes when sufficient records exist", () => {
       const history: ApplicationDocument[] = [
-        { id: "1", userId: testUid, company: "A", jobTitle: "Eng", applicationSource: "LinkedIn", status: "Interview", createdAt: "", updatedAt: "" },
-        { id: "2", userId: testUid, company: "B", jobTitle: "Eng", applicationSource: "LinkedIn", status: "Offer", createdAt: "", updatedAt: "" },
-        { id: "3", userId: testUid, company: "C", jobTitle: "Eng", applicationSource: "LinkedIn", status: "Interview", createdAt: "", updatedAt: "" },
-        { id: "4", userId: testUid, company: "D", jobTitle: "Eng", applicationSource: "LinkedIn", status: "Applied", createdAt: "", updatedAt: "" },
-        { id: "5", userId: testUid, company: "E", jobTitle: "Eng", applicationSource: "LinkedIn", status: "Saved", createdAt: "", updatedAt: "" },
+        {
+          id: "1",
+          userId: testUid,
+          company: "A",
+          jobTitle: "Eng",
+          applicationSource: "LinkedIn",
+          status: "Interview",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "2",
+          userId: testUid,
+          company: "B",
+          jobTitle: "Eng",
+          applicationSource: "LinkedIn",
+          status: "Offer",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "3",
+          userId: testUid,
+          company: "C",
+          jobTitle: "Eng",
+          applicationSource: "LinkedIn",
+          status: "Interview",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "4",
+          userId: testUid,
+          company: "D",
+          jobTitle: "Eng",
+          applicationSource: "LinkedIn",
+          status: "Applied",
+          createdAt: "",
+          updatedAt: "",
+        },
+        {
+          id: "5",
+          userId: testUid,
+          company: "E",
+          jobTitle: "Eng",
+          applicationSource: "LinkedIn",
+          status: "Saved",
+          createdAt: "",
+          updatedAt: "",
+        },
       ];
       const result = calculateApplicationSuccessScore(sampleProfile, sampleJob, history);
       expect(result.historicalContext).toBeDefined();
@@ -309,7 +355,15 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
           claimed: false,
           supported: false,
           verified: false,
-          evidence: { resumeMention: false, resumeCount: 0, projectCount: 0, matchedProjects: [], hasRepoOrLink: false, verificationStatus: "unverified", notes: [] },
+          evidence: {
+            resumeMention: false,
+            resumeCount: 0,
+            projectCount: 0,
+            matchedProjects: [],
+            hasRepoOrLink: false,
+            verificationStatus: "unverified",
+            notes: [],
+          },
         },
       ];
       const successResult = calculateApplicationSuccessScore(sampleProfile, sampleJob);
@@ -319,7 +373,7 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
         "Saved",
         successResult,
         proofs,
-        testUid
+        testUid,
       );
 
       expect(action.actionType).toBe("IMPROVE_SKILL");
@@ -338,7 +392,7 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
         "Interview",
         successResult,
         boostedProofs,
-        testUid
+        testUid,
       );
 
       expect(action.actionType).toBe("PREPARE_INTERVIEW");
@@ -347,7 +401,11 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
 
     it("executes action completion, persists state, and recalculates Next-Best-Action", () => {
       saveProfile(testUid, sampleProfile);
-      const initialProofs = calculateSkillProofScores(sampleProfile, sampleJob.requiredSkills, testUid);
+      const initialProofs = calculateSkillProofScores(
+        sampleProfile,
+        sampleJob.requiredSkills,
+        testUid,
+      );
       const initialSuccess = calculateApplicationSuccessScore(sampleProfile, sampleJob);
 
       const firstAction = determineNextBestAction(
@@ -356,7 +414,7 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
         "Saved",
         initialSuccess,
         initialProofs,
-        testUid
+        testUid,
       );
 
       expect(firstAction.actionType).toBe("IMPROVE_SKILL");
@@ -378,7 +436,11 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
 
       // Re-run pipeline with persisted state
       const reloadedProfile = getProfile(testUid);
-      const recalculatedProofs = calculateSkillProofScores(reloadedProfile, sampleJob.requiredSkills, testUid);
+      const recalculatedProofs = calculateSkillProofScores(
+        reloadedProfile,
+        sampleJob.requiredSkills,
+        testUid,
+      );
       const recalculatedSuccess = calculateApplicationSuccessScore(reloadedProfile, sampleJob);
 
       const secondAction = determineNextBestAction(
@@ -387,7 +449,7 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
         "Saved",
         recalculatedSuccess,
         recalculatedProofs,
-        testUid
+        testUid,
       );
 
       // Next best action must advance to the next priority!
@@ -410,17 +472,18 @@ describe("AI Career Intelligence Engine — Production Hardening & Integration T
         { ...EMPTY_PROFILE, resumeText: "", skills: [] },
         [sampleJob],
         [],
-        testUid
+        testUid,
       );
       expect(emptyProfileSummary?.hasSufficientData).toBe(false);
     });
 
     it("safely extracts JSON objects and arrays from diverse LLM outputs", () => {
-      const rawWithFences = "```json\n{\"score\": 85, \"passed\": true}\n```";
+      const rawWithFences = '```json\n{"score": 85, "passed": true}\n```';
       const obj = safeExtractJsonObject<{ score: number }>(rawWithFences);
       expect(obj?.score).toBe(85);
 
-      const rawWithPreamble = "Here is the result: [{\"id\": \"q-1\", \"question\": \"Test?\"}] hope it helps!";
+      const rawWithPreamble =
+        'Here is the result: [{"id": "q-1", "question": "Test?"}] hope it helps!';
       const arr = safeExtractJsonArray<{ id: string }>(rawWithPreamble);
       expect(arr?.length).toBe(1);
       expect(arr?.[0]?.id).toBe("q-1");

@@ -23,12 +23,12 @@
  * - A runtime value list passed to Zod's z.enum() for validation
  */
 export const APPLICATION_STATUSES = [
-  "Saved",        // Bookmarked job — not yet applied (requirement-specified initial choice)
-  "Applied",      // Application submitted
+  "Saved", // Bookmarked job — not yet applied (requirement-specified initial choice)
+  "Applied", // Application submitted
   "Under Review", // Employer is reviewing the application
-  "Interview",    // Interview scheduled or in progress
-  "Offer",        // Offer received
-  "Rejected",     // Application rejected
+  "Interview", // Interview scheduled or in progress
+  "Offer", // Offer received
+  "Rejected", // Application rejected
 ] as const;
 
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
@@ -44,12 +44,7 @@ export const APPLICATION_SOURCES = [
 
 export type ApplicationSource = (typeof APPLICATION_SOURCES)[number];
 
-export const REMINDER_TYPES = [
-  "follow-up",
-  "interview",
-  "deadline",
-  "application-update",
-] as const;
+export const REMINDER_TYPES = ["follow-up", "interview", "deadline", "application-update"] as const;
 
 export type ReminderType = (typeof REMINDER_TYPES)[number];
 
@@ -79,9 +74,9 @@ export interface ApplicationDocument {
   location?: string | undefined;
   notes?: string | undefined;
   followUpDate?: string | undefined; // YYYY-MM-DD format
-  matchScore?: number | undefined;   // AI-assigned — not written by our services
-  createdAt: string;     // ISO 8601
-  updatedAt: string;     // ISO 8601
+  matchScore?: number | undefined; // AI-assigned — not written by our services
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
 }
 
 /**
@@ -171,7 +166,7 @@ export interface DashboardStats {
     rejected: number;
   };
   recentApplications: ApplicationDocument[]; // Up to 5, most recent first
-  upcomingFollowUps: ApplicationDocument[];  // followUpDate >= today, soonest first
+  upcomingFollowUps: ApplicationDocument[]; // followUpDate >= today, soonest first
 }
 
 // ---------------------------------------------------------------------------
@@ -189,13 +184,13 @@ export interface DashboardStats {
 export interface DocumentMetadata {
   id: string;
   userId: string;
-  applicationId?: string | undefined;  // Optional link to a specific application
+  applicationId?: string | undefined; // Optional link to a specific application
   fileName: string;
-  fileType: string;         // MIME type, e.g. "application/pdf"
-  fileSize: number;         // bytes
-  storageRef: string;       // Firebase Storage path (internal — not exposed to UI)
-  displayName?: string | undefined;     // Optional friendly label, e.g. "Resume v2"
-  createdAt: string;        // ISO 8601
+  fileType: string; // MIME type, e.g. "application/pdf"
+  fileSize: number; // bytes
+  storageRef: string; // Firebase Storage path (internal — not exposed to UI)
+  displayName?: string | undefined; // Optional friendly label, e.g. "Resume v2"
+  createdAt: string; // ISO 8601
 }
 
 /** Input when registering document metadata after a successful Storage upload. */
@@ -215,17 +210,17 @@ export interface CreateDocumentInput {
 export interface ReminderDocument {
   id: string;
   userId: string;
-  applicationId: string;   // Required — every reminder belongs to an application
-  reminderDate: string;    // ISO 8601 datetime string
+  applicationId: string; // Required — every reminder belongs to an application
+  reminderDate: string; // ISO 8601 datetime string
   type: ReminderType;
   message?: string | undefined;
   isCompleted: boolean;
-  createdAt: string;       // ISO 8601
+  createdAt: string; // ISO 8601
 }
 
 export interface CreateReminderInput {
   applicationId: string;
-  reminderDate: string;    // ISO 8601 — e.g. "2026-09-01T09:00"
+  reminderDate: string; // ISO 8601 — e.g. "2026-09-01T09:00"
   type: ReminderType;
   message?: string | undefined;
 }
@@ -252,7 +247,7 @@ export class AppError extends Error {
   constructor(
     public readonly type: "VALIDATION_ERROR" | "NOT_FOUND" | "AUTH_ERROR" | "SERVER_ERROR",
     message: string,
-    public readonly fields?: Record<string, string>
+    public readonly fields?: Record<string, string>,
   ) {
     super(message);
     this.name = "AppError";

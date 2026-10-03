@@ -90,9 +90,7 @@ describe("JobPilot AI Copilot Guidance and Onboarding Replies", () => {
   }, 10000);
 
   it("provides voice commands cheat sheet when asked about voice", async () => {
-    const reply = await chat([
-      { role: "user", content: "What voice commands can I use?" },
-    ]);
+    const reply = await chat([{ role: "user", content: "What voice commands can I use?" }]);
     expect(reply).toContain("JobPilot Voice Commands");
     expect(reply).toContain("Go to Dashboard");
     expect(reply).toContain("Browse Jobs");

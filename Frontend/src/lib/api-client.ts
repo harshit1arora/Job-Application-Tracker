@@ -16,19 +16,29 @@ import type {
 } from "./types";
 import { AppError } from "./types";
 
+import { auth } from "./firebase";
+
 const isServer = typeof window === "undefined";
-const API_BASE = (import.meta.env?.VITE_API_URL as string | undefined) || (isServer ? "http://localhost:5117/api" : "/api");
+const API_BASE =
+  (import.meta.env?.VITE_API_URL as string | undefined) ||
+  (isServer ? "http://localhost:5117/api" : "/api");
 
 // --- Real HTTP Request Helper ---
-async function apiRequest<T>(
-  path: string,
-  userId: string,
-  init: RequestInit = {}
-): Promise<T> {
+async function apiRequest<T>(path: string, userId: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
-    "X-User-Id": userId,
+    "X-User-Id": userId, // Kept for demo-mode fallback only
   };
-  
+
+  // Try to attach Firebase ID Token for production authentication
+  if (auth?.currentUser) {
+    try {
+      const token = await auth.currentUser.getIdToken(false);
+      headers["Authorization"] = `Bearer ${token}`;
+    } catch (e) {
+      console.warn("Failed to get Firebase token");
+    }
+  }
+
   // Only set Content-Type to JSON if it's not a FormData payload
   if (!(init.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
@@ -56,7 +66,8 @@ async function apiRequest<T>(
         if (textData) errorMessage = textData;
       }
 
-      if (res.status === 400 || res.status === 422) throw new AppError("VALIDATION_ERROR", errorMessage);
+      if (res.status === 400 || res.status === 422)
+        throw new AppError("VALIDATION_ERROR", errorMessage);
       if (res.status === 401 || res.status === 403) throw new AppError("AUTH_ERROR", errorMessage);
       if (res.status === 404) {
         // Special case: Some endpoints expect null on 404 (handled by caller)
@@ -72,16 +83,54 @@ async function apiRequest<T>(
   }
 }
 
+export async function apiDownloadRequest(
+  path: string,
+  userId: string,
+  init: RequestInit = {},
+): Promise<Blob> {
+  const headers: Record<string, string> = {
+    "X-User-Id": userId,
+  };
+
+  if (auth?.currentUser) {
+    try {
+      const token = await auth.currentUser.getIdToken(false);
+      headers["Authorization"] = `Bearer ${token}`;
+    } catch (e) {
+      console.warn("Failed to get Firebase token");
+    }
+  }
+
+  const mergedHeaders = { ...headers, ...((init.headers as Record<string, string>) || {}) };
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: mergedHeaders,
+    });
+
+    if (!res.ok) {
+      throw new AppError("SERVER_ERROR", `Failed to download file: ${res.statusText}`);
+    }
+
+    return await res.blob();
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    throw new AppError("SERVER_ERROR", err.message || "Download failed");
+  }
+}
+
 // ===========================================================================
 // Applications API
 // ===========================================================================
 
 export async function fetchApplications(
   userId: string,
-  filters?: ApplicationFilters
+  filters?: ApplicationFilters,
 ): Promise<ApplicationDocument[]> {
   const queryParams = new URLSearchParams();
-  if (filters?.status && (filters.status as string) !== "All") queryParams.set("status", filters.status);
+  if (filters?.status && (filters.status as string) !== "All")
+    queryParams.set("status", filters.status);
   if (filters?.applicationSource && (filters.applicationSource as string) !== "All") {
     queryParams.set("applicationSource", filters.applicationSource);
   }
@@ -93,7 +142,7 @@ export async function fetchApplications(
 
 export async function fetchApplication(
   userId: string,
-  applicationId: string
+  applicationId: string,
 ): Promise<ApplicationDocument | null> {
   try {
     return await apiRequest<ApplicationDocument>(`/applications/${applicationId}`, userId);
@@ -105,7 +154,7 @@ export async function fetchApplication(
 
 export async function createApplicationApi(
   userId: string,
-  input: CreateApplicationInput
+  input: CreateApplicationInput,
 ): Promise<ApplicationDocument> {
   if (input.applicationUrl === "") delete input.applicationUrl;
   return await apiRequest<ApplicationDocument>("/applications", userId, {
@@ -117,7 +166,7 @@ export async function createApplicationApi(
 export async function updateApplicationApi(
   userId: string,
   applicationId: string,
-  changes: UpdateApplicationInput
+  changes: UpdateApplicationInput,
 ): Promise<ApplicationDocument> {
   if (changes.applicationUrl === "") delete changes.applicationUrl;
   return await apiRequest<ApplicationDocument>(`/applications/${applicationId}`, userId, {
@@ -126,10 +175,7 @@ export async function updateApplicationApi(
   });
 }
 
-export async function deleteApplicationApi(
-  userId: string,
-  applicationId: string
-): Promise<void> {
+export async function deleteApplicationApi(userId: string, applicationId: string): Promise<void> {
   await apiRequest(`/applications/${applicationId}`, userId, {
     method: "DELETE",
   });
@@ -141,19 +187,16 @@ export async function deleteApplicationApi(
 
 export async function fetchDocuments(
   userId: string,
-  applicationId?: string
+  applicationId?: string,
 ): Promise<DocumentMetadata[]> {
   const qs = applicationId ? `?applicationId=${applicationId}` : "";
   return await apiRequest<DocumentMetadata[]>(`/documents${qs}`, userId);
 }
 
-// The UI uploads files using documents-service.ts which normally called this. 
+// The UI uploads files using documents-service.ts which normally called this.
 // We will update documents-service.ts to call apiRequest directly with FormData to support actual uploads.
 // But we still leave this for backward compatibility if it's used elsewhere, though it's deprecated.
-export async function createDocumentApi(
-  userId: string,
-  input: any
-): Promise<DocumentMetadata> {
+export async function createDocumentApi(userId: string, input: any): Promise<DocumentMetadata> {
   throw new Error("Use documents-service.ts uploadDocument directly to upload files.");
 }
 
@@ -173,7 +216,7 @@ export { apiRequest };
 export async function fetchReminders(
   userId: string,
   applicationId?: string,
-  isCompleted?: boolean
+  isCompleted?: boolean,
 ): Promise<ReminderDocument[]> {
   const q = new URLSearchParams();
   if (applicationId) q.set("applicationId", applicationId);
@@ -185,7 +228,7 @@ export async function fetchReminders(
 
 export async function createReminderApi(
   userId: string,
-  input: CreateReminderInput
+  input: CreateReminderInput,
 ): Promise<ReminderDocument> {
   return await apiRequest<ReminderDocument>("/reminders", userId, {
     method: "POST",
@@ -196,7 +239,9 @@ export async function createReminderApi(
 export async function updateReminderApi(
   userId: string,
   reminderId: string,
-  changes: Partial<Pick<CreateReminderInput, "reminderDate" | "type" | "message">> & { isCompleted?: boolean }
+  changes: Partial<Pick<CreateReminderInput, "reminderDate" | "type" | "message">> & {
+    isCompleted?: boolean;
+  },
 ): Promise<ReminderDocument> {
   return await apiRequest<ReminderDocument>(`/reminders/${reminderId}`, userId, {
     method: "PATCH",

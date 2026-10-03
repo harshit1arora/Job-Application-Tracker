@@ -9,7 +9,10 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Log In — Access your JobPilot Dashboard" },
-      { name: "description", content: "Log in to track applications, review matches, and manage automated submissions." },
+      {
+        name: "description",
+        content: "Log in to track applications, review matches, and manage automated submissions.",
+      },
     ],
   }),
   component: LoginPage,
@@ -94,7 +97,10 @@ function LoginPage() {
       {/* Top Bar */}
       <header className="border-b border-border/50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
             <ArrowLeft size={16} />
             Back to home
           </Link>
@@ -122,7 +128,9 @@ function LoginPage() {
               </span>
               <div>
                 <p className="text-xs font-semibold text-foreground">Fast Testing Mode</p>
-                <p className="text-[11px] text-muted-foreground">1-click login without filling credentials</p>
+                <p className="text-[11px] text-muted-foreground">
+                  1-click login without filling credentials
+                </p>
               </div>
             </div>
             <button
@@ -137,9 +145,7 @@ function LoginPage() {
 
           <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                Welcome back
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
               <p className="text-sm text-muted-foreground mt-2">
                 Log in to monitor your applications and active AI agent jobs.
               </p>
@@ -201,7 +207,10 @@ function LoginPage() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                  <Mail
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={16}
+                  />
                   <input
                     type="email"
                     required
@@ -227,7 +236,10 @@ function LoginPage() {
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                  <Lock
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={16}
+                  />
                   <input
                     type={showPassword ? "text" : "password"}
                     required

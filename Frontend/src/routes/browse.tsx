@@ -56,7 +56,7 @@ function BrowseJobsPage() {
           education: p.education || "Computer Science",
           summary: p.summary || p.resumeText.slice(0, 180),
         },
-        CURATED_JOBS_CATALOG
+        CURATED_JOBS_CATALOG,
       );
       setSuggestedJobs(ranked);
     } catch {

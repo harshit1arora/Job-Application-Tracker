@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { type UserProfile, saveProfile, getMissingProfileFields } from "@/lib/profile";
 import { toast } from "sonner";
-import { Sparkles, X, Check, AlertCircle, User, Phone, MapPin, Briefcase, Award } from "lucide-react";
+import {
+  Sparkles,
+  X,
+  Check,
+  AlertCircle,
+  User,
+  Phone,
+  MapPin,
+  Briefcase,
+  Award,
+} from "lucide-react";
 
 interface MissingFieldsModalProps {
   userId: string;
@@ -68,7 +78,8 @@ export function MissingFieldsModal({
             <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-600 dark:text-amber-300">
               <span className="font-semibold">Missing from your résumé:</span>{" "}
-              {missingFields.join(", ")}. Fill them below so employers have your complete contact information.
+              {missingFields.join(", ")}. Fill them below so employers have your complete contact
+              information.
             </div>
           </div>
         )}
@@ -111,7 +122,9 @@ export function MissingFieldsModal({
                 type="text"
                 required
                 value={form.city || form.location}
-                onChange={(e) => setForm({ ...form, city: e.target.value, location: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, city: e.target.value, location: e.target.value })
+                }
                 placeholder="e.g. San Francisco, CA or Remote"
                 className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
               />
@@ -171,7 +184,9 @@ export function MissingFieldsModal({
               />
             </div>
             <div>
-              <label className="block font-semibold text-muted-foreground mb-1">Portfolio / GitHub</label>
+              <label className="block font-semibold text-muted-foreground mb-1">
+                Portfolio / GitHub
+              </label>
               <input
                 type="text"
                 value={form.portfolio || ""}

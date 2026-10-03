@@ -43,3 +43,14 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+  
+# Python & Backend  
+__pycache__/  
+*.py[cod]  
+*.class  
+.pytest_cache/  
+*.db  
+*.sqlite  
+*.sqlite3  
+Backend_FastAPI/uploads/  
+Backend_FastAPI/data/ 

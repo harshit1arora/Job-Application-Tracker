@@ -4,12 +4,25 @@ import { useAuth } from "@/lib/auth-context";
 import { Logo } from "@/components/landing/Logo";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import type { ApplicationDocument, ApplicationSource, ApplicationStatus, DashboardStats, SuggestedJob, ReminderDocument } from "@/lib/types";
+import type {
+  ApplicationDocument,
+  ApplicationSource,
+  ApplicationStatus,
+  DashboardStats,
+  SuggestedJob,
+  ReminderDocument,
+} from "@/lib/types";
 import { AppError } from "@/lib/types";
 import { createApplication, getApplications } from "@/lib/applications-service";
 import { getReminders } from "@/lib/reminders-service";
 import { matchScore, parseResumeWithAi, suggestJobsForResume } from "@/lib/ai";
-import { getProfile, saveProfile, mergeParsedResumeIntoProfile, getMissingProfileFields, type UserProfile } from "@/lib/profile";
+import {
+  getProfile,
+  saveProfile,
+  mergeParsedResumeIntoProfile,
+  getMissingProfileFields,
+  type UserProfile,
+} from "@/lib/profile";
 import { extractTextFromFile, SAMPLE_RESUME_PRESET } from "@/lib/resume-parser";
 import { CURATED_JOBS_CATALOG } from "@/lib/jobs-catalog";
 import { SuggestedJobsSection } from "@/components/suggested-jobs-section";
@@ -58,13 +71,18 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — JobPilot Application Tracker" },
-      { name: "description", content: "Track your automated job applications, AI crawler progress, and interview pipeline." },
+      {
+        name: "description",
+        content:
+          "Track your automated job applications, AI crawler progress, and interview pipeline.",
+      },
     ],
   }),
   component: DashboardPage,
 });
 
-type NavTab = "dashboard" | "browse" | "applications" | "inbox" | "tracker" | "profile" | "settings";
+type NavTab =
+  "dashboard" | "browse" | "applications" | "inbox" | "tracker" | "profile" | "settings";
 
 // Color presets for top match cards matching reference image
 const MATCH_CARD_THEMES = [
@@ -121,9 +139,7 @@ function MatchScoreRing({ score }: { score: number }) {
           className={`${strokeColor} transition-all duration-700 ease-out`}
         />
       </svg>
-      <span className="absolute text-[11px] font-black text-foreground">
-        {score}%
-      </span>
+      <span className="absolute text-[11px] font-black text-foreground">{score}%</span>
     </div>
   );
 }
@@ -187,11 +203,12 @@ function DashboardPage() {
           city: p.city || p.location,
           ageOrExperience: p.ageOrExperience || "4+ YOE",
           targetRole: p.targetRole || "Software Developer II",
-          skills: p.skills && p.skills.length > 0 ? p.skills : ["React", "TypeScript", "Node.js", "C#"],
+          skills:
+            p.skills && p.skills.length > 0 ? p.skills : ["React", "TypeScript", "Node.js", "C#"],
           education: p.education || "Computer Science",
           summary: p.summary || p.resumeText.slice(0, 180),
         },
-        CURATED_JOBS_CATALOG
+        CURATED_JOBS_CATALOG,
       );
       setSuggestedJobs(ranked);
     } catch {
@@ -206,10 +223,7 @@ function DashboardPage() {
     const loadData = async () => {
       setIsLoadingApps(true);
       try {
-        const [apps, rems] = await Promise.all([
-          getApplications(user.id),
-          getReminders(user.id),
-        ]);
+        const [apps, rems] = await Promise.all([getApplications(user.id), getReminders(user.id)]);
         setApplications(apps);
         setReminders(rems);
 
@@ -320,7 +334,10 @@ function DashboardPage() {
         notes: `Applied via 1-Click AI Portal. Match score: ${job.matchScore ?? 92}%.`,
       });
 
-      setApplications((prev) => [newApp, ...prev.filter((a) => a.company !== job.company || a.jobTitle !== job.role)]);
+      setApplications((prev) => [
+        newApp,
+        ...prev.filter((a) => a.company !== job.company || a.jobTitle !== job.role),
+      ]);
       setDashboardStats((prev) => {
         if (!prev) return null;
         return {
@@ -340,7 +357,7 @@ function DashboardPage() {
     newCompany: string,
     newRole: string,
     newPlatform: ApplicationSource,
-    newUrl?: string
+    newUrl?: string,
   ) => {
     if (!user) return;
     if (!newCompany.trim() || !newRole.trim()) {
@@ -401,7 +418,12 @@ function DashboardPage() {
 
   const topMatches = suggestedJobs.slice(0, 4);
   const initials = profile?.fullName
-    ? profile.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    ? profile.fullName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
     : "AM";
 
   // Dashboard Application Intelligence Aggregation (Single source of truth via career-intelligence engine)
@@ -463,7 +485,8 @@ function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {topMatches.map((job, idx) => {
               const theme = MATCH_CARD_THEMES[idx % MATCH_CARD_THEMES.length]!;
-              const matchScore = job.matchScore || (idx === 0 ? 71 : idx === 1 ? 60 : idx === 2 ? 64 : 58);
+              const matchScore =
+                job.matchScore || (idx === 0 ? 71 : idx === 1 ? 60 : idx === 2 ? 64 : 58);
 
               return (
                 <div
@@ -512,7 +535,9 @@ function DashboardPage() {
               Add your résumé to calculate application readiness.
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
-              Once your résumé or skills are parsed, JobPilot calculates your application success score, evidence strength, Career Twin role fit, and prioritized Next Best Actions across all jobs.
+              Once your résumé or skills are parsed, JobPilot calculates your application success
+              score, evidence strength, Career Twin role fit, and prioritized Next Best Actions
+              across all jobs.
             </p>
             <div className="pt-1">
               <Link
@@ -545,7 +570,8 @@ function DashboardPage() {
                   Average Application Readiness
                 </span>
                 <span className="text-2xl font-black text-foreground mt-1 block">
-                  {dashboardIntelligence.avgReadiness} <span className="text-xs text-muted-foreground font-normal">/ 100</span>
+                  {dashboardIntelligence.avgReadiness}{" "}
+                  <span className="text-xs text-muted-foreground font-normal">/ 100</span>
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-0.5 block">
                   Aggregated across live catalog roles
@@ -614,7 +640,11 @@ function DashboardPage() {
                     type="button"
                     onClick={() => {
                       if (user?.id && profile && dashboardIntelligence.nextAction) {
-                        const res = executeActionCompletion(user.id, dashboardIntelligence.nextAction, profile);
+                        const res = executeActionCompletion(
+                          user.id,
+                          dashboardIntelligence.nextAction,
+                          profile,
+                        );
                         if (res.success) {
                           toast.success(res.message);
                           setProfile(getProfile(user.id));
@@ -676,7 +706,11 @@ function DashboardPage() {
               disabled={isParsingResume}
               className="text-xs font-bold text-foreground bg-secondary hover:bg-secondary/80 border border-border px-3.5 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
             >
-              {isParsingResume ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+              {isParsingResume ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Upload size={13} />
+              )}
               Upload Résumé
             </button>
             <input
@@ -801,7 +835,9 @@ function DashboardPage() {
 
                           {/* Cover Letter Status */}
                           <td className="py-4 px-6 text-foreground font-medium">
-                            {app.notes && (app.notes.includes("--- AI Cover Letter ---") || app.notes.includes("Cover Letter")) ? (
+                            {app.notes &&
+                            (app.notes.includes("--- AI Cover Letter ---") ||
+                              app.notes.includes("Cover Letter")) ? (
                               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                                 Generated
@@ -930,7 +966,7 @@ function AddApplicationModal({
           companyRef.current.value,
           roleRef.current.value,
           platformRef.current.value as ApplicationSource,
-          urlRef.current?.value || undefined
+          urlRef.current?.value || undefined,
         );
       } finally {
         setIsSubmitting(false);
@@ -948,7 +984,9 @@ function AddApplicationModal({
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Company Name</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
+              Company Name
+            </label>
             <input
               type="text"
               required
@@ -959,7 +997,9 @@ function AddApplicationModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Role Title</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
+              Role Title
+            </label>
             <input
               type="text"
               required
@@ -970,7 +1010,9 @@ function AddApplicationModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Application Source</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
+              Application Source
+            </label>
             <select
               ref={platformRef}
               defaultValue="Greenhouse"
@@ -986,7 +1028,9 @@ function AddApplicationModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1">Career Portal URL (Optional)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
+              Career Portal URL (Optional)
+            </label>
             <input
               type="url"
               ref={urlRef}

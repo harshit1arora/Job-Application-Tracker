@@ -39,11 +39,51 @@ const TONES: Record<string, string> = {
 };
 
 const ROWS = [
-  { company: "Blue Origin", role: "Software Development Engineer II", resume: "Ready", cover: "Ready", status: "Submitted", tone: "green", when: "2 days ago" },
-  { company: "Linktree", role: "Software Engineer, Backend", resume: "Default", cover: "Off", status: "Submitted", tone: "green", when: "2 days ago" },
-  { company: "Atlassian", role: "Senior Frontend Engineer", resume: "Ready", cover: "Ready", status: "Tailoring résumé", tone: "blue", when: "just now" },
-  { company: "Dremio", role: "Software Engineer, Platform", resume: "Default", cover: "Off", status: "Needs you", tone: "rose", when: "1 day ago" },
-  { company: "Astronomer", role: "Member of Technical Staff", resume: "Default", cover: "Off", status: "Queued", tone: "amber", when: "3 hours ago" },
+  {
+    company: "Blue Origin",
+    role: "Software Development Engineer II",
+    resume: "Ready",
+    cover: "Ready",
+    status: "Submitted",
+    tone: "green",
+    when: "2 days ago",
+  },
+  {
+    company: "Linktree",
+    role: "Software Engineer, Backend",
+    resume: "Default",
+    cover: "Off",
+    status: "Submitted",
+    tone: "green",
+    when: "2 days ago",
+  },
+  {
+    company: "Atlassian",
+    role: "Senior Frontend Engineer",
+    resume: "Ready",
+    cover: "Ready",
+    status: "Tailoring résumé",
+    tone: "blue",
+    when: "just now",
+  },
+  {
+    company: "Dremio",
+    role: "Software Engineer, Platform",
+    resume: "Default",
+    cover: "Off",
+    status: "Needs you",
+    tone: "rose",
+    when: "1 day ago",
+  },
+  {
+    company: "Astronomer",
+    role: "Member of Technical Staff",
+    resume: "Default",
+    cover: "Off",
+    status: "Queued",
+    tone: "amber",
+    when: "3 hours ago",
+  },
 ];
 
 const DOT: Record<string, string> = {
