@@ -228,7 +228,7 @@ uvicorn main:app --port 5117
 ```
 API runs locally on `http://localhost:5117` and is automatically proxied by Vite. Documents will be saved in `Backend_FastAPI/uploads`.
 
-**Note:** The backend requires `python-multipart` (already included in `requirements.txt`) to process raw `multipart/form-data` during file uploads on strict production WSGI/ASGI servers. Additionally, the backend provides a root `/` endpoint that returns a JSON status message to quickly verify deployment uptime.
+**Note:** The backend requires `python-multipart` (already included in `requirements.txt`) to process raw `multipart/form-data` during file uploads on strict production WSGI/ASGI servers. Additionally, the backend provides a root `/` endpoint that returns a JSON status message to quickly verify deployment uptime. All other endpoints are strictly prefixed with `/api/` (e.g., `/api/health`).
 
 ---
 
