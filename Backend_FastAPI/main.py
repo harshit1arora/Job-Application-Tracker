@@ -203,6 +203,10 @@ class DashboardStatsOut(BaseModel):
 # Health Check Endpoint
 # ---------------------------------------------------------
 
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "JobPilot API is running successfully!"}
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
