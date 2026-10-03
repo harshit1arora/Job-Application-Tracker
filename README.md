@@ -5,6 +5,7 @@
 ![JobPilot AI Tracker Banner](https://img.shields.io/badge/JobPilot-AI%20Career%20Copilot-blueviolet?style=for-the-badge&logo=rocket)
 ![React 19](https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![OpenRouter AI](https://img.shields.io/badge/OpenRouter-AI%20LLM-purple?style=for-the-badge&logo=openai)
 ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Tests Passed](https://img.shields.io/badge/Tests-78%2F78%20Passed-brightgreen?style=for-the-badge)
@@ -58,9 +59,12 @@ flowchart TB
     subgraph Integration["🌐 External Career Portals & Data Sync"]
         Portals["Greenhouse / Lever / Ashby / Workday / LinkedIn"]
         DataSync["Unified Local & Persistent Data Adapter\n(api-client / localStorage / Firestore)"]
+        FastApi["Python FastAPI Backend\n(REST Endpoints & SQLite Persistence)"]
 
-        Applications <--> DataSync
-        CalendarTracker <--> DataSync
+        Dashboard --> Portals
+        BrowseJobs --> Portals
+        Applications <--> FastApi
+        CalendarTracker <--> FastApi
         ProfileHub <--> DataSync
     end
 ```
@@ -153,6 +157,11 @@ Job-Application-Tracker/
 │   │   └── styles.css                 # Tailwind CSS v4 & OKLCH Design Tokens
 │   └── package.json
 │
+├── Backend_FastAPI/                   # Python FastAPI Backend
+│   ├── main.py                        # REST API Routes & SQLAlchemy Models
+│   ├── requirements.txt               # Python Dependencies
+│   └── README.md                      # Backend Documentation
+│
 ├── firestore.rules                    # Firebase Security Rules
 └── README.md                          # Master Project Documentation
 ```
@@ -168,6 +177,7 @@ Job-Application-Tracker/
 | **Styling & Design System** | Tailwind CSS v4, Lucide React, Date-fns, Sonner, Vaul |
 | **Document Processing** | Mozilla PDF.js (`pdfjs-dist`) with client-side stream decoding |
 | **AI & Career Intelligence**| OpenRouter API (`nvidia/nemotron-3-ultra`, `google/gemma-4`) + Local Deterministic Fallback Engine |
+| **Backend API** | Python FastAPI (SQLAlchemy, SQLite) |
 | **Data Persistence** | Unified API Adapter (Local Storage fallback with Firebase / Firestore support) |
 | **Validation & Schemas** | Zod 3.25 runtime validation |
 | **Testing** | Vitest, JSDOM, Coverage-v8 (**78/78 passing tests**) |
@@ -179,6 +189,7 @@ Job-Application-Tracker/
 ### Prerequisites
 - **Node.js** `v20+` or `v22+`
 - **npm** `10+` or **bun**
+- **Python 3.9+** (for running the FastAPI backend)
 
 ### 1. Clone the Repository
 ```bash
@@ -207,6 +218,15 @@ npm install
 npm run dev
 ```
 Open **`http://localhost:5173`** in your browser.
+
+### 4. (Optional) Start the FastAPI Backend Manually
+```bash
+cd Backend_FastAPI
+pip install -r requirements.txt
+python main.py
+```
+API runs locally on `http://localhost:5117` and is automatically proxied by Vite.
+Or just use `npm run start:all` from the root directory to run both frontend and backend concurrently!
 
 ---
 
