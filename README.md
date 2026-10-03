@@ -242,6 +242,12 @@ API runs locally on `http://localhost:5117` and is automatically proxied by Vite
    - Add the environment variable `VITE_API_URL` set to your Render URL (e.g. `https://job-tracker-backend.onrender.com/api`).
    - Also add `VITE_DEMO_MODE=false` and all required `VITE_FIREBASE_*` configuration variables.
    
+### Render Troubleshooting
+If your Render build fails with `ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'requirements.txt'`, this means you created a Web Service manually instead of using the Blueprint config.
+To fix this instantly:
+1. Go to your Web Service **Settings** in the Render Dashboard.
+2. Set the **Root Directory** field to `Backend_FastAPI`.
+3. Click **Save Changes** and trigger a **Manual Deploy**.
 ---
 
 ## 🧪 Automated Testing
