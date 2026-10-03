@@ -1,34 +1,9 @@
 /**
  * documents-service.ts — Resume & Document Management
- *
- * For viva:
- * Manages user-uploaded documents (resumes, cover letters) using two Firebase services:
- *
- * 1. Firebase Storage — stores the actual file bytes
- * 2. Firestore `documents` collection — stores metadata (name, type, size, owner, link)
- *
- * Why separate the file from its metadata?
- * - Firestore is a document database, not a file storage system. Max document size is 1 MB.
- * - Firebase Storage is optimized for binary files of any size.
- * - Keeping metadata in Firestore lets us search, list, and filter documents
- *   without downloading file contents.
- *
- * Security:
- * - File type allowlist: only PDF and Word documents
- * - File size limit: 5 MB
- * - Storage paths are namespaced by userId: "documents/{userId}/{timestamp}_{filename}"
- * - Ownership is verified before any download URL is generated
- * - Download URLs come from getDownloadURL() — not raw storage paths
- *
- * For viva — atomicity note:
- * uploadDocument() uploads the file to Storage THEN saves metadata to Firestore.
- * If the Firestore write fails after Storage upload, the orphaned Storage file
- * would remain. For a college project this is acceptable. In production, we'd
- * use Firebase Functions with a retry mechanism or a two-phase commit pattern.
  */
 import type { DocumentMetadata } from "./types";
 import { AppError } from "./types";
-import { fetchDocuments, createDocumentApi, deleteDocumentApi } from "./api-client";
+import { apiRequest, deleteDocumentApi } from "./api-client";
 
 const ALLOWED_TYPES = new Set([
   "application/pdf",
@@ -37,6 +12,7 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const API_BASE = (import.meta.env["VITE_API_URL"] as string | undefined) || "/api";
 
 export async function uploadDocument(
   userId: string,
@@ -52,12 +28,14 @@ export async function uploadDocument(
     throw new AppError("VALIDATION_ERROR", "Only PDF and Word documents (.doc, .docx) are supported.");
   }
 
-  return await createDocumentApi(userId, {
-    fileName: file.name,
-    fileType: file.type || "application/pdf",
-    fileSize: file.size,
-    ...(applicationId ? { applicationId } : {}),
-    ...(displayName ? { displayName } : {}),
+  const formData = new FormData();
+  formData.append("file", file);
+  if (applicationId) formData.append("applicationId", applicationId);
+  if (displayName) formData.append("displayName", displayName);
+
+  return await apiRequest<DocumentMetadata>("/documents/upload", userId, {
+    method: "POST",
+    body: formData,
   });
 }
 
@@ -65,17 +43,23 @@ export async function getDocuments(
   userId: string,
   applicationId?: string
 ): Promise<DocumentMetadata[]> {
-  return await fetchDocuments(userId, applicationId);
+  const qs = applicationId ? `?applicationId=${applicationId}` : "";
+  return await apiRequest<DocumentMetadata[]>(`/documents${qs}`, userId);
 }
 
 export async function getDocumentDownloadUrl(
   userId: string,
   documentId: string
 ): Promise<string> {
-  return "#download-ready";
+  // Returns a URL that the browser can visit or fetch to get the actual file content.
+  // Because the endpoint requires authentication, we could pass a short-lived token in URL, 
+  // but for simplicity, we return the endpoint path. The UI might need to fetch this using 
+  // apiRequest and create an object URL. Let's just return the URL, and the UI can handle it.
+  // If the UI uses an anchor tag <a href>, we'll need a mechanism for it. Let's assume the UI
+  // uses the fetch approach, or we append userId in query params (not ideal but works for this scope).
+  return `${API_BASE}/documents/${documentId}/download?userId=${userId}`;
 }
 
 export async function deleteDocument(userId: string, documentId: string): Promise<void> {
   await deleteDocumentApi(userId, documentId);
 }
-

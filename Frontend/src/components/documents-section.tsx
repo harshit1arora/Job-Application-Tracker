@@ -89,7 +89,20 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
   };
 
   const handleDownload = async (documentId: string, fileName: string) => {
-    toast.info("Mockup Mode: Since Firebase Storage requires a credit card on the Blaze plan, the actual PDF wasn't saved to Google servers. This button is just for show!");
+    if (!user) return;
+    try {
+      const url = await getDocumentDownloadUrl(user.id, documentId);
+      // Create a temporary link to download the file directly from backend
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download document.");
+    }
   };
 
   const formatFileSize = (bytes: number) => {

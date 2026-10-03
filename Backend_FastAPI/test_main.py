@@ -1,0 +1,118 @@
+import os
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from main import app, Base, get_db, get_user_id
+
+# Use an in-memory SQLite database for testing
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base.metadata.create_all(bind=engine)
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+app.dependency_overrides[get_db] = override_get_db
+
+client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    yield
+
+def test_health_check():
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+def test_create_and_get_application():
+    headers = {"X-User-Id": "test-user-123"}
+    app_data = {
+        "company": "Test Corp",
+        "jobTitle": "Engineer",
+        "applicationSource": "LinkedIn",
+        "status": "Applied"
+    }
+    
+    # Create
+    response = client.post("/api/applications", json=app_data, headers=headers)
+    assert response.status_code == 201
+    created_app = response.json()
+    assert created_app["company"] == "Test Corp"
+    app_id = created_app["id"]
+    
+    # Get
+    response = client.get(f"/api/applications/{app_id}", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["id"] == app_id
+
+def test_cross_user_isolation():
+    # User 1 creates app
+    headers1 = {"X-User-Id": "user1"}
+    response = client.post("/api/applications", json={
+        "company": "Corp 1", "jobTitle": "Dev", "applicationSource": "Direct", "status": "Saved"
+    }, headers=headers1)
+    app_id = response.json()["id"]
+    
+    # User 2 tries to access User 1's app
+    headers2 = {"X-User-Id": "user2"}
+    response = client.get(f"/api/applications/{app_id}", headers=headers2)
+    assert response.status_code == 404
+
+def test_dashboard_stats():
+    headers = {"X-User-Id": "stats-user"}
+    # Create 2 applications
+    client.post("/api/applications", json={
+        "company": "Stats 1", "jobTitle": "Dev", "applicationSource": "Direct", "status": "Applied"
+    }, headers=headers)
+    client.post("/api/applications", json={
+        "company": "Stats 2", "jobTitle": "Dev", "applicationSource": "Direct", "status": "Interview"
+    }, headers=headers)
+    
+    response = client.get("/api/dashboard/stats", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["totalApplications"] == 2
+    assert data["byStatus"]["applied"] == 1
+    assert data["byStatus"]["interview"] == 1
+
+def test_upload_and_download_document():
+    headers = {"X-User-Id": "doc-user"}
+    
+    # Create application first
+    app_res = client.post("/api/applications", json={
+        "company": "Corp", "jobTitle": "Dev", "applicationSource": "Direct", "status": "Saved"
+    }, headers=headers)
+    app_id = app_res.json()["id"]
+    
+    # Upload doc
+    with open("test_file.txt", "w") as f:
+        f.write("test content")
+        
+    with open("test_file.txt", "rb") as f:
+        response = client.post(
+            "/api/documents/upload",
+            headers=headers,
+            data={"applicationId": app_id, "displayName": "My Resume"},
+            files={"file": ("test_file.txt", f, "text/plain")}
+        )
+        
+    os.remove("test_file.txt")
+    
+    assert response.status_code == 201
+    doc_id = response.json()["id"]
+    
+    # Download doc
+    dl_response = client.get(f"/api/documents/{doc_id}/download?userId=doc-user")
+    assert dl_response.status_code == 200
+    assert dl_response.text == "test content"

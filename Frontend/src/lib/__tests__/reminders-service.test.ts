@@ -9,7 +9,7 @@ import {
 } from "../reminders-service";
 
 const VALID_INPUT = {
-  applicationId: "app-123",
+  applicationId: "", // To be populated
   reminderDate: "2026-09-15T09:00",
   type: "follow-up" as const,
   message: "Check in with recruiter",
@@ -31,11 +31,13 @@ describe("createReminder — validation", () => {
 
 describe("reminders-service — CRUD workflow", () => {
   it("creates, marks complete, updates and deletes a reminder", async () => {
-    const reminder = await createReminder("test-user-rems", VALID_INPUT);
+    const { createApplicationApi } = await import("../api-client");
+    const app = await createApplicationApi("test-user-rems", { company: "C", jobTitle: "T", applicationSource: "LinkedIn", status: "Applied" });
+    const reminder = await createReminder("test-user-rems", { ...VALID_INPUT, applicationId: app.id });
     expect(reminder.id).toBeDefined();
     expect(reminder.isCompleted).toBe(false);
 
-    const list = await getReminders("test-user-rems", "app-123");
+    const list = await getReminders("test-user-rems", app.id);
     expect(list.some((r) => r.id === reminder.id)).toBe(true);
 
     await markReminderComplete("test-user-rems", reminder.id);
@@ -45,7 +47,7 @@ describe("reminders-service — CRUD workflow", () => {
     expect(updated.message).toBe("Updated recruiter message");
 
     await deleteReminder("test-user-rems", reminder.id);
-    const afterDelete = await getReminders("test-user-rems", "app-123");
+    const afterDelete = await getReminders("test-user-rems", app.id);
     expect(afterDelete.some((r) => r.id === reminder.id)).toBe(false);
   });
 });

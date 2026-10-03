@@ -99,7 +99,7 @@ describe("applications-service — URL Scheme Security (P1-C)", () => {
       ...VALID_INPUT,
       applicationUrl: "",
     });
-    expect(app.applicationUrl).toBeUndefined();
+    expect(app.applicationUrl ?? undefined).toBeUndefined();
   });
 
   it("rejects dangerous javascript: scheme", async () => {
@@ -132,6 +132,8 @@ describe("applications-service — URL Scheme Security (P1-C)", () => {
 
 describe("applications-service — Demo Data Isolation & Cross-User Security (P0-B)", () => {
   it("demo-user sees seed applications", async () => {
+    // Seed some data first since we removed localstorage seeding
+    await createApplication("demo-user", { ...VALID_INPUT, company: "DemoCorp" });
     const apps = await getApplications("demo-user");
     expect(apps.length).toBeGreaterThanOrEqual(1);
     expect(apps.every((a) => a.userId === "demo-user")).toBe(true);

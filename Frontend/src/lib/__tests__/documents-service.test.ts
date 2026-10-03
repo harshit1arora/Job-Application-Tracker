@@ -23,18 +23,21 @@ describe("documents-service", () => {
   });
 
   it("uploads valid PDF metadata and fetches documents list", async () => {
+    const { createApplicationApi } = await import("../api-client");
+    const app = await createApplicationApi("test-user-docs", { company: "C", jobTitle: "T", applicationSource: "LinkedIn", status: "Applied" });
+    
     const validFile = makeFile("resume.pdf", "application/pdf", 2048);
-    const doc = await uploadDocument("test-user-docs", validFile, "app-123", "My Resume");
+    const doc = await uploadDocument("test-user-docs", validFile, app.id, "My Resume");
 
     expect(doc.id).toBeDefined();
     expect(doc.fileName).toBe("resume.pdf");
     expect(doc.displayName).toBe("My Resume");
 
-    const list = await getDocuments("test-user-docs", "app-123");
+    const list = await getDocuments("test-user-docs", app.id);
     expect(list.some((d) => d.id === doc.id)).toBe(true);
 
     await deleteDocument("test-user-docs", doc.id);
-    const afterDelete = await getDocuments("test-user-docs", "app-123");
+    const afterDelete = await getDocuments("test-user-docs", app.id);
     expect(afterDelete.some((d) => d.id === doc.id)).toBe(false);
   });
 });

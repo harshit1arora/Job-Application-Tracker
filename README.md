@@ -58,8 +58,8 @@ flowchart TB
 
     subgraph Integration["🌐 External Career Portals & Data Sync"]
         Portals["Greenhouse / Lever / Ashby / Workday / LinkedIn"]
-        DataSync["Unified Local & Persistent Data Adapter\n(api-client / localStorage / Firestore)"]
-        FastApi["Python FastAPI Backend\n(REST Endpoints & SQLite Persistence)"]
+        DataSync["API Client Layer\n(api-client.ts)"]
+        FastApi["Python FastAPI Backend\n(REST Endpoints, SQLite & Physical Document Uploads)"]
 
         Dashboard --> Portals
         BrowseJobs --> Portals
@@ -177,8 +177,8 @@ Job-Application-Tracker/
 | **Styling & Design System** | Tailwind CSS v4, Lucide React, Date-fns, Sonner, Vaul |
 | **Document Processing** | Mozilla PDF.js (`pdfjs-dist`) with client-side stream decoding |
 | **AI & Career Intelligence**| OpenRouter API (`nvidia/nemotron-3-ultra`, `google/gemma-4`) + Local Deterministic Fallback Engine |
-| **Backend API** | Python FastAPI (SQLAlchemy, SQLite) |
-| **Data Persistence** | Unified API Adapter (Local Storage fallback with Firebase / Firestore support) |
+| **Backend API** | Python FastAPI (SQLAlchemy, Physical File Management) |
+| **Data Persistence** | SQLite Database with automated cascading deletes |
 | **Validation & Schemas** | Zod 3.25 runtime validation |
 | **Testing** | Vitest, JSDOM, Coverage-v8 (**78/78 passing tests**) |
 
@@ -219,15 +219,25 @@ npm run dev
 ```
 Open **`http://localhost:5173`** in your browser.
 
-### 4. (Optional) Start the FastAPI Backend Manually
+### 4. Start the FastAPI Backend (Required for DB operations)
 ```bash
 cd Backend_FastAPI
 pip install -r requirements.txt
-python main.py
+uvicorn main:app --port 5117
 ```
-API runs locally on `http://localhost:5117` and is automatically proxied by Vite.
-Or just use `npm run start:all` from the root directory to run both frontend and backend concurrently!
+API runs locally on `http://localhost:5117` and is automatically proxied by Vite. Documents will be saved in `Backend_FastAPI/uploads`.
 
+---
+
+## 🚀 Deployment (Vercel & Render)
+
+1. **Backend via Render**: 
+   - A `render.yaml` configuration is included. Connect this repository to Render and create a new **Blueprint**. Render will deploy the FastAPI backend.
+   - Note the resulting URL (e.g., `https://job-tracker-backend.onrender.com`).
+2. **Frontend via Vercel**: 
+   - Import the `Frontend` folder as your project root in Vercel. 
+   - Add the environment variable `VITE_API_URL` set to your Render URL appended with `/api` (e.g. `https://job-tracker-backend.onrender.com/api`).
+   
 ---
 
 ## 🧪 Automated Testing
@@ -239,7 +249,20 @@ cd Frontend
 npm test
 ```
 
-### Test Suite Summary:
+### Test Suite Summary
+
+**Backend Tests (Pytest)**
+```bash
+cd Backend_FastAPI
+pytest
+```
+- Passes 5/5 integration tests covering CRUD operations, physical document uploads, stats generation, and cross-user isolation.
+
+**Frontend Tests (Vitest)**
+```bash
+cd Frontend
+npm run test
+```
 ```text
 ✓ src/lib/__tests__/documents-service.test.ts (3 tests)
 ✓ src/lib/ai.test.ts (6 tests)
