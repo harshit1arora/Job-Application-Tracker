@@ -234,6 +234,7 @@ API runs locally on `http://localhost:5117` and is automatically proxied by Vite
 
 1. **Backend via Render**: 
    - A `render.yaml` configuration is included. Connect this repository to Render and create a new **Blueprint**. Render will deploy the FastAPI backend.
+   - **Note on Root Directory**: For seamless deployments, a `requirements.txt` is provided at the repository root, and the start command automatically switches to `Backend_FastAPI` before booting. This prevents common `No such file or directory` errors if the service is linked manually.
    - The config automatically mounts a 1GB persistent disk to `/var/data` for the SQLite database and uploaded user resumes, ensuring they survive redeploys.
    - Note the resulting URL (e.g., `https://job-tracker-backend.onrender.com`).
    - You must manually configure `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `CORS_ORIGINS` in your Render Environment dashboard.
