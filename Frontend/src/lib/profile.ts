@@ -140,6 +140,30 @@ export function mergeParsedResumeIntoProfile(
 ): UserProfile {
   const fullName = parsed.fullName || current.fullName;
   const names = extractFirstAndLastName(fullName);
+  const city = parsed.city || current.city || current.location || "";
+  const country =
+    parsed.country ||
+    (/India|\+91/i.test(parsed.phone || city)
+      ? "India"
+      : current.country || "United States");
+  const countryCode =
+    country === "India"
+      ? "+91"
+      : country === "United Kingdom"
+        ? "+44"
+        : "+1";
+
+  const projects =
+    parsed.projects && parsed.projects.length > 0
+      ? parsed.projects.map((proj, idx) => ({
+          id: proj.id || `proj_${Date.now()}_${idx}`,
+          name: proj.name,
+          description: proj.description,
+          technologies: proj.technologies,
+          link: proj.link,
+        }))
+      : current.projects || [];
+
   return {
     ...current,
     fullName,
@@ -147,17 +171,22 @@ export function mergeParsedResumeIntoProfile(
     lastName: names.lastName || current.lastName,
     email: parsed.email || current.email,
     phone: parsed.phone || current.phone,
-    location: parsed.city || current.location,
-    city: parsed.city || current.city || current.location,
+    country,
+    countryCode,
+    location: city,
+    city: city,
     ageOrExperience: parsed.ageOrExperience || current.ageOrExperience,
-    yearsOfExperience: parsed.ageOrExperience || current.yearsOfExperience || "3+ years",
+    yearsOfExperience: parsed.ageOrExperience || current.yearsOfExperience || "1-3 years",
     targetRole: parsed.targetRole || current.targetRole,
     skills: parsed.skills && parsed.skills.length > 0 ? parsed.skills : current.skills || [],
     education: parsed.education || current.education,
-    projects: current.projects || [],
+    projects,
     linkedin: parsed.linkedin || current.linkedin,
     portfolio: parsed.portfolio || current.portfolio,
-    github: current.github || (parsed.portfolio?.includes("github.com") ? parsed.portfolio : ""),
+    github:
+      parsed.github ||
+      current.github ||
+      (parsed.portfolio?.includes("github.com") ? parsed.portfolio : ""),
     resumeText: parsed.rawResumeText || current.resumeText,
     summary: parsed.summary || current.summary,
     customAnswers: current.customAnswers || {},

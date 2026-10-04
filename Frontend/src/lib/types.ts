@@ -107,12 +107,15 @@ export interface ParsedResumeProfile {
   email: string;
   phone: string;
   city: string;
+  country?: string | undefined;
   ageOrExperience: string; // e.g. "24 years old / 3+ YOE" or "4 years experience"
   targetRole: string;
   skills: string[];
   education: string;
   linkedin?: string | undefined;
   portfolio?: string | undefined;
+  github?: string | undefined;
+  projects?: Array<{ id?: string; name: string; description: string; technologies: string[]; link?: string }> | undefined;
   summary?: string | undefined;
   rawResumeText?: string | undefined;
 }

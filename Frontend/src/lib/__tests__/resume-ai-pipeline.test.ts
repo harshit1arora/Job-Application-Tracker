@@ -140,4 +140,59 @@ describe("AI Resume Schema Validation & Fallback Robustness (P1-D)", () => {
     expect(parsed.phone).toBe("(555) 789-0123");
     expect(parsed.fullName).toContain("Taylor");
   });
+
+  it("accurately parses complete candidate resume with location, full LinkedIn, projects, and skills", async () => {
+    const resume = `
+KARTIKEY TIWARI
+New Delhi, India | +91 9717569478 | tiwarikartikey03@gmail.com
+linkedin.com/in/kartikeytiwari10 | github.com/KartikeyT10
+
+PROFESSIONAL SUMMARY
+Computer Science undergraduate at VIT Bhopal with hands-on experience across frontend development and applied machine learning. Shipped React.js/Python projects and placed in national-level hackathons.
+
+EDUCATION
+B.Tech, Computer Science - VIT Bhopal University 2027 (expected)
+
+TECHNICAL SKILLS
+Languages: Python, C++, JavaScript (ES6), SQL
+Web Development: React.js, HTML5, CSS3, Bootstrap, Tailwind CSS, REST API integration, Axios
+Databases: MySQL, SQL
+Tools: Git, GitHub, VS Code, Jupyter Notebook
+
+PROJECTS UNDERTAKEN
+Smart Parking Management Application — Frontend (UI) | HTML · CSS · JavaScript · REST API Integration | github.com/KartikeyT10/Java-Smart-Parking-Management-Application
+• Owned the complete user interface: designed and built the login/signup flow, dashboard.
+
+AgriSmartSuite — Smart Agriculture Dashboard | React.js · Axios · REST API · CSS3 | github.com/KartikeyT10/AgricultureSmartSuite
+• Built the React.js frontend for an AI-powered agriculture dashboard.
+`;
+
+    const parsed = await parseResumeWithAi(resume);
+
+    expect(parsed.fullName).toBe("Kartikey Tiwari");
+    expect(parsed.email).toBe("tiwarikartikey03@gmail.com");
+    expect(parsed.phone).toContain("9717569478");
+    expect(parsed.city).toBe("New Delhi, India");
+    expect(parsed.country).toBe("India");
+    expect(parsed.linkedin).toBe("linkedin.com/in/kartikeytiwari10");
+    expect(parsed.portfolio).toContain("github.com/KartikeyT10");
+    expect(parsed.skills).toContain("Python");
+    expect(parsed.skills).toContain("React.js");
+    expect(parsed.skills).toContain("MySQL");
+    expect(parsed.skills).toContain("Tailwind CSS");
+    expect(parsed.projects && parsed.projects.length).toBeGreaterThanOrEqual(2);
+    expect(parsed.projects?.[0]?.name).toContain("Smart Parking Management Application");
+
+    const merged = mergeParsedResumeIntoProfile(EMPTY_PROFILE, parsed);
+    expect(merged.country).toBe("India");
+    expect(merged.city).toBe("New Delhi, India");
+    expect(merged.location).toBe("New Delhi, India");
+    expect(merged.linkedin).toBe("linkedin.com/in/kartikeytiwari10");
+    expect(merged.projects?.length).toBeGreaterThanOrEqual(2);
+
+    const missing = getMissingProfileFields(merged);
+    expect(missing).not.toContain("City / Location");
+    expect(missing).not.toContain("Full Name");
+    expect(missing).not.toContain("Email Address");
+  });
 });

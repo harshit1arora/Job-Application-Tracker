@@ -92,6 +92,7 @@ function ProfilePage() {
       saveProfile(user.id, merged);
       setProfile(merged);
       setSkillsInput((merged.skills || []).join(", "));
+      setProjects(merged.projects || []);
 
       const missing = getMissingProfileFields(merged);
       if (missing.length > 0) {
@@ -122,6 +123,7 @@ function ProfilePage() {
       saveProfile(user.id, merged);
       setProfile(merged);
       setSkillsInput((merged.skills || []).join(", "));
+      setProjects(merged.projects || []);
 
       toast.success("Sample résumé parsed & profile populated!");
     } catch {
@@ -139,9 +141,12 @@ function ProfilePage() {
       phone: "",
       city: "",
       location: "",
+      country: "",
+      countryCode: "+1",
       ageOrExperience: "",
       targetRole: "",
       skills: [],
+      projects: [],
       linkedin: "",
       portfolio: "",
       education: "",
@@ -151,6 +156,7 @@ function ProfilePage() {
     setProfile(blank);
     setResumeText("");
     setSkillsInput("");
+    setProjects([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     toast.success("Résumé and profile data cleared.");
   };

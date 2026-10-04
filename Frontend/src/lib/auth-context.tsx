@@ -184,9 +184,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
   ): Promise<{ success: boolean; error?: string }> => {
+    const normalizedEmail = email.trim().toLowerCase();
+
     if (auth) {
       try {
-        await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+        await signInWithEmailAndPassword(auth, normalizedEmail, password);
         return { success: true };
       } catch (err) {
         const firebaseErr = err as FirebaseError;
@@ -199,15 +201,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Local authentication fallback ONLY if VITE_DEMO_MODE is true
-    if (import.meta.env.VITE_DEMO_MODE === "true") {
-      const targetRole = localStorage.getItem(TARGET_ROLE_KEY) ?? DEMO_FALLBACK_ROLE;
+    // Local authentication fallback if in demo mode or Firebase not configured
+    const isDemo = import.meta.env.VITE_DEMO_MODE === "true" || !auth;
+    if (isDemo) {
+      let registeredUsers: Record<string, any> = {};
+      try {
+        registeredUsers = JSON.parse(localStorage.getItem("jobpilot_registered_users") || "{}");
+      } catch {
+        // ignore
+      }
+
+      if (registeredUsers[normalizedEmail]) {
+        const registered = registeredUsers[normalizedEmail];
+        if (registered.password && registered.password !== password) {
+          return { success: false, error: "Invalid email or password." };
+        }
+      }
+
+      const targetRole =
+        registeredUsers[normalizedEmail]?.targetRole ||
+        localStorage.getItem(TARGET_ROLE_KEY) ||
+        DEMO_FALLBACK_ROLE;
+
       const localUser: User = {
-        id: `user_${email.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
-        name: email.split("@")[0] || "User",
-        email: email.trim().toLowerCase(),
+        id: registeredUsers[normalizedEmail]?.id || `user_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
+        name: registeredUsers[normalizedEmail]?.name || normalizedEmail.split("@")[0] || "User",
+        email: normalizedEmail,
         targetRole,
-        createdAt: new Date().toISOString(),
+        createdAt: registeredUsers[normalizedEmail]?.createdAt || new Date().toISOString(),
       };
 
       setUser(localUser);
@@ -230,11 +251,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string;
     targetRole?: string;
   }): Promise<{ success: boolean; error?: string }> => {
+    const normalizedEmail = data.email.trim().toLowerCase();
+
     if (auth) {
       try {
         const credential = await createUserWithEmailAndPassword(
           auth,
-          data.email.trim().toLowerCase(),
+          normalizedEmail,
           data.password,
         );
         await updateProfile(credential.user, { displayName: data.name.trim() });
@@ -244,7 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u: User = {
           id: credential.user.uid,
           name: data.name.trim(),
-          email: credential.user.email ?? data.email.trim().toLowerCase(),
+          email: credential.user.email ?? normalizedEmail,
           targetRole,
           createdAt: credential.user.metadata.creationTime ?? new Date().toISOString(),
         };
@@ -259,17 +282,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Local fallback signup ONLY if VITE_DEMO_MODE is true
-    if (import.meta.env.VITE_DEMO_MODE === "true") {
+    // Local fallback signup if in demo mode or Firebase not configured
+    const isDemo = import.meta.env.VITE_DEMO_MODE === "true" || !auth;
+    if (isDemo) {
       const targetRole = data.targetRole?.trim() || DEMO_FALLBACK_ROLE;
       localStorage.setItem(TARGET_ROLE_KEY, targetRole);
+      const userId = `user_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "") || "local"}`;
+      
       const localUser: User = {
-        id: `user_${data.email.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
+        id: userId,
         name: data.name.trim(),
-        email: data.email.trim().toLowerCase(),
+        email: normalizedEmail,
         targetRole,
         createdAt: new Date().toISOString(),
       };
+
+      try {
+        const registeredUsers = JSON.parse(localStorage.getItem("jobpilot_registered_users") || "{}");
+        registeredUsers[normalizedEmail] = {
+          id: userId,
+          name: data.name.trim(),
+          email: normalizedEmail,
+          password: data.password,
+          targetRole,
+          createdAt: localUser.createdAt,
+        };
+        localStorage.setItem("jobpilot_registered_users", JSON.stringify(registeredUsers));
+      } catch {
+        // ignore
+      }
+
       setUser(localUser);
       localStorage.setItem("jobpilot_local_user", JSON.stringify(localUser));
       return { success: true };
@@ -292,11 +334,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // demoLogin — Signs into demo account with zero latency
   // ---------------------------------------------------------------------------
   const demoLogin = (): void => {
-    if (import.meta.env.VITE_DEMO_MODE !== "true") {
-      console.warn("Demo mode is disabled in production.");
-      return;
-    }
-
     const demoUser: User = {
       id: "demo-user",
       name: DEMO_NAME,
@@ -330,9 +367,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ---------------------------------------------------------------------------
-  // googleLogin — Firebase Google OAuth (unchanged from previous implementation)
+  // googleLogin — Firebase Google OAuth with local fallback
   // ---------------------------------------------------------------------------
   const googleLogin = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!auth) {
+      const demoGoogleUser: User = {
+        id: "google_demo_user",
+        name: "Google Demo User",
+        email: "demo.google@jobpilot.ai",
+        targetRole: DEMO_TARGET_ROLE,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces",
+        createdAt: new Date().toISOString(),
+      };
+      localStorage.setItem(TARGET_ROLE_KEY, DEMO_TARGET_ROLE);
+      localStorage.setItem("jobpilot_local_user", JSON.stringify(demoGoogleUser));
+      setUser(demoGoogleUser);
+      return { success: true };
+    }
+
     try {
       const result = await signInWithGooglePopup();
 

@@ -347,9 +347,11 @@ function DashboardPage() {
           recentApplications: [newApp, ...prev.recentApplications].slice(0, 5),
         };
       });
+      return newApp;
     } catch (err: any) {
       console.error("Auto-track error:", err);
       toast.error(err?.message || "Could not track application.");
+      throw err;
     }
   };
 

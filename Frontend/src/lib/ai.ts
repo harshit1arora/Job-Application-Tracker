@@ -364,6 +364,7 @@ export const aiResumeProfileSchema = z.object({
   email: z.string().optional().default(""),
   phone: z.string().optional().default(""),
   city: z.string().optional().default(""),
+  country: z.string().optional().default(""),
   ageOrExperience: z.string().optional().default(""),
   targetRole: z.string().optional().default(""),
   skills: z
@@ -381,6 +382,18 @@ export const aiResumeProfileSchema = z.object({
   education: z.string().optional().default(""),
   linkedin: z.string().optional().default(""),
   portfolio: z.string().optional().default(""),
+  github: z.string().optional().default(""),
+  projects: z
+    .array(
+      z.object({
+        name: z.string().default(""),
+        description: z.string().default(""),
+        technologies: z.array(z.string()).default([]),
+        link: z.string().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
   summary: z.string().optional().default(""),
 });
 
@@ -390,6 +403,11 @@ export const aiResumeProfileSchema = z.object({
  * with deterministic regex & NLP fallback for instant offline reliability.
  */
 export async function parseResumeWithAi(resumeText: string): Promise<ParsedResumeProfile> {
+  const loc = extractLocation(resumeText);
+  const country = extractCountry(resumeText, loc);
+  const projects = extractProjects(resumeText);
+  const githubLink = extractLink(resumeText, "github");
+
   if (KEY && resumeText.trim().length > 30) {
     const systemPrompt = `You are a high-accuracy resume parsing AI. Analyze the provided resume text and output ONLY a valid JSON object matching this schema:
 {
@@ -397,12 +415,13 @@ export async function parseResumeWithAi(resumeText: string): Promise<ParsedResum
   "email": "candidate@example.com",
   "phone": "+1 234 567 8900",
   "city": "City, State or Country",
-  "ageOrExperience": "e.g. 5+ Years Experience or Age 26",
+  "country": "Country",
+  "ageOrExperience": "e.g. 5+ Years Experience or Fresher / Student",
   "targetRole": "Candidate Title or Primary Role",
   "skills": ["Skill1", "Skill2", "Skill3"],
   "education": "Degree, Major and University",
   "linkedin": "linkedin URL if found",
-  "portfolio": "github or portfolio URL if found",
+  "portfolio": "portfolio URL or github if found",
   "summary": "2 sentence professional overview"
 }
 Do NOT include markdown formatting or extra text. Output JSON only.`;
@@ -432,11 +451,13 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
         if (validation.success) {
           const parsed = validation.data;
           if (parsed.fullName || parsed.email || parsed.skills.length > 0) {
+            const parsedLoc = parsed.city || loc;
             return {
               fullName: parsed.fullName || extractName(resumeText),
               email: parsed.email || extractEmail(resumeText),
               phone: parsed.phone || extractPhone(resumeText),
-              city: parsed.city || extractLocation(resumeText),
+              city: parsedLoc,
+              country: parsed.country || extractCountry(resumeText, parsedLoc),
               ageOrExperience: parsed.ageOrExperience || extractExperience(resumeText),
               targetRole: parsed.targetRole || extractTargetRole(resumeText),
               skills: parsed.skills.length > 0 ? parsed.skills : extractSkills(resumeText),
@@ -444,8 +465,10 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
               linkedin: parsed.linkedin || extractLink(resumeText, "linkedin"),
               portfolio:
                 parsed.portfolio ||
-                extractLink(resumeText, "github") ||
+                githubLink ||
                 extractLink(resumeText, "portfolio"),
+              github: githubLink,
+              projects: projects.length > 0 ? projects : parsed.projects,
               summary: parsed.summary || resumeText.slice(0, 180),
               rawResumeText: resumeText,
             };
@@ -462,13 +485,16 @@ Do NOT include markdown formatting or extra text. Output JSON only.`;
     fullName: extractName(resumeText),
     email: extractEmail(resumeText),
     phone: extractPhone(resumeText),
-    city: extractLocation(resumeText),
+    city: loc,
+    country: country,
     ageOrExperience: extractExperience(resumeText),
     targetRole: extractTargetRole(resumeText),
     skills: extractSkills(resumeText),
     education: extractEducation(resumeText),
     linkedin: extractLink(resumeText, "linkedin"),
-    portfolio: extractLink(resumeText, "github") || extractLink(resumeText, "portfolio"),
+    portfolio: githubLink || extractLink(resumeText, "portfolio"),
+    github: githubLink,
+    projects: projects,
     summary:
       resumeText
         .split("\n")
@@ -485,8 +511,9 @@ function extractEmail(text: string): string {
 }
 
 function extractPhone(text: string): string {
-  const match = text.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
-  return match ? match[0] : "";
+  // Supports international formats like +91 9717569478, +1 (415) 890-2341, (555) 789-0123
+  const match = text.match(/(?:\+\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,5}[\s.-]?\d{4,5}/);
+  return match ? match[0].trim() : "";
 }
 
 function extractName(text: string): string {
@@ -500,113 +527,315 @@ function extractName(text: string): string {
       line.length < 35 &&
       !line.includes("@") &&
       !line.includes("http") &&
-      !/resume|curriculum|phone|email/i.test(line)
+      !line.includes(".com") &&
+      !/resume|curriculum|phone|email|summary|education|skills/i.test(line)
     ) {
       const raw = line.replace(/[^a-zA-Z\s.'-]/g, "").trim();
-      // If all-caps, convert to Title Case
-      if (raw === raw.toUpperCase() && raw.length > 3) {
-        return raw.replace(
-          /\w\S*/g,
-          (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase(),
-        );
+      if (raw.length > 2) {
+        // If all-caps, convert to Title Case
+        if (raw === raw.toUpperCase() && raw.length > 3) {
+          return raw.replace(
+            /\w\S*/g,
+            (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase(),
+          );
+        }
+        return raw;
       }
-      return raw;
     }
   }
   return "Alex Carter";
 }
 
 function extractLocation(text: string): string {
-  const match = text.match(
-    /(?:Location|Address|Based in|City)[:\s]*([A-Za-z\s,]+(?:CA|NY|TX|WA|Bengaluru|London|Remote|San Francisco|New York|Austin)[A-Za-z\s,]*)/i,
+  // 1. Check explicit label (e.g. Location: San Francisco, CA)
+  const labeledMatch = text.match(
+    /(?:Location|Address|Based in|City)[:\s]*([^\n|•,]+(?:,\s*[^\n|•]+)?)/i,
   );
-  if (match && match[1]) return match[1].trim();
+  if (labeledMatch && labeledMatch[1]) {
+    const candidate = labeledMatch[1].trim();
+    if (candidate.length > 2 && candidate.length < 50 && !/phone|email|linkedin|github/i.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  // 2. Check top header lines (e.g., "New Delhi, India | +91 9717569478 | ...")
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 8);
+  for (const line of lines) {
+    const segments = line.split(/[|•·]/).map((s) => s.trim());
+    for (const seg of segments) {
+      if (
+        !seg.includes("@") &&
+        !seg.includes("http") &&
+        !seg.includes("github.com") &&
+        !seg.includes("linkedin.com") &&
+        !/\d{5,}/.test(seg) &&
+        seg.length > 2 &&
+        seg.length < 40
+      ) {
+        if (
+          /New Delhi|Delhi|Mumbai|Bangalore|Bengaluru|Hyderabad|Pune|Chennai|Kolkata|Noida|Gurgaon|Bhopal|Jaipur|India|San Francisco|New York|Austin|Seattle|Boston|Chicago|Los Angeles|London|Toronto|Vancouver|Berlin|Singapore|Remote/i.test(
+            seg,
+          )
+        ) {
+          return seg;
+        }
+      }
+    }
+
+    // Direct "City, State/Country" pattern
+    const cityPattern = line.match(/^([A-Za-z\s]+,\s*[A-Za-z\s]+)(?:\s*[|•]|\s*$)/);
+    if (cityPattern && cityPattern[1]) {
+      const candidate = cityPattern[1].trim();
+      if (!/curriculum|resume|engineer|developer|profile|summary|education/i.test(candidate) && candidate.length < 40) {
+        return candidate;
+      }
+    }
+  }
+
+  if (/New Delhi|Delhi/i.test(text)) return "New Delhi, India";
+  if (/Bengaluru|Bangalore/i.test(text)) return "Bengaluru, India";
+  if (/Mumbai/i.test(text)) return "Mumbai, India";
   if (/San Francisco/i.test(text)) return "San Francisco, CA";
   if (/New York/i.test(text)) return "New York, NY";
   if (/Austin/i.test(text)) return "Austin, TX";
-  if (/Bengaluru|Bangalore/i.test(text)) return "Bengaluru, India";
   if (/London/i.test(text)) return "London, UK";
   if (/Remote/i.test(text)) return "Remote (Worldwide)";
+
   return "";
+}
+
+function extractCountry(text: string, locationStr: string): string {
+  if (/India|\+91\b|Delhi|Mumbai|Bangalore|Bengaluru|Pune|Hyderabad|Noida|Bhopal/i.test(text) || /India/i.test(locationStr)) {
+    return "India";
+  }
+  if (/United States|USA|\bUS\b|San Francisco|New York|Austin|Seattle|\+1\b/i.test(text)) {
+    return "United States";
+  }
+  if (/United Kingdom|UK|London|\+44\b/i.test(text)) {
+    return "United Kingdom";
+  }
+  if (/Canada|Toronto|Vancouver/i.test(text)) {
+    return "Canada";
+  }
+  return "India";
 }
 
 function extractExperience(text: string): string {
   const match = text.match(/(\d+\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience)/i);
   if (match && match[1]) return match[1];
+
   const ageMatch = text.match(/Age[:\s]*(\d{2})/i);
-  if (ageMatch && ageMatch[1]) return `Age ${ageMatch[1]} / 3+ YOE`;
-  return "4+ Years Experience";
+  if (ageMatch && ageMatch[1]) return `Age ${ageMatch[1]}`;
+
+  if (/undergraduate|student|intern\b|internship|pursuing|expected\s*202[4-9]|fresher/i.test(text)) {
+    if (/intern\b|internship/i.test(text)) {
+      return "1 Year Experience (Intern / Student)";
+    }
+    return "Fresher / Student (< 1 Year)";
+  }
+
+  return "1-3 Years Experience";
 }
 
 function extractTargetRole(text: string): string {
+  // Look for target role in professional summary or top headers
   const roles = [
-    "Full Stack Engineer",
     "Senior Full Stack Engineer",
-    "Frontend Engineer",
+    "Full Stack Engineer",
     "Lead Frontend Engineer",
+    "Frontend Developer",
+    "Frontend Engineer",
     "Backend Developer",
+    "Backend Engineer",
+    "Software Development Engineer",
     "Software Engineer",
     "AI Platform Engineer",
-    "DevOps Engineer",
+    "AI/ML Engineer",
     "Machine Learning Engineer",
-    "Product Designer",
+    "Data Scientist",
     "Data Engineer",
+    "DevOps Engineer",
+    "Product Designer",
+    "Product Manager",
   ];
+
   for (const role of roles) {
-    if (new RegExp(role, "i").test(text)) return role;
+    const escaped = role.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\b`, "i").test(text)) return role;
   }
+
+  if (/Software Development|Software Developer/i.test(text)) {
+    return "Software Engineer";
+  }
+  if (/AI\/ML|Machine Learning/i.test(text)) {
+    return "AI/ML Engineer";
+  }
+
   return "Software Engineer";
 }
 
 function extractSkills(text: string): string[] {
+  const found = new Set<string>();
+
+  // 1. Parse Technical Skills section
+  const skillsSectionMatch = text.match(
+    /(?:TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|LANGUAGES & TOOLS|TECHNOLOGIES)[\s\S]*?(?=(?:EXPERIENCE|PROJECTS|EDUCATION|CERTIFICATIONS|ACHIEVEMENTS|INTERNSHIP|$))/i,
+  );
+  if (skillsSectionMatch) {
+    const rawSection = skillsSectionMatch[0];
+    const tokens = rawSection
+      .replace(
+        /(?:TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|LANGUAGES & TOOLS|TECHNOLOGIES|Languages|Web Development|Databases|Tools|Frameworks)[:—–]?/gi,
+        "",
+      )
+      .split(/[,•·|\n;]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 1 && s.length < 35 && !/^(and|with|etc|using|design|operations|table design)$/i.test(s));
+
+    for (const token of tokens) {
+      const cleaned = token
+        .replace(/^[•\-*:\s]+|[•\-*:\s]+$/g, "")
+        .replace(/\s*\(.*?\)\s*/g, "")
+        .trim();
+      if (cleaned.length > 1 && cleaned.length < 35) {
+        found.add(cleaned);
+      }
+    }
+  }
+
+  // 2. Comprehensive vocabulary lookup
   const commonSkills = [
-    "TypeScript",
-    "JavaScript",
-    "React",
-    "Next.js",
-    "Node.js",
-    "Python",
-    "C#",
-    ".NET",
-    "ASP.NET Core",
-    "Tailwind CSS",
-    "PostgreSQL",
-    "MongoDB",
-    "Redis",
-    "Docker",
-    "Kubernetes",
-    "AWS",
-    "Firebase",
-    "GraphQL",
-    "REST APIs",
-    "Git",
-    "CI/CD",
-    "Distributed Systems",
-    "Machine Learning",
-    "OpenAI",
+    "Python", "C++", "C#", "Java", "JavaScript", "TypeScript", "SQL", "MySQL", "PostgreSQL",
+    "MongoDB", "Redis", "React", "React.js", "Next.js", "Node.js", "ASP.NET Core", "Express",
+    "Flask", "Django", "FastAPI", "HTML", "HTML5", "CSS", "CSS3", "Bootstrap", "Tailwind CSS",
+    "REST API", "REST APIs", "Axios", "Git", "GitHub", "Docker", "Kubernetes", "AWS", "Firebase",
+    "GraphQL", "CI/CD", "Machine Learning", "AI", "VS Code", "Jupyter Notebook", "Distributed Systems",
+    "OpenAI", "Object-Oriented Programming", "DBMS", "Operating Systems", "Computer Networks"
   ];
-  const found: string[] = [];
+
   for (const skill of commonSkills) {
     const regex = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
     if (regex.test(text)) {
-      found.push(skill);
+      found.add(skill);
     }
   }
-  return found.length > 0 ? found : ["React", "TypeScript", "Node.js", "REST APIs", "Git"];
+
+  const result = Array.from(found);
+  return result.length > 0 ? result : ["React", "TypeScript", "Python", "REST APIs", "Git"];
 }
 
 function extractEducation(text: string): string {
   const match = text.match(
-    /(?:Bachelor|Master|B\.S\.|M\.S\.|B\.Tech|Degree)[^\n,.]*(?:in|,)[^\n.]+/i,
+    /(?:B\.Tech|B\.E\.|B\.S\.|Bachelor|M\.Tech|M\.S\.|Master|Diploma)[^\n•|,]*(?:,\s*[^\n•|,]+)?(?:\s+(?:at|from|-)?\s+[A-Za-z\s]+(?:University|Institute|College|School))?(?:[^\n]*)?/i,
   );
-  if (match) return match[0].trim();
-  return "B.S. in Computer Science";
+  if (match) {
+    return match[0].replace(/\s+/g, " ").trim();
+  }
+  return "B.Tech in Computer Science";
 }
 
 function extractLink(text: string, domain: string): string {
-  const regex = new RegExp(`(?:https?:\\/\\/)?(?:www\\.)?${domain}\\.com\\/[a-zA-Z0-9_.-]+`, "i");
+  // Allows full path with slashes: e.g. linkedin.com/in/kartikeytiwari10 or github.com/KartikeyT10/project
+  const regex = new RegExp(
+    `(?:https?:\\/\\/)?(?:www\\.)?${domain}\\.com\\/[a-zA-Z0-9_.~%/-]+`,
+    "i",
+  );
   const match = text.match(regex);
-  return match ? match[0] : "";
+  if (!match) return "";
+  // Strip trailing punctuation
+  return match[0].replace(/[.,|;:)\]\s]+$/, "");
+}
+
+function extractProjects(text: string): Array<{ name: string; description: string; technologies: string[]; link?: string }> {
+  const projects: Array<{ name: string; description: string; technologies: string[]; link?: string }> = [];
+
+  const projectHeaderMatch = text.match(/(?:\n|^)\s*(?:PROJECTS(?:\s+UNDERTAKEN)?|ACADEMIC PROJECTS|PERSONAL PROJECTS)\s*[:—–]?\s*(?:\n|$)/i);
+  if (!projectHeaderMatch || projectHeaderMatch.index === undefined) return projects;
+
+  const startIndex = projectHeaderMatch.index + projectHeaderMatch[0].length;
+  const remainingText = text.slice(startIndex);
+
+  const nextSectionMatch = remainingText.match(/\n\s*(?:CERTIFICATIONS|ACHIEVEMENTS|EDUCATION|INTERNSHIP EXPERIENCE|WORK EXPERIENCE|EXPERIENCE|SKILLS|PUBLICATIONS|EXTRACURRICULAR)\b/i);
+  const sectionText = nextSectionMatch && nextSectionMatch.index !== undefined
+    ? remainingText.slice(0, nextSectionMatch.index)
+    : remainingText;
+
+  const lines = sectionText.split("\n").map((l) => l.trim()).filter(Boolean);
+  let currentProject: { name: string; description: string; technologies: string[]; link?: string } | null = null;
+
+  for (const line of lines) {
+    if (/^(?:PROJECTS|PROJECTS UNDERTAKEN|ACADEMIC PROJECTS|PERSONAL PROJECTS)$/i.test(line)) continue;
+
+    const isHeader =
+      !line.startsWith("•") &&
+      !line.startsWith("-") &&
+      !line.startsWith("*") &&
+      (line.includes("—") || line.includes("–") || line.includes("|") || line.includes("github.com") || /Application|Dashboard|System|Project|Platform|Hackathon/i.test(line));
+
+    if (isHeader) {
+      if (currentProject) {
+        projects.push(currentProject);
+      }
+
+      const linkMatch = line.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_.~%/-]+/i);
+      const link = linkMatch
+        ? linkMatch[0].startsWith("http")
+          ? linkMatch[0]
+          : `https://${linkMatch[0]}`
+        : undefined;
+
+      const nameParts = line.split(/[—–|]/);
+      const name =
+        nameParts[0]
+          ?.replace(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_.~%/-]+/gi, "")
+          .trim() || line.slice(0, 40);
+
+      const techList: string[] = [];
+      const commonTech = [
+        "React", "React.js", "Python", "Flask", "Django", "Axios", "REST API", "REST APIs",
+        "HTML", "CSS", "JavaScript", "TypeScript", "MySQL", "Tailwind CSS", "Bootstrap",
+        "Machine Learning", "AI", "C++", "Java", "SQL"
+      ];
+      for (const t of commonTech) {
+        if (new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(line)) {
+          techList.push(t);
+        }
+      }
+
+      currentProject = {
+        name,
+        description: "",
+        technologies: techList,
+        link,
+      };
+    } else if (currentProject) {
+      const cleanedBullet = line.replace(/^[•\-\*]\s*/, "");
+      if (currentProject.description) {
+        currentProject.description += " " + cleanedBullet;
+      } else {
+        currentProject.description = cleanedBullet;
+      }
+
+      const commonTech = [
+        "React", "React.js", "Python", "Flask", "Django", "Axios", "REST API", "HTML", "CSS",
+        "JavaScript", "TypeScript", "MySQL", "Tailwind CSS"
+      ];
+      for (const t of commonTech) {
+        if (
+          new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(line) &&
+          !currentProject.technologies.includes(t)
+        ) {
+          currentProject.technologies.push(t);
+        }
+      }
+    }
+  }
+
+  if (currentProject) {
+    projects.push(currentProject);
+  }
+
+  return projects;
 }
 
 /**

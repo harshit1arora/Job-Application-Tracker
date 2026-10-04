@@ -178,7 +178,7 @@ export function SuggestedJobsSection({ jobs, profile, onApplyClick }: SuggestedJ
                     className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:opacity-95 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     <Zap size={14} className="fill-primary-foreground text-primary-foreground" />
-                    1-Click Apply
+                    Easy Apply
                   </button>
                 </div>
               </div>

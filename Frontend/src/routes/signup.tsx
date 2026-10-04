@@ -14,6 +14,7 @@ import {
   EyeOff,
   Sparkles,
   ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/signup")({
@@ -40,7 +41,7 @@ const POPULAR_ROLES = [
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { signup, isAuthenticated } = useAuth();
+  const { signup, demoLogin, googleLogin, isAuthenticated } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,7 +52,12 @@ function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { googleLogin } = useAuth();
+
+  const handleDemoLogin = () => {
+    demoLogin();
+    toast.success("Logged in with Demo Account (Alex Carter)!");
+    navigate({ to: "/dashboard" });
+  };
 
   // If already authenticated, redirect to dashboard
   import_react_useEffect(() => {
@@ -150,6 +156,28 @@ function SignUpPage() {
       {/* Main Container */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
+          {/* Quick Demo Banner */}
+          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/20 text-primary">
+                <Zap size={15} />
+              </span>
+              <div>
+                <p className="text-xs font-semibold text-foreground">Fast Testing Mode</p>
+                <p className="text-[11px] text-muted-foreground">
+                  1-click login without filling credentials
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
+            >
+              Demo Account
+            </button>
+          </div>
+
           <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3">

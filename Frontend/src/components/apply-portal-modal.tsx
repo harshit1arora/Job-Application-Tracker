@@ -42,6 +42,7 @@ import {
   type UnifiedCareerIntelligence,
 } from "@/lib/career-intelligence";
 import type { SuggestedJob } from "@/lib/types";
+import { hasAppliedToJob } from "@/lib/applications-service";
 
 interface ApplyPortalModalProps {
   job: SuggestedJob;
@@ -92,9 +93,24 @@ export function ApplyPortalModal({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
   const [coverLetter, setCoverLetter] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "saving" | "submitted" | "error">(
+    "idle",
+  );
+  const [isAlreadyApplied, setIsAlreadyApplied] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
+
+  // Check if user has already applied to this company & role
+  useEffect(() => {
+    let isSubscribed = true;
+    void hasAppliedToJob(userId, job.company, job.role).then((applied) => {
+      if (isSubscribed && applied) {
+        setIsAlreadyApplied(true);
+      }
+    });
+    return () => {
+      isSubscribed = false;
+    };
+  }, [userId, job.company, job.role]);
 
   // Compute Unified Career Intelligence for this role
   const intelligence = useMemo(() => {
@@ -131,11 +147,11 @@ export function ApplyPortalModal({
     hybridScheduleOk: profile.hybridScheduleOk || "Yes",
     sponsorshipRequired: profile.sponsorshipRequired || "No",
     yearsOfExperience: profile.yearsOfExperience || profile.ageOrExperience || "4+ years",
-    currentCompany: profile.currentCompany || "Previous Tech Co.",
+    currentCompany: profile.currentCompany || "",
     currentTitle: profile.currentTitle || profile.targetRole || "Software Engineer",
-    linkedin: profile.linkedin || "https://linkedin.com/in/candidate",
-    portfolio: profile.portfolio || profile.github || "https://github.com/candidate",
-    github: profile.github || "https://github.com/candidate",
+    linkedin: profile.linkedin || "",
+    portfolio: profile.portfolio || profile.github || "",
+    github: profile.github || "",
     notes: `Applied for ${job.role} at ${job.company} via JobPilot AI Assistant.`,
   });
 
@@ -272,7 +288,13 @@ export function ApplyPortalModal({
 
   // Submit and track application
   const handleSubmitAndTrack = async () => {
-    setIsSubmitting(true);
+    if (isAlreadyApplied) {
+      toast.info(`You have already applied to ${job.company} for this role.`);
+      return;
+    }
+    if (submitStatus === "saving") return;
+
+    setSubmitStatus("saving");
     try {
       // 1. Save profile to ensure memory across future roles
       const updatedProfile: UserProfile = {
@@ -301,14 +323,17 @@ export function ApplyPortalModal({
       // 2. Track application
       await onApplyAndTrack(job);
 
-      setIsSubmitted(true);
+      setSubmitStatus("submitted");
+      setIsAlreadyApplied(true);
       toast.success(
         `Application submitted for ${job.role} at ${job.company}! Details saved to memory for next application.`,
       );
     } catch (err: any) {
-      toast.error(err?.message || "Failed to submit application.");
+      setSubmitStatus("error");
+      toast.error(err?.message || "Failed to submit application. Please click Try Again.");
     } finally {
-      setIsSubmitting(false);
+      // Clear saving state deterministically
+      setSubmitStatus((prev) => (prev === "saving" ? "idle" : prev));
     }
   };
 
@@ -333,7 +358,7 @@ export function ApplyPortalModal({
   };
 
   // Success view
-  if (isSubmitted) {
+  if (submitStatus === "submitted") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
         <div className="w-full max-w-lg rounded-3xl border border-emerald-500/30 bg-[#0d131f] p-8 shadow-2xl text-center flex flex-col items-center">
@@ -936,18 +961,34 @@ export function ApplyPortalModal({
             <button
               type="button"
               onClick={handleSubmitAndTrack}
-              disabled={isSubmitting}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl bg-primary hover:bg-primary/90 px-6 py-2.5 text-xs font-black text-primary-foreground shadow-lg shadow-primary/20 transition-transform active:scale-95 disabled:opacity-50"
+              disabled={submitStatus === "saving" || isAlreadyApplied}
+              className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-2.5 text-xs font-black shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                isAlreadyApplied
+                  ? "bg-white/10 text-gray-300 border border-white/20"
+                  : submitStatus === "error"
+                  ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20"
+                  : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+              }`}
             >
-              {isSubmitting ? (
+              {isAlreadyApplied ? (
+                <>
+                  <CheckCircle2 size={14} className="text-emerald-400" />
+                  Already Applied
+                </>
+              ) : submitStatus === "saving" ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Submitting & Saving...
+                  Saving...
+                </>
+              ) : submitStatus === "error" ? (
+                <>
+                  <AlertTriangle size={14} />
+                  Try Again
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  Submit Application & Auto-Track
+                  Apply Now
                 </>
               )}
             </button>

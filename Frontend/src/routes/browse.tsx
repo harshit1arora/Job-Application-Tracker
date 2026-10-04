@@ -67,7 +67,7 @@ function BrowseJobsPage() {
   const handleApplyAndTrackJob = async (job: SuggestedJob) => {
     if (!user) return;
     try {
-      await createApplication(user.id, {
+      const newApp = await createApplication(user.id, {
         company: job.company,
         jobTitle: job.role,
         applicationSource: job.source,
@@ -79,8 +79,10 @@ function BrowseJobsPage() {
         notes: `Applied via Browse Jobs portal. Match score: ${job.matchScore ?? 90}%.`,
       });
       toast.success(`Application for ${job.company} added to your tracker!`);
+      return newApp;
     } catch (err: any) {
       toast.error(err?.message || "Failed to record application.");
+      throw err;
     }
   };
 

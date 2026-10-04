@@ -113,3 +113,18 @@ export async function updateApplication(
 export async function deleteApplication(userId: string, applicationId: string): Promise<void> {
   await deleteApplicationApi(userId, applicationId);
 }
+
+export async function hasAppliedToJob(
+  userId: string,
+  company: string,
+  role: string,
+): Promise<boolean> {
+  const normCompany = company.trim().toLowerCase();
+  const normRole = role.trim().toLowerCase();
+  const apps = await getApplications(userId);
+  return apps.some(
+    (a) =>
+      a.company.trim().toLowerCase() === normCompany &&
+      a.jobTitle.trim().toLowerCase() === normRole,
+  );
+}
