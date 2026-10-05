@@ -40,7 +40,7 @@ def test_health_check():
     body = response.json()
     assert body["status"] == "ok"
     assert isinstance(body["firebaseAdminInitialized"], bool)
-    assert "firebaseProjectId" in body
+    assert body["firebaseProjectId"] == "jobpilot-ai-tracker"
 
 def test_production_frontend_cors_preflight():
     response = client.options(

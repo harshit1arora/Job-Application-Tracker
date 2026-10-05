@@ -19,7 +19,7 @@ services:
       - key: CORS_ORIGINS
         value: http://localhost:5173,http://localhost:4173,https://job-application-tracker-pearl-nine.vercel.app
       - key: FIREBASE_PROJECT_ID
-        sync: false
+        value: jobpilot-ai-tracker
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_PRIVATE_KEY

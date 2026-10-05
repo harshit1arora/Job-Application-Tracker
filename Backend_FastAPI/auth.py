@@ -5,12 +5,17 @@ from fastapi import Header, HTTPException
 import logging
 
 logger = logging.getLogger(__name__)
+DEFAULT_FIREBASE_PROJECT_ID = "jobpilot-ai-tracker"
 
 def initialize_firebase():
     if firebase_admin._apps:
         return
         
-    project_id = os.environ.get("FIREBASE_PROJECT_ID")
+    project_id = (
+        os.environ.get("FIREBASE_PROJECT_ID")
+        or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        or DEFAULT_FIREBASE_PROJECT_ID
+    ).strip()
     client_email = os.environ.get("FIREBASE_CLIENT_EMAIL")
     private_key = os.environ.get("FIREBASE_PRIVATE_KEY")
     
@@ -29,7 +34,7 @@ def initialize_firebase():
                 "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
                 "client_x509_cert_url": f"https://www.googleapis.com/robot/v1/metadata/x509/{client_email.replace('@', '%40')}"
             })
-            firebase_admin.initialize_app(cred)
+            firebase_admin.initialize_app(cred, {"projectId": project_id})
             logger.info("Firebase Admin initialized via environment variables")
         except Exception as e:
             logger.error(
@@ -38,12 +43,12 @@ def initialize_firebase():
                 e,
             )
     else:
-        # Default initialization if no explicit env vars (e.g. relying on GOOGLE_APPLICATION_CREDENTIALS)
+        # ID-token signature and audience checks need the project ID, not a service-account key.
         try:
-            firebase_admin.initialize_app()
-            logger.info("Firebase Admin initialized via default mechanism")
-        except Exception:
-            logger.warning("Firebase Admin could not be initialized")
+            firebase_admin.initialize_app(options={"projectId": project_id})
+            logger.info("Firebase Admin initialized for project %s", project_id)
+        except Exception as e:
+            logger.error("Firebase Admin initialization failed (%s): %s", type(e).__name__, e)
 
 initialize_firebase()
 
