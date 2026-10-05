@@ -476,7 +476,7 @@ export function ApplyPortalModal({
                 onClick={() => setActiveTab("form")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   activeTab === "form"
-                    ? "bg-primary text-black shadow-xs"
+                    ? "bg-white text-slate-950 shadow-xs"
                     : "text-gray-400 hover:text-white"
                 }`}
               >
@@ -487,7 +487,7 @@ export function ApplyPortalModal({
                 onClick={() => setActiveTab("intelligence")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "intelligence"
-                    ? "bg-primary text-black shadow-xs"
+                    ? "bg-white text-slate-950 shadow-xs"
                     : "text-gray-400 hover:text-white"
                 }`}
               >
@@ -498,7 +498,7 @@ export function ApplyPortalModal({
                 onClick={() => setActiveTab("coverLetter")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === "coverLetter"
-                    ? "bg-primary text-black shadow-xs"
+                    ? "bg-white text-slate-950 shadow-xs"
                     : "text-gray-400 hover:text-white"
                 }`}
               >
@@ -965,7 +965,7 @@ export function ApplyPortalModal({
                   ? "bg-white/10 text-gray-300 border border-white/20"
                   : submitStatus === "error"
                   ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20"
-                  : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+                  : "bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-emerald-400/20"
               }`}
             >
               {isAlreadyApplied ? (
