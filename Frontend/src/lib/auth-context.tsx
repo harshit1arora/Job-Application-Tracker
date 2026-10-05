@@ -90,7 +90,8 @@ const DEMO_PASSWORD = "password123";
 const DEMO_NAME = "Alex Carter";
 const DEMO_TARGET_ROLE = "Full Stack Engineer";
 const DEMO_FALLBACK_ROLE = "Software Engineer";
-const isFirebaseConfiguredForAuth = Boolean((import.meta.env?.VITE_FIREBASE_API_KEY as string | undefined)?.trim());
+const firebaseAuthKey = (import.meta.env?.VITE_FIREBASE_API_KEY as string | undefined)?.trim() || "";
+const isFirebaseConfiguredForAuth = firebaseAuthKey.startsWith("AIza");
 // Enable local auth fallback whenever Firebase is not configured — works in both dev and prod.
 const LOCAL_DEMO_ENABLED = !isFirebaseConfiguredForAuth || import.meta.env.VITE_DEMO_MODE === "true";
 

@@ -59,7 +59,7 @@ function ApplicationsPage() {
     try {
       const data = await getApplications(userId);
       setApplications(data);
-      setIsLoading(false);
+
       const profile = getProfile(userId);
       const rankedCatalog = await suggestJobsForResume(
         {
