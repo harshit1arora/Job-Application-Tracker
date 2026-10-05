@@ -47,6 +47,7 @@ const API_BASE = (() => {
 })();
 
 const REQUEST_TIMEOUT_MS = 30000;
+const APPLICATION_SAVE_TIMEOUT_MS = 120000;
 
 export function handleAuthFailure(hasAuthenticatedFirebaseUser = Boolean(auth?.currentUser)) {
   if (
@@ -413,7 +414,7 @@ export async function createApplicationApi(
     const created = await apiRequest<ApplicationDocument>("/applications", userId, {
       method: "POST",
       body: JSON.stringify(input),
-    });
+    }, APPLICATION_SAVE_TIMEOUT_MS);
     if (!created || typeof created.id !== "string") {
       throw new AppError("SERVER_ERROR", "The server returned an invalid application record.");
     }
