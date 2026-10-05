@@ -13,7 +13,7 @@ from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, T
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 import httpx
 
-from auth import get_current_user_id
+from auth import get_current_user_id, get_firebase_auth_diagnostics
 from services.gemini_service import gemini_service
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
@@ -235,7 +235,7 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", **get_firebase_auth_diagnostics()}
 
 ALLOWED_GEMINI_MODELS = {
     "gemini-2.5-flash",

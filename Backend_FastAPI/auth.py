@@ -32,7 +32,11 @@ def initialize_firebase():
             firebase_admin.initialize_app(cred)
             logger.info("Firebase Admin initialized via environment variables")
         except Exception as e:
-            logger.error("Failed to initialize Firebase Admin via environment variables")
+            logger.error(
+                "Firebase Admin initialization failed (%s): %s",
+                type(e).__name__,
+                e,
+            )
     else:
         # Default initialization if no explicit env vars (e.g. relying on GOOGLE_APPLICATION_CREDENTIALS)
         try:
@@ -42,6 +46,17 @@ def initialize_firebase():
             logger.warning("Firebase Admin could not be initialized")
 
 initialize_firebase()
+
+def get_firebase_auth_diagnostics():
+    try:
+        firebase_app = firebase_admin.get_app()
+    except ValueError:
+        return {"firebaseAdminInitialized": False, "firebaseProjectId": None}
+
+    return {
+        "firebaseAdminInitialized": True,
+        "firebaseProjectId": firebase_app.project_id,
+    }
 
 DEVELOPMENT_MODE = os.environ.get("DEMO_MODE", "false").lower() == "true"
 
@@ -55,7 +70,11 @@ def get_current_user_id(
             decoded_token = auth.verify_id_token(token)
             return decoded_token["uid"]
         except Exception as e:
-            logger.warning("Firebase token verification failed")
+            logger.warning(
+                "Firebase ID token verification failed (%s): %s",
+                type(e).__name__,
+                e,
+            )
             raise HTTPException(status_code=401, detail="Invalid or expired authentication token")
             
     # Fallback to X-User-Id only if in development mode

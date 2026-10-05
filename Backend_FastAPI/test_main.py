@@ -37,7 +37,10 @@ def run_around_tests():
 def test_health_check():
     response = client.get("/api/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert isinstance(body["firebaseAdminInitialized"], bool)
+    assert "firebaseProjectId" in body
 
 def test_production_frontend_cors_preflight():
     response = client.options(
