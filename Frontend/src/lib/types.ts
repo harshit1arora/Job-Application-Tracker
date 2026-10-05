@@ -133,10 +133,12 @@ export interface SuggestedJob {
   source: ApplicationSource | "official";
   applicationSource?: ApplicationSource | undefined;
   sourceLabel?: string | undefined;
-  sourceType?: "official" | undefined;
-  jobUrl: string;
-  externalApplyUrl: string;
+  sourceType?: "official" | "curated" | "unverified" | undefined;
+  jobUrl?: string | undefined;
+  externalApplyUrl?: string | undefined;
   isActive?: boolean | undefined;
+  isVerified?: boolean | undefined;
+  verifiedAt?: string | undefined;
   employmentType?: string | undefined;
   description: string;
   requiredSkills: string[];

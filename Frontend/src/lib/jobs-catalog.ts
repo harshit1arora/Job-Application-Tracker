@@ -1,31 +1,4 @@
-import type { SuggestedJob } from "./types";
-
-const OFFICIAL_HOSTS = new Set([
-  "careers.airbnb.com",
-  "stripe.com",
-  "jobs.stripe.com",
-  "careers.google.com",
-  "www.metacareers.com",
-  "www.atlassian.com",
-  "vercel.com",
-  "www.notion.so",
-  "www.coinbase.com",
-  "www.microsoft.com",
-  "www.uber.com",
-]);
-
-const officialCareerBase = [
-  "https://careers.airbnb.com/positions/8225785/",
-  "https://stripe.com/jobs/search?role=software-engineer",
-  "https://careers.google.com/jobs/results/",
-  "https://www.metacareers.com/jobs/",
-  "https://www.atlassian.com/company/careers/all-jobs",
-  "https://vercel.com/careers",
-  "https://www.notion.so/careers",
-  "https://www.coinbase.com/careers/positions",
-  "https://jobs.microsoft.com/v2/search?jobFamily=Product%20and%20Program%20Management",
-  "https://www.uber.com/us/en/careers/list/",
-];
+﻿import type { SuggestedJob } from "./types";
 
 export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
   {
@@ -37,9 +10,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "LinkedIn",
     applicationSource: "LinkedIn",
     sourceLabel: "Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[0],
-    externalApplyUrl: officialCareerBase[0],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Airbnb's India Analytics Centre of Excellence is seeking a senior advanced analyst to partner with the Fraud & Safety Delivery team. The role delivers metrics, data models, dashboards, root-cause analysis, and recommendations for product and business decisions.",
@@ -64,9 +36,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Greenhouse",
     applicationSource: "Greenhouse",
     sourceLabel: "Stripe Jobs",
-    sourceType: "official",
-    jobUrl: officialCareerBase[1],
-    externalApplyUrl: officialCareerBase[1],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Work closely with product and design to build global payment experiences, internal tooling, and developer-facing workflows that scale across markets and teams.",
@@ -82,9 +53,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Workday",
     applicationSource: "Workday",
     sourceLabel: "Google Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[2],
-    externalApplyUrl: officialCareerBase[2],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Build high-impact, large-scale user experiences and backend services for Google products used by billions of people every day.",
@@ -100,9 +70,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Greenhouse",
     applicationSource: "Greenhouse",
     sourceLabel: "Meta Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[3],
-    externalApplyUrl: officialCareerBase[3],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Ship new products and insights across Meta's feed, ads, and community experiences with a focus on product quality, performance, and scale.",
@@ -118,9 +87,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Workday",
     applicationSource: "Workday",
     sourceLabel: "Atlassian Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[4],
-    externalApplyUrl: officialCareerBase[4],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Create polished, high-performance product experiences for teams that plan, build, and ship software at scale.",
@@ -136,9 +104,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Other",
     applicationSource: "Other",
     sourceLabel: "Vercel Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[5],
-    externalApplyUrl: officialCareerBase[5],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Build delightful developer experiences and frontend infrastructure for the modern web, helping teams ship faster and with greater confidence.",
@@ -154,9 +121,8 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Ashby",
     applicationSource: "Ashby",
     sourceLabel: "Notion Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[6],
-    externalApplyUrl: officialCareerBase[6],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Design and ship polished product experiences that make knowledge work more flexible, collaborative, and productive for teams around the world.",
@@ -172,19 +138,21 @@ export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
     source: "Lever",
     applicationSource: "Lever",
     sourceLabel: "Coinbase Careers",
-    sourceType: "official",
-    jobUrl: officialCareerBase[7],
-    externalApplyUrl: officialCareerBase[7],
+    sourceType: "unverified",
+    isVerified: false,
     isActive: true,
     description:
       "Own critical product areas across crypto infrastructure, user trust, and financial tooling that power safe and reliable customer experiences.",
     requiredSkills: ["Go", "Distributed Systems", "APIs", "Security", "Cloud"],
     experienceLevel: "3+ years",
-  },
+  }
 ];
 
 export function validateDemoJob(job: Partial<SuggestedJob>): boolean {
   if (!job.company?.trim() || !job.role?.trim() || !job.id?.trim()) return false;
+  
+  if (job.sourceType === "unverified") return true;
+
   if (job.sourceType !== "official" || job.isActive !== true) return false;
   if (!job.source) return false;
   if (!job.jobUrl || !job.externalApplyUrl) return false;
@@ -193,24 +161,7 @@ export function validateDemoJob(job: Partial<SuggestedJob>): boolean {
     const jobUrl = new URL(job.jobUrl);
     const applyUrl = new URL(job.externalApplyUrl);
     const isHttps = jobUrl.protocol === "https:" && applyUrl.protocol === "https:";
-    const allowedHost = OFFICIAL_HOSTS.has(jobUrl.hostname) && OFFICIAL_HOSTS.has(applyUrl.hostname);
-    const candidatePaths = [
-      jobUrl.pathname.toLowerCase(),
-      applyUrl.pathname.toLowerCase(),
-      `${jobUrl.pathname}${jobUrl.search}`.toLowerCase(),
-      `${applyUrl.pathname}${applyUrl.search}`.toLowerCase(),
-    ];
-
-    const hasOfficialCareerPath = candidatePaths.some((path) =>
-      path.includes("/positions/") ||
-        path.includes("/jobs") ||
-        path.includes("/careers") ||
-        path.includes("/results") ||
-        path.includes("/search") ||
-        path.includes("/list/"),
-    );
-
-    return isHttps && allowedHost && hasOfficialCareerPath;
+    return isHttps;
   } catch {
     return false;
   }

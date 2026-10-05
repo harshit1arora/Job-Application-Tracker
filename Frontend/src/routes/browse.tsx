@@ -103,7 +103,7 @@ function BrowseJobsPage() {
               Browse Tech Opportunities
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Live openings ranked by AI compatibility with your résumé skills and preferred role.
+              Opportunities ranked by AI compatibility with your résumé skills and preferred role.
             </p>
           </div>
         </div>

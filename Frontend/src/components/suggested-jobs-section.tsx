@@ -112,7 +112,11 @@ export function SuggestedJobsSection({ jobs, profile, onApplyClick }: SuggestedJ
                       {job.sourceLabel || job.source}
                     </span>
                     <span className="text-[11px] text-muted-foreground">
-                      {job.postedDate ? `Posted ${job.postedDate}` : "Official opening"}
+                      {job.postedDate 
+                        ? `Posted ${job.postedDate}` 
+                        : job.sourceType === 'unverified' 
+                          ? "Sample listing (Unverified)" 
+                          : "Official opening"}
                     </span>
                   </div>
 

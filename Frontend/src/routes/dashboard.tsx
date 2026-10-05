@@ -646,7 +646,7 @@ function DashboardPage() {
                   <span className="text-xs text-muted-foreground font-normal">/ 100</span>
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-0.5 block">
-                  Aggregated across live catalog roles
+                  Aggregated across catalog roles
                 </span>
               </div>
 

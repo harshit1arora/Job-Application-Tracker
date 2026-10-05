@@ -350,12 +350,21 @@ export function ApplyPortalModal({
     saveProfile(userId, updatedProfile);
     onProfileUpdated?.(updatedProfile);
 
-    window.open(job.externalApplyUrl, "_blank", "noopener,noreferrer");
-    try {
-      await navigator.clipboard.writeText(autofillText(updatedProfile));
-      toast.success(`Opened ${job.company}'s official career page. Application details copied.`);
-    } catch {
-      toast.info(`Opened ${job.company}'s official career page.`);
+    if (job.externalApplyUrl) {
+      window.open(job.externalApplyUrl, "_blank", "noopener,noreferrer");
+      try {
+        await navigator.clipboard.writeText(autofillText(updatedProfile));
+        toast.success(`Opened ${job.company}'s official career page. Application details copied.`);
+      } catch {
+        toast.info(`Opened ${job.company}'s official career page.`);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(autofillText(updatedProfile));
+        toast.success(`Application details copied. Please search for the role on ${job.company}'s website.`);
+      } catch {
+        toast.info(`Please search for the role on ${job.company}'s website.`);
+      }
     }
   };
 
