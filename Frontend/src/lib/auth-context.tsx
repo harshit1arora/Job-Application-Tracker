@@ -90,7 +90,9 @@ const DEMO_PASSWORD = "password123";
 const DEMO_NAME = "Alex Carter";
 const DEMO_TARGET_ROLE = "Full Stack Engineer";
 const DEMO_FALLBACK_ROLE = "Software Engineer";
-const LOCAL_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === "true";
+const isFirebaseConfiguredForAuth = Boolean((import.meta.env?.VITE_FIREBASE_API_KEY as string | undefined)?.trim());
+// Enable local auth fallback whenever Firebase is not configured — works in both dev and prod.
+const LOCAL_DEMO_ENABLED = !isFirebaseConfiguredForAuth || import.meta.env.VITE_DEMO_MODE === "true";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -148,16 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     if (!auth) {
-      if (import.meta.env.PROD) {
-        setUser(null);
-        localStorage.removeItem("jobpilot_local_user");
-      } else if (LOCAL_DEMO_ENABLED) {
+      if (LOCAL_DEMO_ENABLED) {
         try {
           const savedLocal = localStorage.getItem("jobpilot_local_user");
           if (savedLocal) setUser(JSON.parse(savedLocal));
         } catch {
           localStorage.removeItem("jobpilot_local_user");
         }
+      } else {
+        setUser(null);
+        localStorage.removeItem("jobpilot_local_user");
       }
       setIsLoading(false);
       return;

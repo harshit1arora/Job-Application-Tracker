@@ -30,7 +30,12 @@ const isTestEnvironment =
   (process.env?.VITEST === "true" || process.env?.NODE_ENV === "test");
 
 const isDemoModeFlag = import.meta.env?.VITE_DEMO_MODE === "true";
-export const isDemoMode = isDemoModeFlag || isTestEnvironment;
+const isFirebaseConfigured = Boolean((import.meta.env?.VITE_FIREBASE_API_KEY as string | undefined)?.trim());
+// In production without Firebase credentials configured, fall back to local storage so the app
+// doesn't loop on 401s from a Firebase-secured backend. In dev, the local backend accepts
+// X-User-Id in DEMO_MODE so we only need the explicit VITE_DEMO_MODE flag.
+const isProdWithoutFirebase = (import.meta.env?.PROD ?? false) && !isFirebaseConfigured;
+export const isDemoMode = isDemoModeFlag || isTestEnvironment || isProdWithoutFirebase;
 
 const PRODUCTION_API_BASE = "https://job-tracker-api-fo65.onrender.com/api";
 const defaultApiBase = isBrowser
