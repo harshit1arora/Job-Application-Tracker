@@ -31,9 +31,18 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
-import { auth, signInWithGooglePopup, signOutFirebase } from "./firebase";
+import {
+  auth,
+  firebaseConfigurationError,
+  signInWithGooglePopup,
+  signOutFirebase,
+} from "./firebase";
 
 // ---------------------------------------------------------------------------
 // Types — identical interface to the previous implementation
@@ -52,7 +61,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   signup: (data: {
     name: string;
     email: string;
@@ -80,6 +90,7 @@ const DEMO_PASSWORD = "password123";
 const DEMO_NAME = "Alex Carter";
 const DEMO_TARGET_ROLE = "Full Stack Engineer";
 const DEMO_FALLBACK_ROLE = "Software Engineer";
+const LOCAL_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === "true";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -136,18 +147,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * is more reliable: Firebase handles token rotation automatically.
    */
   useEffect(() => {
-    // Check for saved local/demo session first
-    try {
-      const savedLocal = localStorage.getItem("jobpilot_local_user");
-      if (savedLocal) {
-        setUser(JSON.parse(savedLocal));
-        setIsLoading(false);
-      }
-    } catch {
-      // ignore
-    }
-
     if (!auth) {
+      if (LOCAL_DEMO_ENABLED) {
+        try {
+          const savedLocal = localStorage.getItem("jobpilot_local_user");
+          if (savedLocal) setUser(JSON.parse(savedLocal));
+        } catch {
+          localStorage.removeItem("jobpilot_local_user");
+        }
+      }
       setIsLoading(false);
       return;
     }
@@ -166,10 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(u);
         localStorage.setItem("jobpilot_local_user", JSON.stringify(u));
       } else {
-        const savedLocal = localStorage.getItem("jobpilot_local_user");
-        if (!savedLocal) {
-          setUser(null);
-        }
+        setUser(null);
       }
       setIsLoading(false);
     });
@@ -183,11 +188,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (
     email: string,
     password: string,
+    rememberMe = true,
   ): Promise<{ success: boolean; error?: string }> => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (auth) {
       try {
+        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
         await signInWithEmailAndPassword(auth, normalizedEmail, password);
         return { success: true };
       } catch (err) {
@@ -202,33 +209,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Local authentication fallback if in demo mode or Firebase not configured
-    const isDemo = import.meta.env.VITE_DEMO_MODE === "true" || !auth;
-    if (isDemo) {
-      let registeredUsers: Record<string, any> = {};
-      try {
-        registeredUsers = JSON.parse(localStorage.getItem("jobpilot_registered_users") || "{}");
-      } catch {
-        // ignore
-      }
-
-      if (registeredUsers[normalizedEmail]) {
-        const registered = registeredUsers[normalizedEmail];
-        if (registered.password && registered.password !== password) {
-          return { success: false, error: "Invalid email or password." };
-        }
-      }
-
-      const targetRole =
-        registeredUsers[normalizedEmail]?.targetRole ||
-        localStorage.getItem(TARGET_ROLE_KEY) ||
-        DEMO_FALLBACK_ROLE;
-
+    if (LOCAL_DEMO_ENABLED && !auth) {
       const localUser: User = {
-        id: registeredUsers[normalizedEmail]?.id || `user_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
-        name: registeredUsers[normalizedEmail]?.name || normalizedEmail.split("@")[0] || "User",
+        id: `demo_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "") || "local"}`,
+        name: normalizedEmail.split("@")[0] || "User",
         email: normalizedEmail,
-        targetRole,
-        createdAt: registeredUsers[normalizedEmail]?.createdAt || new Date().toISOString(),
+        targetRole: localStorage.getItem(TARGET_ROLE_KEY) || DEMO_FALLBACK_ROLE,
+        createdAt: new Date().toISOString(),
       };
 
       setUser(localUser);
@@ -238,8 +225,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return {
       success: false,
-      error: "Authentication failed. Backend unavailable or invalid credentials.",
+      error: !auth
+        ? firebaseConfigurationError || "Firebase authentication is unavailable."
+        : "Authentication failed. Backend unavailable or invalid credentials.",
     };
+  };
+
+  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return { success: false, error: "Enter your email address first." };
+    if (!auth) {
+      return {
+        success: false,
+        error: firebaseConfigurationError || "Password reset is unavailable because Firebase is not configured.",
+      };
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, normalizedEmail);
+      return { success: true };
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      return { success: false, error: mapFirebaseError(firebaseError.code) };
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -283,8 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Local fallback signup if in demo mode or Firebase not configured
-    const isDemo = import.meta.env.VITE_DEMO_MODE === "true" || !auth;
-    if (isDemo) {
+    if (LOCAL_DEMO_ENABLED && !auth) {
       const targetRole = data.targetRole?.trim() || DEMO_FALLBACK_ROLE;
       localStorage.setItem(TARGET_ROLE_KEY, targetRole);
       const userId = `user_${normalizedEmail.replace(/[^a-zA-Z0-9]/g, "") || "local"}`;
@@ -297,27 +304,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
 
-      try {
-        const registeredUsers = JSON.parse(localStorage.getItem("jobpilot_registered_users") || "{}");
-        registeredUsers[normalizedEmail] = {
-          id: userId,
-          name: data.name.trim(),
-          email: normalizedEmail,
-          password: data.password,
-          targetRole,
-          createdAt: localUser.createdAt,
-        };
-        localStorage.setItem("jobpilot_registered_users", JSON.stringify(registeredUsers));
-      } catch {
-        // ignore
-      }
-
       setUser(localUser);
       localStorage.setItem("jobpilot_local_user", JSON.stringify(localUser));
       return { success: true };
     }
 
-    return { success: false, error: "Signup failed. Backend unavailable or invalid data." };
+    return {
+      success: false,
+      error: !auth
+        ? firebaseConfigurationError || "Firebase authentication is unavailable."
+        : "Signup failed. Backend unavailable or invalid data.",
+    };
   };
 
   // ---------------------------------------------------------------------------
@@ -334,6 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // demoLogin — Signs into demo account with zero latency
   // ---------------------------------------------------------------------------
   const demoLogin = (): void => {
+    if (!LOCAL_DEMO_ENABLED) return;
     const demoUser: User = {
       id: "demo-user",
       name: DEMO_NAME,
@@ -371,6 +369,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ---------------------------------------------------------------------------
   const googleLogin = async (): Promise<{ success: boolean; error?: string }> => {
     if (!auth) {
+      if (!LOCAL_DEMO_ENABLED) {
+        return { success: false, error: "Firebase authentication is not configured." };
+      }
       const demoGoogleUser: User = {
         id: "google_demo_user",
         name: "Google Demo User",
@@ -418,6 +419,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        resetPassword,
         signup,
         logout,
         demoLogin,

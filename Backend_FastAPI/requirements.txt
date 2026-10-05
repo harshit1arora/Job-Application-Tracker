@@ -2,7 +2,9 @@ fastapi
 uvicorn
 pydantic
 sqlalchemy
-pytest 
-httpx 
+pytest
+httpx
 firebase-admin
 python-multipart
+google-genai
+httpx

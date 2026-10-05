@@ -1,4 +1,4 @@
-# 🚀 JobPilot — Autonomous AI Job Application Tracker & Career Copilot
+# JobPilot — AI-Powered Career Intelligence & Job Application Tracker
 
 <div align="center">
 
@@ -6,13 +6,12 @@
 ![React 19](https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
-![OpenRouter AI](https://img.shields.io/badge/OpenRouter-AI%20LLM-purple?style=for-the-badge&logo=openai)
+![Google Gemini](https://img.shields.io/badge/Google-Gemini-8A2BE2?style=for-the-badge&logo=google)
 ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Tests Passed](https://img.shields.io/badge/Tests-78%2F78%20Passed-brightgreen?style=for-the-badge)
 
-**JobPilot parses your résumé, detects missing application fields, scores candidate readiness and career intelligence, generates tailored first-person cover letters, provides 1-click clipboard auto-fill, and tracks application pipelines and interview timelines in an interactive color-coded calendar.**
+**JobPilot analyzes profile-to-role fit, provides explainable career-readiness and skill evidence, helps prepare cover letters and interview practice, supports profile-assisted field population, and tracks applications and interview timelines. Candidates review materials and submit applications directly on employer sites.**
 
-[Live Dashboard Demo](http://localhost:5173/dashboard) • [Browse Jobs](http://localhost:5173/browse) • [Interview Tracker](http://localhost:5173/tracker) • [Candidate Profile](http://localhost:5173/profile)
+[Dashboard](http://localhost:5173/dashboard) • [Browse Jobs](http://localhost:5173/browse) • [Interview Tracker](http://localhost:5173/tracker) • [Candidate Profile](http://localhost:5173/profile)
 
 </div>
 
@@ -29,10 +28,10 @@ flowchart TB
         ResumeUpload --> PdfJsEngine --> TextSanitizer
     end
 
-    subgraph AIEngine["🤖 AI Intelligence Core (OpenRouter + Local NLP)"]
+    subgraph AIEngine["🤖 AI Intelligence Core (Google Gemini + Local NLP)"]
         AiParser["Intelligent Resume Parser\n(Name, Contact, Experience, Skills)"]
         GapDetector["Conversational Gap Assistant\n(Missing Fields Detection)"]
-        JobMatcher["Vector Semantic Matcher\n(Cosine Similarity & Score Rings 5-99%)"]
+        JobMatcher["Profile-to-Role Analysis\n(Explainable role and skill signals)"]
         LetterGen["Tailored Cover Letter Engine\n(8-10 Line First-Person Generator)"]
         
         TextSanitizer --> AiParser
@@ -61,7 +60,6 @@ flowchart TB
         DataSync["API Client Layer\n(api-client.ts)"]
         FastApi["Python FastAPI Backend\n(REST Endpoints, SQLite & Physical Document Uploads)"]
 
-        Dashboard --> Portals
         BrowseJobs --> Portals
         Applications <--> FastApi
         CalendarTracker <--> FastApi
@@ -89,10 +87,10 @@ flowchart TB
 - **Closed-Loop Action Completion Engine**:
   - Completing recommended actions (verifying skills, attaching practical projects, optimizing bullets) updates underlying profile state, triggers immediate Career Intelligence recomputation, and dynamically generates the next prioritized task.
 
-### 3. 🧩 1-Click Career Portal Auto-Fill & Floating Quick-Fill
-- **Instant Field Copy**: Dedicated copy shortcuts for First Name, Last Name, Email, Phone, City, Experience, LinkedIn, and Portfolio.
-- **Master Bundle Copy**: Copies full candidate application profile in one click.
-- **Floating Quick-Fill Widget**: Stays docked on screen while navigating external ATS portals (Workday, Greenhouse, Lever, Ashby, LinkedIn).
+### 3. 🧩 Profile-Assisted Application Preparation
+- **Profile Field Copy**: Copy saved contact, experience, and portfolio details for use in supported employer application forms.
+- **Master Profile Copy**: Copy profile details to paste into an employer portal.
+- **Quick-Fill Helper**: Keep profile details accessible while completing an external application. Review and submit directly on the employer's site.
 
 ### 4. ✍️ Tailored First-Person Cover Letter Generator
 - **Zero Generic Fluff**: Directly addresses the hiring team and target position.
@@ -134,7 +132,7 @@ Job-Application-Tracker/
 │   │   │   ├── suggested-jobs-section.tsx # Curated role matching cards
 │   │   │   └── landing/               # Marketing & Landing Page Components
 │   │   ├── lib/                       # Core Business Logic & State Services
-│   │   │   ├── ai.ts                  # OpenRouter client, schema validation & fallback
+│   │   │   ├── ai.ts                  # Gemini-backed backend client, schema validation & fallback
 │   │   │   ├── api-client.ts          # Unified REST & LocalStorage data adapter
 │   │   │   ├── applications-service.ts# Application CRUD & validation rules
 │   │   │   ├── auth-context.tsx       # Authentication state provider
@@ -177,7 +175,7 @@ Job-Application-Tracker/
 | **Routing & Architecture** | TanStack Router, TanStack Query |
 | **Styling & Design System** | Tailwind CSS v4, Lucide React, Date-fns, Sonner, Vaul |
 | **Document Processing** | Mozilla PDF.js (`pdfjs-dist`) with client-side stream decoding |
-| **AI & Career Intelligence**| OpenRouter API (`nvidia/nemotron-3-ultra`, `google/gemma-4`) + Local Deterministic Fallback Engine |
+| **AI & Career Intelligence**| Google Gemini API (backend-only via `GEMINI_API_KEY`) + Local Deterministic Fallback Engine |
 | **Backend API** | Python FastAPI (SQLAlchemy, Physical File Management) |
 | **Data Persistence** | SQLite Database with automated cascading deletes |
 | **Validation & Schemas** | Zod 3.25 runtime validation |
@@ -199,11 +197,9 @@ cd Job-Application-Tracker
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env` file in `Frontend/`:
+Create a `.env` file in `Frontend/` for local development. Firebase web configuration is required for real authentication; Gemini credentials live only on the backend and must never use a `VITE_` variable.
 ```env
-VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
-
-# Firebase Configuration (Optional)
+# Firebase Web App configuration
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
@@ -239,7 +235,7 @@ API runs locally on `http://localhost:5117` and is automatically proxied by Vite
    - **Note on Root Directory**: For seamless deployments, a `requirements.txt` is provided at the repository root, and the start command automatically switches to `Backend_FastAPI` before booting. This prevents common `No such file or directory` errors if the service is linked manually.
    - The config automatically mounts a 1GB persistent disk to `/var/data` for the SQLite database and uploaded user resumes, ensuring they survive redeploys.
    - Note the resulting URL (e.g., `https://job-tracker-backend.onrender.com`).
-   - You must manually configure `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `CORS_ORIGINS` in your Render Environment dashboard.
+  - Configure `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `GEMINI_API_KEY` in Render. The production Vercel origin is included in backend CORS configuration.
 2. **Frontend via Vercel**: 
    - Import the `Frontend` folder as your project root in Vercel. 
    - Add the environment variable `VITE_API_URL` set to your Render URL (e.g. `https://job-tracker-backend.onrender.com/api`).

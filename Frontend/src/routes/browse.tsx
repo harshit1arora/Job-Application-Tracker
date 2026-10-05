@@ -6,7 +6,7 @@ import { SuggestedJobsSection } from "@/components/suggested-jobs-section";
 import { ApplyPortalModal } from "@/components/apply-portal-modal";
 import { MissingFieldsModal } from "@/components/missing-fields-modal";
 import { QuickFillWidget } from "@/components/quick-fill-widget";
-import { CURATED_JOBS_CATALOG } from "@/lib/jobs-catalog";
+import { VALIDATED_DEMO_JOBS } from "@/lib/jobs-catalog";
 import { getProfile, saveProfile, type UserProfile } from "@/lib/profile";
 import { suggestJobsForResume } from "@/lib/ai";
 import { createApplication } from "@/lib/applications-service";
@@ -22,25 +22,27 @@ export const Route = createFileRoute("/browse")({
 });
 
 function BrowseJobsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [suggestedJobs, setSuggestedJobs] = useState<SuggestedJob[]>(CURATED_JOBS_CATALOG);
+  const [suggestedJobs, setSuggestedJobs] = useState<SuggestedJob[]>(VALIDATED_DEMO_JOBS);
   const [selectedApplyJob, setSelectedApplyJob] = useState<SuggestedJob | null>(null);
   const [showMissingModal, setShowMissingModal] = useState(false);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated && !user) {
       navigate({ to: "/login" });
       return;
     }
     if (user) {
-      const p = getProfile(user.id);
+      const savedProfile = getProfile(user.id);
+      const p = { ...savedProfile, targetRole: savedProfile.targetRole || user.targetRole || "" };
       setProfile(p);
       void rankJobs(p);
     }
-  }, [user, isAuthenticated, navigate]);
+  }, [user, isAuthenticated, isAuthLoading, navigate]);
 
   const rankJobs = async (p: UserProfile) => {
     try {
@@ -50,13 +52,13 @@ function BrowseJobsPage() {
           email: p.email,
           phone: p.phone,
           city: p.city || p.location,
-          ageOrExperience: p.ageOrExperience || "3+ YOE",
-          targetRole: p.targetRole || "Software Engineer",
-          skills: p.skills && p.skills.length > 0 ? p.skills : ["React", "TypeScript", "Node.js"],
-          education: p.education || "Computer Science",
+          ageOrExperience: p.ageOrExperience || "",
+          targetRole: p.targetRole || "",
+          skills: p.skills || [],
+          education: p.education || "",
           summary: p.summary || p.resumeText.slice(0, 180),
         },
-        CURATED_JOBS_CATALOG,
+        VALIDATED_DEMO_JOBS,
       );
       setSuggestedJobs(ranked);
     } catch {
@@ -70,13 +72,14 @@ function BrowseJobsPage() {
       const newApp = await createApplication(user.id, {
         company: job.company,
         jobTitle: job.role,
-        applicationSource: job.source,
+        applicationSource: job.applicationSource || "Other",
         status: "Applied",
-        applicationUrl: job.portalUrl,
+        applicationUrl: job.externalApplyUrl,
         location: job.location,
         salaryRange: job.salaryRange,
         jobDescription: job.description,
-        notes: `Applied via Browse Jobs portal. Match score: ${job.matchScore ?? 90}%.`,
+        matchScore: job.matchScore,
+        notes: `Demo application recorded via Browse Jobs.${job.matchScore === undefined ? " Match score unavailable." : ` Match score: ${job.matchScore}%.`}`,
       });
       toast.success(`Application for ${job.company} added to your tracker!`);
       return newApp;

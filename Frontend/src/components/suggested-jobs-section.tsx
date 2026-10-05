@@ -94,7 +94,7 @@ export function SuggestedJobsSection({ jobs, profile, onApplyClick }: SuggestedJ
           </div>
         ) : (
           filteredJobs.map((job) => {
-            const score = job.matchScore ?? 90;
+            const score = job.matchScore;
             return (
               <div
                 key={job.id}
@@ -109,10 +109,10 @@ export function SuggestedJobsSection({ jobs, profile, onApplyClick }: SuggestedJ
                     </span>
                     <span className="text-muted-foreground">•</span>
                     <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-[11px] font-medium bg-background text-foreground/80">
-                      {job.source}
+                      {job.sourceLabel || job.source}
                     </span>
                     <span className="text-[11px] text-muted-foreground">
-                      Posted {job.postedDate || "recently"}
+                      {job.postedDate ? `Posted ${job.postedDate}` : "Official opening"}
                     </span>
                   </div>
 
@@ -156,20 +156,28 @@ export function SuggestedJobsSection({ jobs, profile, onApplyClick }: SuggestedJ
                 {/* Match Score & Action */}
                 <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0">
                   <div className="text-right">
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                        {score}%
+                    {score === undefined ? (
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        Match unavailable
                       </span>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Match
-                      </span>
-                    </div>
-                    <div className="w-24 h-1.5 bg-secondary rounded-full overflow-hidden mt-1">
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                            {score}%
+                          </span>
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Match
+                          </span>
+                        </div>
+                        <div className="w-24 h-1.5 bg-secondary rounded-full overflow-hidden mt-1">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                            style={{ width: `${score}%` }}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <button

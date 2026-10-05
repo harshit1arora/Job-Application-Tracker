@@ -7,9 +7,9 @@ import { FAQ } from "@/components/landing/FAQ";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { Footer } from "@/components/landing/Footer";
 
-const TITLE = "JobPilot — Intelligent AI Job Application Tracker & Autofill";
+const TITLE = "JobPilot — AI-Powered Career Intelligence & Job Application Tracker";
 const DESCRIPTION =
-  "Parse your résumé, discover matched tech opportunities, auto-fill applications in 1-click with persistent memory, and track your interview pipeline.";
+  "Analyze role fit and career readiness, prepare application materials, practice interviews, and track job applications. Review your materials and apply on the employer's site.";
 
 export const Route = createFileRoute("/")({
   head: () => ({

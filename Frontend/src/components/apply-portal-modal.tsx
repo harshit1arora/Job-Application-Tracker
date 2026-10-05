@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import {
   ExternalLink,
   Copy,
-  Check,
   Sparkles,
   X,
   Building2,
@@ -25,6 +24,7 @@ import {
   Send,
   Loader2,
   CheckCircle2,
+  Check,
   Upload,
   Globe,
   HelpCircle,
@@ -98,6 +98,7 @@ export function ApplyPortalModal({
   );
   const [isAlreadyApplied, setIsAlreadyApplied] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
+  const submitLock = useRef(false);
 
   // Check if user has already applied to this company & role
   useEffect(() => {
@@ -122,7 +123,7 @@ export function ApplyPortalModal({
         company: job.company,
         description: job.description,
         requiredSkills: job.requiredSkills || ["Software Engineering"],
-        matchScore: job.matchScore ?? 92,
+        ...(job.matchScore === undefined ? {} : { matchScore: job.matchScore }),
       },
       null,
       [],
@@ -138,17 +139,17 @@ export function ApplyPortalModal({
     lastName: profile.lastName || initialNames.lastName || "",
     email: profile.email || "",
     phone: profile.phone || "",
-    countryCode: profile.countryCode || "+1",
+    countryCode: profile.countryCode || "",
     country:
       profile.country ||
       (COUNTRY_OPTIONS.includes(profile.location) ? profile.location : "United States"),
-    locationCity: profile.city || profile.location || "San Francisco, CA",
-    resumeFileName: profile.resumeFileName || "Alex_Carter_Resume.pdf",
+    locationCity: profile.city || profile.location || "",
+    resumeFileName: profile.resumeFileName || "",
     hybridScheduleOk: profile.hybridScheduleOk || "Yes",
     sponsorshipRequired: profile.sponsorshipRequired || "No",
-    yearsOfExperience: profile.yearsOfExperience || profile.ageOrExperience || "4+ years",
+    yearsOfExperience: profile.yearsOfExperience || profile.ageOrExperience || "",
     currentCompany: profile.currentCompany || "",
-    currentTitle: profile.currentTitle || profile.targetRole || "Software Engineer",
+    currentTitle: profile.currentTitle || profile.targetRole || "",
     linkedin: profile.linkedin || "",
     portfolio: profile.portfolio || profile.github || "",
     github: profile.github || "",
@@ -157,47 +158,42 @@ export function ApplyPortalModal({
 
   // Track field change and auto-save into profile memory
   const handleFieldChange = (field: keyof typeof formData, value: string) => {
-    setFormData((prev) => {
-      const next = { ...prev, [field]: value };
+    const next = { ...formData, [field]: value };
+    setFormData(next);
 
-      // Sync back into UserProfile memory
-      const updatedProfile: UserProfile = {
-        ...profile,
-        firstName: next.firstName,
-        lastName: next.lastName,
-        fullName: `${next.firstName} ${next.lastName}`.trim() || profile.fullName,
-        email: next.email,
-        phone: next.phone,
-        countryCode: next.countryCode,
-        country: next.country,
-        city: next.locationCity,
-        location: next.locationCity,
-        hybridScheduleOk: next.hybridScheduleOk,
-        sponsorshipRequired: next.sponsorshipRequired,
-        yearsOfExperience: next.yearsOfExperience,
-        ageOrExperience: next.yearsOfExperience,
-        currentCompany: next.currentCompany,
-        currentTitle: next.currentTitle,
-        linkedin: next.linkedin,
-        portfolio: next.portfolio,
-        github: next.github,
-        resumeFileName: next.resumeFileName,
-        customAnswers: {
-          ...(profile.customAnswers || {}),
-          [field]: value,
-          [`${job.company}_applied_country`]: next.country,
-          [`${job.company}_hybrid_ok`]: next.hybridScheduleOk,
-        },
-      };
+    const updatedProfile: UserProfile = {
+      ...profile,
+      firstName: next.firstName,
+      lastName: next.lastName,
+      fullName: `${next.firstName} ${next.lastName}`.trim() || profile.fullName,
+      email: next.email,
+      phone: next.phone,
+      countryCode: next.countryCode,
+      country: next.country,
+      city: next.locationCity,
+      location: next.locationCity,
+      hybridScheduleOk: next.hybridScheduleOk,
+      sponsorshipRequired: next.sponsorshipRequired,
+      yearsOfExperience: next.yearsOfExperience,
+      ageOrExperience: next.yearsOfExperience,
+      currentCompany: next.currentCompany,
+      currentTitle: next.currentTitle,
+      linkedin: next.linkedin,
+      portfolio: next.portfolio,
+      github: next.github,
+      resumeFileName: next.resumeFileName,
+      customAnswers: {
+        ...(profile.customAnswers || {}),
+        [field]: value,
+        [`${job.company}_applied_country`]: next.country,
+        [`${job.company}_hybrid_ok`]: next.hybridScheduleOk,
+      },
+    };
 
-      saveProfile(userId, updatedProfile);
-      onProfileUpdated?.(updatedProfile);
-
-      setLastSavedField(field);
-      setTimeout(() => setLastSavedField(null), 2500);
-
-      return next;
-    });
+    saveProfile(userId, updatedProfile);
+    onProfileUpdated?.(updatedProfile);
+    setLastSavedField(field);
+    setTimeout(() => setLastSavedField(null), 2500);
   };
 
   // Auto-generate tailored cover letter for this specific job & company
@@ -292,9 +288,11 @@ export function ApplyPortalModal({
       toast.info(`You have already applied to ${job.company} for this role.`);
       return;
     }
-    if (submitStatus === "saving") return;
+    if (submitLock.current || submitStatus === "saving") return;
 
+    submitLock.current = true;
     setSubmitStatus("saving");
+    let submitTimeout: ReturnType<typeof setTimeout> | undefined;
     try {
       // 1. Save profile to ensure memory across future roles
       const updatedProfile: UserProfile = {
@@ -312,6 +310,7 @@ export function ApplyPortalModal({
         sponsorshipRequired: formData.sponsorshipRequired,
         yearsOfExperience: formData.yearsOfExperience,
         currentCompany: formData.currentCompany,
+        currentTitle: formData.currentTitle,
         linkedin: formData.linkedin,
         portfolio: formData.portfolio,
         github: formData.github,
@@ -321,18 +320,27 @@ export function ApplyPortalModal({
       onProfileUpdated?.(updatedProfile);
 
       // 2. Track application
-      await onApplyAndTrack(job);
+      await Promise.race([
+        onApplyAndTrack(job),
+        new Promise<never>((_, reject) => {
+          submitTimeout = setTimeout(
+            () => reject(new Error("Saving timed out. Please try again.")),
+            10000,
+          );
+        }),
+      ]);
 
       setSubmitStatus("submitted");
       setIsAlreadyApplied(true);
-      toast.success(
-        `Application submitted for ${job.role} at ${job.company}! Details saved to memory for next application.`,
-      );
-    } catch (err: any) {
+      toast.success("Application saved successfully.");
+    } catch (err: unknown) {
       setSubmitStatus("error");
-      toast.error(err?.message || "Failed to submit application. Please click Try Again.");
+      if (import.meta.env.DEV) console.error("[apply-modal] Application save failed:", err);
+      const message = err instanceof Error ? err.message : "Couldn't save your application. Please try again.";
+      toast.error(message);
     } finally {
-      // Clear saving state deterministically
+      if (submitTimeout) clearTimeout(submitTimeout);
+      submitLock.current = false;
       setSubmitStatus((prev) => (prev === "saving" ? "idle" : prev));
     }
   };
@@ -352,9 +360,13 @@ export function ApplyPortalModal({
     saveProfile(userId, updatedProfile);
     onProfileUpdated?.(updatedProfile);
 
-    await navigator.clipboard.writeText(autofillText(updatedProfile));
-    window.open(job.portalUrl, "_blank", "noopener,noreferrer");
-    toast.success(`Redirected to ${job.company} portal! Application details copied to clipboard.`);
+    window.open(job.externalApplyUrl, "_blank", "noopener,noreferrer");
+    try {
+      await navigator.clipboard.writeText(autofillText(updatedProfile));
+      toast.success(`Opened ${job.company}'s official career page. Application details copied.`);
+    } catch {
+      toast.info(`Opened ${job.company}'s official career page.`);
+    }
   };
 
   // Success view
@@ -402,7 +414,7 @@ export function ApplyPortalModal({
               className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 hover:bg-white/15 px-4 py-3 text-xs font-bold text-white transition-colors"
             >
               <ExternalLink size={14} />
-              Visit Official {job.company} Site
+              Open External Site
             </button>
             <button
               type="button"
@@ -429,18 +441,14 @@ export function ApplyPortalModal({
                 <Building2 size={12} className="text-primary" />
                 {job.company}
               </span>
-              <span className="text-xs text-muted-foreground">• {job.source}</span>
+              <span className="text-xs text-muted-foreground">• {job.sourceLabel || job.source}</span>
               <span className="text-xs text-emerald-400 font-bold">
-                • {job.matchScore ?? 92}% Match
+                • {job.matchScore === undefined ? "Match unavailable" : `${job.matchScore}% Match`}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-              Apply Now.
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              {job.role}
             </h2>
-            <p className="text-xs text-gray-400">
-              Tell us why you'd be a good fit for the{" "}
-              <strong className="text-white">{job.role}</strong> role.
-            </p>
           </div>
 
           <button

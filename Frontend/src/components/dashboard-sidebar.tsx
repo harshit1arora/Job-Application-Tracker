@@ -2,6 +2,8 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { type UserProfile, getProfile } from "@/lib/profile";
 import { useState, useEffect } from "react";
+import { getApplications } from "@/lib/applications-service";
+import { getUnreadInboxCount } from "@/lib/inbox-state";
 import {
   LayoutDashboard,
   Search,
@@ -22,11 +24,13 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({
-  applicationsCount = 47,
-  inboxCount = 3,
+  applicationsCount,
+  inboxCount,
 }: DashboardSidebarProps) {
   const { user, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [liveApplicationsCount, setLiveApplicationsCount] = useState(0);
+  const [liveInboxCount, setLiveInboxCount] = useState(0);
 
   // Get current pathname to highlight active link
   const routerState = useRouterState();
@@ -37,6 +41,39 @@ export function DashboardSidebar({
       setProfile(getProfile(user.id));
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let isActive = true;
+
+    const refreshCounts = async () => {
+      const unreadCount = getUnreadInboxCount(user.id);
+      setLiveInboxCount(unreadCount);
+      if (applicationsCount !== undefined) return;
+
+      try {
+        const applications = await getApplications(user.id);
+        if (isActive) setLiveApplicationsCount(applications.length);
+      } catch {
+        if (isActive) setLiveApplicationsCount(0);
+      }
+    };
+
+    void refreshCounts();
+    window.addEventListener("jobpilot:data-changed", refreshCounts);
+    window.addEventListener("storage", refreshCounts);
+    window.addEventListener("focus", refreshCounts);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener("jobpilot:data-changed", refreshCounts);
+      window.removeEventListener("storage", refreshCounts);
+      window.removeEventListener("focus", refreshCounts);
+    };
+  }, [user?.id, applicationsCount]);
+
+  const displayedApplicationsCount = applicationsCount ?? liveApplicationsCount;
+  const displayedInboxCount = inboxCount ?? liveInboxCount;
 
   const userName = profile?.fullName || user?.name || user?.email || "User";
   const initials =
@@ -129,7 +166,7 @@ export function DashboardSidebar({
               />
               <span>Applications</span>
             </div>
-            <span className="text-xs text-muted-foreground font-semibold">{applicationsCount}</span>
+            <span className="text-xs text-muted-foreground font-semibold">{displayedApplicationsCount}</span>
           </Link>
 
           <Link
@@ -147,7 +184,7 @@ export function DashboardSidebar({
               />
               <span>Inbox</span>
             </div>
-            <span className="text-xs text-muted-foreground font-semibold">{inboxCount}</span>
+            <span className="text-xs text-muted-foreground font-semibold">{displayedInboxCount}</span>
           </Link>
 
           <Link

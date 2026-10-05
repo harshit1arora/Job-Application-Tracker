@@ -1,5 +1,5 @@
 /**
- * ai.ts — OpenRouter client with smart offline/demo fallbacks for JobPilot's AI features.
+ * ai.ts — AI-assisted career analysis with deterministic local fallbacks.
  *
  * Capabilities:
  *  - chat()                    → free chat model / smart career assistant
@@ -8,47 +8,22 @@
  *  - generateInterviewQuestions() → role-specific interview prep generator
  */
 
-const BASE = "https://openrouter.ai/api/v1";
-const KEY = import.meta.env["VITE_OPENROUTER_API_KEY"] as string | undefined;
-
-// Verified working free models with graceful fallbacks
-const CHAT_MODELS = [
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "google/gemma-4-31b-it:free",
-];
-const EMBED_MODEL = "liquid/lfm-2.5-embedding-350m:free";
+import { apiRequest } from "./api-client";
+import { auth } from "./firebase";
 
 export function isAiConfigured(): boolean {
-  return Boolean(KEY);
+  return Boolean(auth?.currentUser);
 }
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-async function orFetch(path: string, body: unknown, timeoutMs = 2200): Promise<any> {
-  if (!KEY) {
-    throw new Error("AI key not configured");
-  }
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${BASE}${path}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      throw new Error(data?.error?.message || `OpenRouter request failed (${res.status})`);
-    }
-    return data;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+async function aiRequest<T>(path: string, body: unknown, timeoutMs = 22000): Promise<T> {
+  const userId = auth?.currentUser?.uid;
+  if (!userId) throw new Error("Sign in to use JobPilot AI features.");
+  return apiRequest<T>(path, userId, {
+    method: "POST",
+    body: JSON.stringify(body),
+  }, timeoutMs);
 }
 
 // --- Smart Local Fallback Responses ---
@@ -66,11 +41,11 @@ function generateLocalChatReply(userMessage: string): string {
   ) {
     return (
       "🚀 **Welcome to JobPilot! Here is how to get the most out of your job search:**\n\n" +
-      "1. **Upload & Parse Résumé** (`/profile`): Upload your PDF or paste text. Our AI auto-extracts your skills, target roles, and experience.\n" +
-      "2. **Browse & Auto-Match Jobs** (`/browse`): Filter 50,000+ live jobs indexed across Workday, Greenhouse, Lever, and Ashby with AI match scores.\n" +
+      "1. **Upload & Parse Résumé** (`/profile`): Upload your PDF or paste text. AI-assisted parsing identifies your skills, target roles, and experience.\n" +
+      "2. **Browse & Analyze Role Fit** (`/browse`): Review curated opportunities and compare listed requirements with your profile.\n" +
       "3. **Track with Kanban** (`/tracker`): Move applications smoothly across *Applied*, *Screening*, *Interview*, *Offer*, and *Archived* columns.\n" +
-      "4. **AI Quick Tools**: Ask me to draft tailored cover letters, run mock interview questions, or calculate match scores anytime!\n" +
-      "5. **Voice Navigation**: Click the mic or press `Ctrl+J` and say *'Go to Tracker'*, *'Browse Jobs'*, or *'Edit Résumé'*."
+      "4. **AI Quick Tools**: Ask me to draft cover letters, run mock interview questions, or review role-fit insights.\n" +
+      "5. **Voice Navigation**: Click the mic or press `Ctrl+J` and say *'Go to Tracker'*, *'Browse Jobs'*, or *'Edit Résumé'* ."
     );
   }
 
@@ -80,8 +55,8 @@ function generateLocalChatReply(userMessage: string): string {
       "🎙️ **JobPilot Voice Commands**:\n\n" +
       "Simply click the **Mic icon** (or press `Ctrl+J`) and speak naturally:\n" +
       "• *'Go to Dashboard'* → Main analytics & activity overview\n" +
-      "• *'Browse Jobs'* → Real-time job listings catalog\n" +
-      "• *'Show Applications'* → Detailed submissions table\n" +
+      "• *'Browse Jobs'* → Curated role catalog with profile-fit analysis\n" +
+      "• *'Show Applications'* → Application tracking and status table\n" +
       "• *'Go to Tracker'* → Interactive Kanban board & interview calendar\n" +
       "• *'Open Inbox'* → Recruiter messages & status updates\n" +
       "• *'Edit Résumé'* → Profile builder, PDF parser & ATS optimization\n" +
@@ -101,12 +76,12 @@ function generateLocalChatReply(userMessage: string): string {
     return (
       "📊 **Job Tracker Workflow**:\n\n" +
       "Your Kanban board organizes opportunities through 5 key stages:\n" +
-      "• **Applied**: Jobs submitted via JobPilot or manually logged.\n" +
+      "• **Applied**: Applications you recorded after applying on employer sites.\n" +
       "• **Screening**: Recruiter phone screens and initial assessments scheduled.\n" +
       "• **Interview**: Technical rounds, hiring manager chats, and presentations.\n" +
       "• **Offer**: Congratulations! Track compensation and deadlines here.\n" +
       "• **Archived / Rejected**: Keep historical records to learn and refine.\n\n" +
-      "💡 *Tip: Drag and drop cards, or click any card to view detailed notes, add interview reminders, and draft tailored follow-ups!*"
+      "💡 *Tip: Drag and drop cards, or click any card to view detailed notes, add interview reminders, and draft follow-ups!*"
     );
   }
 
@@ -118,11 +93,11 @@ function generateLocalChatReply(userMessage: string): string {
     q.includes("apply")
   ) {
     return (
-      "⚡ **JobPilot Auto-Apply & Quick-Fill**:\n\n" +
-      "When applying on external company portals (Workday, Greenhouse, Lever, Ashby):\n" +
-      "• **1-Click Profile Sync**: Pulls your verified contact details, work history, and portfolio links directly from your `/profile`.\n" +
-      "• **Custom Cover Letters**: Generates an 8-10 line tailored letter mapped to the specific job requirements.\n" +
-      "• **Missing Field Detection**: Highlights any required fields (e.g. sponsorship, notice period) before final submission."
+      "⚡ **JobPilot Application Preparation**:\n\n" +
+      "When completing an employer application:\n" +
+      "• **Profile-assisted field copy**: Copies saved contact details, work history, and portfolio links from your `/profile`.\n" +
+      "• **Custom cover letter drafts**: Generates a role-specific draft that you can review and edit before using it.\n" +
+      "• **Missing field detection**: Highlights required details (for example sponsorship or notice period) before you continue to the employer's application page."
     );
   }
 
@@ -179,31 +154,35 @@ function generateLocalChatReply(userMessage: string): string {
 
 /**
  * Sends a chat conversation and returns the assistant's reply text.
- * Uses OpenRouter when key is present, with fallback to intelligent career responses.
+ * Uses the backend Gemini gateway when configured, with fallback to intelligent career responses.
  */
 export async function chat(messages: ChatMessage[]): Promise<string> {
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content || "";
 
-  if (KEY) {
-    for (const model of CHAT_MODELS) {
-      try {
-        const data = await orFetch("/chat/completions", { model, messages, max_tokens: 700 });
-        const content = data?.choices?.[0]?.message?.content;
-        if (content) return content as string;
-      } catch {
-        // try next model
-      }
-    }
+  try {
+    const data = await aiRequest<{ content: string }>("/ai/chat", { messages, max_tokens: 700 }, 22000);
+    if (data?.content) return data.content;
+  } catch {
+    // Fall back to deterministic local guidance when the backend AI service is unavailable.
   }
 
-  // Graceful local response when no key or rate-limited
   return generateLocalChatReply(lastUserMsg);
 }
 
-/** Embeds one or more texts into vectors using the embedding model. */
+/** Embeds one or more texts into vectors using a local deterministic fallback. */
 export async function embed(texts: string[]): Promise<number[][]> {
-  const data = await orFetch("/embeddings", { model: EMBED_MODEL, input: texts });
-  return (data.data as { embedding: number[] }[]).map((d) => d.embedding);
+  return texts.map((text) => {
+    const tokenMap = new Map<string, number>();
+    for (const token of text.toLowerCase().match(/[a-z0-9+#]{3,}/g) ?? []) {
+      tokenMap.set(token, (tokenMap.get(token) ?? 0) + 1);
+    }
+    const values = Array.from({ length: 32 }, (_, idx) => {
+      const key = `token_${idx}`;
+      return tokenMap.get(key) ?? 0;
+    });
+    const norm = Math.sqrt(values.reduce((sum, value) => sum + value * value, 0)) || 1;
+    return values.map((value) => value / norm);
+  });
 }
 
 // --- Pure helpers (unit-tested in ai.test.ts) ---
@@ -244,7 +223,7 @@ function heuristicMatch(resume: string, jobText: string): number {
   const rWords = new Set(tokenize(resume));
   const jWords = tokenize(jobText);
 
-  if (jWords.length === 0 || rWords.size === 0) return 75;
+  if (jWords.length === 0 || rWords.size === 0) return 0;
 
   let matches = 0;
   for (const word of jWords) {
@@ -252,26 +231,23 @@ function heuristicMatch(resume: string, jobText: string): number {
   }
 
   const ratio = matches / Math.max(1, jWords.length);
-  const score = Math.round(50 + ratio * 45);
-  return Math.max(45, Math.min(98, score));
+  const score = Math.round(ratio * 100);
+  return Math.max(0, Math.min(100, score));
 }
 
 /**
  * Returns a 5–99 match score for a résumé against a job's text.
- * Uses embedding vectors via OpenRouter when configured, or heuristic matching otherwise.
+ * Uses the backend AI gateway when configured, or heuristic matching otherwise.
  */
 export async function matchScore(resume: string, jobText: string): Promise<number> {
-  if (KEY) {
-    try {
-      const [rv, jv] = await embed([resume, jobText]);
-      if (rv && jv) {
-        return scoreFromSimilarity(cosineSim(rv, jv));
-      }
-    } catch {
-      // fallback to heuristic
-    }
+  try {
+    const data = await aiRequest<{ score: number }>("/ai/match", { resumeText: resume, jobText }, 22000);
+    if (typeof data?.score === "number") return Math.max(0, Math.min(100, Math.round(data.score)));
+  } catch {
+    // Fall back to deterministic scoring when the backend AI service is unavailable.
   }
 
+  if (!resume.trim() || !jobText.trim()) return 0;
   return heuristicMatch(resume, jobText);
 }
 
@@ -283,22 +259,26 @@ export function buildTailoredCoverLetter(
   jobDescription?: string,
   resumeHighlights?: string,
 ): string {
-  const name = applicantName?.trim() || "Alex Carter";
-  const comp = company?.trim() || "your team";
-  const role = jobTitle?.trim() || "Software Engineer";
+  const name = applicantName?.trim();
+  const comp = company?.trim() || "the company";
+  const role = jobTitle?.trim() || "the position";
+  const greeting = name
+    ? `Hi, I'm ${name} applying for the ${role} position at ${comp}.`
+    : `Hello, I'm applying for the ${role} position at ${comp}.`;
+  const highlights = resumeHighlights?.trim();
+  const jobContext = jobDescription?.trim();
 
-  return `Hi, I'm ${name} applying for the ${role} position at ${comp}.
+  return `${greeting}
 
-I'm interested in joining ${comp} because of your team's commitment to building cutting-edge, high-impact products and engineering excellence. With my hands-on background in modern web development, scalable frontend architectures, and resilient backend APIs, I have a track record of delivering reliable, user-centric software.
+I am interested in joining ${comp} and would welcome the chance to contribute to the work described for the ${role} role.
 
-Throughout my experience, I have focused on shipping clean, performant features, optimizing system latency, and collaborating closely with cross-functional teams to solve challenging technical problems. The responsibilities described for the ${role} position align directly with my core technical strengths and passions.
+${highlights ? `My background includes ${highlights}.` : "I would be glad to discuss how my experience aligns with the position."}
 
-I am eager to bring my practical problem-solving ability, ownership mindset, and enthusiasm to ${comp} to help accelerate your product roadmap.
+${jobContext ? "The responsibilities outlined in the posting are of particular interest to me." : "I would appreciate the opportunity to learn more about the team's needs and priorities."}
 
-Thank you for your time and review. I look forward to discussing how my experience and skill set can support your team's upcoming goals.
+Thank you for considering my application. I look forward to discussing my fit for the role.
 
-Sincerely,
-${name}`;
+Sincerely${name ? `,\n${name}` : ""}`;
 }
 
 /** Generates an instant tailored cover letter draft for a specific job and company */
@@ -309,48 +289,23 @@ export async function generateCoverLetter(
   jobDescription?: string,
   resumeHighlights?: string,
 ): Promise<string> {
-  const name = applicantName?.trim() || "Alex Carter";
-  const comp = company?.trim() || "Company";
-  const role = jobTitle?.trim() || "Software Engineer";
+  const name = applicantName?.trim() || "";
+  const comp = company?.trim() || "the company";
+  const role = jobTitle?.trim() || "the position";
 
-  if (KEY) {
-    const prompt: ChatMessage[] = [
-      {
-        role: "system",
-        content: `You are an expert career writer. Write a persuasive, authentic, 8-10 line first-person cover letter. Start the letter with: "Hi, I'm ${name} applying for the ${role} position at ${comp}." Do NOT include tips, advice, or placeholder text. Output ONLY the completed cover letter.`,
-      },
-      {
-        role: "user",
-        content: `Write an 8-10 line tailored cover letter for ${name} applying for ${role} at ${comp}.
-Job Details: ${jobDescription || "Full-stack software engineering responsibilities"}.
-Candidate Background: ${resumeHighlights || "Experienced developer skilled in TypeScript, React, APIs, and modern engineering"}.`,
-      },
-    ];
-
-    for (const model of CHAT_MODELS) {
-      try {
-        const data = await orFetch(
-          "/chat/completions",
-          {
-            model,
-            messages: prompt,
-            max_tokens: 500,
-          },
-          1800,
-        );
-        const content = data?.choices?.[0]?.message?.content;
-        if (
-          content &&
-          content.length > 50 &&
-          !content.toLowerCase().includes("resume optimization tip") &&
-          !content.toLowerCase().includes("cover letter formula")
-        ) {
-          return content.trim();
-        }
-      } catch {
-        // try next model
-      }
+  try {
+    const data = await aiRequest<{ content: string }>("/ai/cover-letter", {
+      applicantName: name,
+      company: comp,
+      jobTitle: role,
+      jobDescription: jobDescription?.trim() || "",
+      resumeHighlights: resumeHighlights?.trim() || "",
+    }, 22000);
+    if (data?.content && data.content.trim().length > 50) {
+      return data.content.trim();
     }
+  } catch {
+    // Use deterministic fallback when Gemini is unavailable.
   }
 
   return buildTailoredCoverLetter(name, comp, role, jobDescription, resumeHighlights);
@@ -399,7 +354,7 @@ export const aiResumeProfileSchema = z.object({
 
 /**
  * Intelligent AI Resume Parser:
- * Extracts candidate metadata into a structured JSON profile using OpenRouter LLM,
+ * Extracts candidate metadata into a structured JSON profile using the backend Gemini gateway,
  * with deterministic regex & NLP fallback for instant offline reliability.
  */
 export async function parseResumeWithAi(resumeText: string): Promise<ParsedResumeProfile> {
@@ -408,71 +363,31 @@ export async function parseResumeWithAi(resumeText: string): Promise<ParsedResum
   const projects = extractProjects(resumeText);
   const githubLink = extractLink(resumeText, "github");
 
-  if (KEY && resumeText.trim().length > 30) {
-    const systemPrompt = `You are a high-accuracy resume parsing AI. Analyze the provided resume text and output ONLY a valid JSON object matching this schema:
-{
-  "fullName": "Candidate Full Name",
-  "email": "candidate@example.com",
-  "phone": "+1 234 567 8900",
-  "city": "City, State or Country",
-  "country": "Country",
-  "ageOrExperience": "e.g. 5+ Years Experience or Fresher / Student",
-  "targetRole": "Candidate Title or Primary Role",
-  "skills": ["Skill1", "Skill2", "Skill3"],
-  "education": "Degree, Major and University",
-  "linkedin": "linkedin URL if found",
-  "portfolio": "portfolio URL or github if found",
-  "summary": "2 sentence professional overview"
-}
-Do NOT include markdown formatting or extra text. Output JSON only.`;
-
+  if (auth?.currentUser && resumeText.trim().length > 30) {
     try {
-      const res = await orFetch(
-        "/chat/completions",
-        {
-          model: CHAT_MODELS[0],
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `Parse this resume:\n\n${resumeText.slice(0, 3000)}` },
-          ],
-          max_tokens: 600,
-        },
-        1200,
-      );
-      const content = res?.choices?.[0]?.message?.content;
-      if (content) {
-        const jsonStr = content
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        const rawParsed = JSON.parse(jsonStr);
-        const validation = aiResumeProfileSchema.safeParse(rawParsed);
-
-        if (validation.success) {
-          const parsed = validation.data;
-          if (parsed.fullName || parsed.email || parsed.skills.length > 0) {
-            const parsedLoc = parsed.city || loc;
-            return {
-              fullName: parsed.fullName || extractName(resumeText),
-              email: parsed.email || extractEmail(resumeText),
-              phone: parsed.phone || extractPhone(resumeText),
-              city: parsedLoc,
-              country: parsed.country || extractCountry(resumeText, parsedLoc),
-              ageOrExperience: parsed.ageOrExperience || extractExperience(resumeText),
-              targetRole: parsed.targetRole || extractTargetRole(resumeText),
-              skills: parsed.skills.length > 0 ? parsed.skills : extractSkills(resumeText),
-              education: parsed.education || extractEducation(resumeText),
-              linkedin: parsed.linkedin || extractLink(resumeText, "linkedin"),
-              portfolio:
-                parsed.portfolio ||
-                githubLink ||
-                extractLink(resumeText, "portfolio"),
-              github: githubLink,
-              projects: projects.length > 0 ? projects : parsed.projects,
-              summary: parsed.summary || resumeText.slice(0, 180),
-              rawResumeText: resumeText,
-            };
-          }
+      const data = await aiRequest<Record<string, unknown>>("/ai/resume-parse", { resumeText }, 22000);
+      const validation = aiResumeProfileSchema.safeParse(data);
+      if (validation.success) {
+        const parsed = validation.data;
+        if (parsed.fullName || parsed.email || parsed.skills.length > 0) {
+          const parsedLoc = parsed.city || loc;
+          return {
+            fullName: parsed.fullName || extractName(resumeText),
+            email: parsed.email || extractEmail(resumeText),
+            phone: parsed.phone || extractPhone(resumeText),
+            city: parsedLoc,
+            country: parsed.country || extractCountry(resumeText, parsedLoc),
+            ageOrExperience: parsed.ageOrExperience || extractExperience(resumeText),
+            targetRole: parsed.targetRole || extractTargetRole(resumeText),
+            skills: parsed.skills.length > 0 ? parsed.skills : extractSkills(resumeText),
+            education: parsed.education || extractEducation(resumeText),
+            linkedin: parsed.linkedin || extractLink(resumeText, "linkedin"),
+            portfolio: parsed.portfolio || githubLink || extractLink(resumeText, "portfolio"),
+            github: githubLink,
+            projects: projects.length > 0 ? projects : parsed.projects,
+            summary: parsed.summary || resumeText.slice(0, 180),
+            rawResumeText: resumeText,
+          };
         }
       }
     } catch {
@@ -845,37 +760,68 @@ export async function suggestJobsForResume(
   profile: ParsedResumeProfile,
   catalog: SuggestedJob[],
 ): Promise<SuggestedJob[]> {
-  const candidateSkills = new Set(profile.skills.map((s) => s.toLowerCase()));
-  const candidateText =
-    `${profile.targetRole} ${profile.skills.join(" ")} ${profile.summary || ""}`.toLowerCase();
+  const candidateSkills = new Set(profile.skills.map((s) => s.toLowerCase().trim()));
+  const candidateText = `${profile.targetRole} ${profile.skills.join(" ")} ${profile.summary || ""} ${profile.rawResumeText || ""}`
+    .trim()
+    .toLowerCase();
+  const hasCandidateEvidence = Boolean(candidateText || profile.education || profile.ageOrExperience);
+
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9+/\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
   return catalog
     .map((job) => {
-      let score = 60;
-      const reasons: string[] = [];
-
-      // Role similarity
-      if (
-        candidateText.includes(job.role.toLowerCase()) ||
-        job.role.toLowerCase().includes(profile.targetRole.toLowerCase())
-      ) {
-        score += 18;
-        reasons.push(`Direct alignment with your target role (${profile.targetRole})`);
+      if (!hasCandidateEvidence || !job.description.trim() || job.requiredSkills.length === 0) {
+        return { ...job, matchScore: undefined, matchReasons: [] };
       }
 
-      // Skills overlap
+      let score = 0;
+      const reasons: string[] = [];
+
+      const targetRole = normalize(profile.targetRole || "");
+      const jobRole = normalize(job.role);
+      if (targetRole && (jobRole.includes(targetRole) || targetRole.includes(jobRole))) {
+        score += 20;
+        reasons.push(`Direct alignment with your target role (${profile.targetRole})`);
+      } else if (
+        /engineer|developer|software/.test(targetRole) &&
+        /analyst|data|metrics|reporting|product/.test(jobRole)
+      ) {
+        score += 12;
+        reasons.push("Strong technical foundation with data and analytics exposure");
+      }
+
+      const aliasMap: Record<string, string[]> = {
+        "sql/no sql": ["sql", "nosql", "postgresql", "mongodb", "database", "mysql"],
+        python: ["python"],
+        "r or sas": ["r", "sas", "statistics", "python"],
+        statistics: ["statistics", "analytics", "metrics", "insights", "reporting"],
+        "machine learning": ["machine learning", "ml", "ai", "llm", "embeddings", "ai integration"],
+        "tableau or bi": ["tableau", "bi", "dashboard", "analytics", "reporting"],
+        "data modeling": ["data modeling", "schema", "schemas", "database design", "data warehouse"],
+        "a/b testing": ["a/b testing", "ab testing", "experimentation", "experiment design", "analytics"],
+      };
+
       let matchedSkillsCount = 0;
       for (const reqSkill of job.requiredSkills) {
-        if (
-          candidateSkills.has(reqSkill.toLowerCase()) ||
-          candidateText.includes(reqSkill.toLowerCase())
-        ) {
+        const reqKey = normalize(reqSkill);
+        const aliases = aliasMap[reqKey] || [reqKey];
+        const matched = aliases.some((alias) => {
+          const cleanAlias = normalize(alias);
+          return candidateSkills.has(cleanAlias) || candidateText.includes(cleanAlias);
+        });
+
+        if (matched) {
           matchedSkillsCount++;
         }
       }
 
       const skillRatio = matchedSkillsCount / Math.max(1, job.requiredSkills.length);
-      score += Math.round(skillRatio * 20);
+      score += Math.round(skillRatio * 72);
 
       if (matchedSkillsCount > 0) {
         reasons.push(
@@ -883,7 +829,25 @@ export async function suggestJobsForResume(
         );
       }
 
-      // Location compatibility
+      const analyticsSignals = [
+        "sql",
+        "postgres",
+        "mongodb",
+        "python",
+        "analytics",
+        "dashboard",
+        "metrics",
+        "ai",
+        "machine learning",
+        "llm",
+        "data",
+        "reporting",
+      ].filter((term) => candidateText.includes(term));
+      if (analyticsSignals.length >= 3) {
+        score += 12;
+        reasons.push("Relevant analytics and data tooling signal in your profile");
+      }
+
       if (
         job.location.toLowerCase().includes("remote") ||
         (profile.city && job.location.toLowerCase().includes(profile.city.toLowerCase()))
@@ -892,11 +856,11 @@ export async function suggestJobsForResume(
         reasons.push(`Location compatible (${job.location})`);
       }
 
-      const finalScore = Math.min(99, Math.max(45, score));
+      const finalScore = Math.min(100, Math.max(0, score));
       return {
         ...job,
         matchScore: finalScore,
-        matchReasons: reasons.length > 0 ? reasons : ["Core engineering competencies match"],
+        matchReasons: reasons.length === 0 ? ["No matching skills or role signals found"] : reasons,
       };
     })
     .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));

@@ -39,6 +39,19 @@ def test_health_check():
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
+def test_production_frontend_cors_preflight():
+    response = client.options(
+        "/api/applications",
+        headers={
+            "Origin": "https://job-application-tracker-pearl-nine.vercel.app",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization,x-user-id",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://job-application-tracker-pearl-nine.vercel.app"
+
 def test_create_and_get_application():
     headers = {"X-User-Id": "test-user-123"}
     app_data = {
@@ -99,19 +112,12 @@ def test_upload_and_download_document():
     }, headers=headers)
     app_id = app_res.json()["id"]
     
-    # Upload doc
-    with open("test_file.txt", "w") as f:
-        f.write("test content")
-        
-    with open("test_file.txt", "rb") as f:
-        response = client.post(
-            "/api/documents/upload",
-            headers=headers,
-            data={"applicationId": app_id, "displayName": "My Resume"},
-            files={"file": ("test_file.txt", f, "text/plain")}
-        )
-        
-    os.remove("test_file.txt")
+    response = client.post(
+        "/api/documents/upload",
+        headers=headers,
+        data={"applicationId": app_id, "displayName": "My Resume"},
+        files={"file": ("resume.pdf", b"%PDF-1.7\nresume content", "application/pdf")},
+    )
     
     assert response.status_code == 201
     doc_id = response.json()["id"]
@@ -119,7 +125,41 @@ def test_upload_and_download_document():
     # Download doc
     dl_response = client.get(f"/api/documents/{doc_id}/download", headers=headers)
     assert dl_response.status_code == 200
-    assert dl_response.text == "test content"
+    assert dl_response.content == b"%PDF-1.7\nresume content"
+
+    delete_response = client.delete(f"/api/documents/{doc_id}", headers=headers)
+    assert delete_response.status_code == 204
+
+
+def test_upload_rejects_mime_type_spoofing():
+    response = client.post(
+        "/api/documents/upload",
+        headers={"X-User-Id": "doc-user"},
+        files={"file": ("not-a-pdf.pdf", b"plain text", "application/pdf")},
+    )
+
+    assert response.status_code == 422
+    assert "does not match" in response.json()["detail"]
+
+
+def test_upload_rejects_unsupported_text_file():
+    response = client.post(
+        "/api/documents/upload",
+        headers={"X-User-Id": "doc-user"},
+        files={"file": ("resume.txt", b"resume text", "text/plain")},
+    )
+
+    assert response.status_code == 422
+
+
+def test_upload_rejects_oversized_file():
+    response = client.post(
+        "/api/documents/upload",
+        headers={"X-User-Id": "doc-user"},
+        files={"file": ("large.pdf", b"%PDF-1.7" + b"x" * (5 * 1024 * 1024), "application/pdf")},
+    )
+
+    assert response.status_code == 413
 
 def test_production_auth_rejection():
     # Force DEMO_MODE off to test production behavior
@@ -134,3 +174,40 @@ def test_production_auth_rejection():
     
     assert response.status_code == 401
     assert "Authentication required" in response.text or "Invalid or expired" in response.text
+
+def test_ai_proxy_requires_authentication():
+    import auth
+
+    original_mode = auth.DEVELOPMENT_MODE
+    auth.DEVELOPMENT_MODE = False
+    try:
+        response = client.post(
+            "/api/ai/chat/completions",
+            headers={"X-User-Id": "unauthenticated-user"},
+            json={"model": "google/gemma-4-26b-a4b-it:free", "messages": []},
+        )
+    finally:
+        auth.DEVELOPMENT_MODE = original_mode
+
+    assert response.status_code == 401
+
+def test_ai_proxy_rejects_unapproved_model():
+    response = client.post(
+        "/api/ai/chat/completions",
+        headers={"X-User-Id": "demo-user"},
+        json={"model": "untrusted/model", "messages": []},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "AI model is not allowed"
+
+def test_ai_proxy_reports_missing_provider_configuration(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    response = client.post(
+        "/api/ai/chat/completions",
+        headers={"X-User-Id": "demo-user"},
+        json={"model": "gemini-2.5-flash", "messages": []},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "AI service is not configured"

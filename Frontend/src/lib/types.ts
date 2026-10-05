@@ -94,6 +94,7 @@ export interface CreateApplicationInput {
   location?: string | undefined;
   notes?: string | undefined;
   followUpDate?: string | undefined;
+  matchScore?: number | undefined;
 }
 
 /** Partial update — only the provided fields are changed in Firestore. */
@@ -129,8 +130,14 @@ export interface SuggestedJob {
   role: string;
   location: string;
   salaryRange: string;
-  source: ApplicationSource;
-  portalUrl: string;
+  source: ApplicationSource | "official";
+  applicationSource?: ApplicationSource | undefined;
+  sourceLabel?: string | undefined;
+  sourceType?: "official" | undefined;
+  jobUrl: string;
+  externalApplyUrl: string;
+  isActive?: boolean | undefined;
+  employmentType?: string | undefined;
   description: string;
   requiredSkills: string[];
   matchScore?: number | undefined;

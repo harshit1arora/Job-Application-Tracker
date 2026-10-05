@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { isInboxThreadUnread, markInboxThreadRead } from "@/lib/inbox-state";
 import { toast } from "sonner";
 import {
   Inbox as InboxIcon,
@@ -91,10 +92,20 @@ function InboxPage() {
   const [replyText, setReplyText] = useState("");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
+  useEffect(() => {
+    setThreads(
+      SAMPLE_THREADS.map((thread) => ({
+        ...thread,
+        unread: isInboxThreadUnread(user?.id, thread.id, thread.unread),
+      })),
+    );
+  }, [user?.id]);
+
   const selectedThread = threads.find((t) => t.id === selectedId) || threads[0];
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
+    markInboxThreadRead(user?.id, id);
     setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: false } : t)));
   };
 

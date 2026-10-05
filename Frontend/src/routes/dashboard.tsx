@@ -24,7 +24,7 @@ import {
   type UserProfile,
 } from "@/lib/profile";
 import { extractTextFromFile, SAMPLE_RESUME_PRESET } from "@/lib/resume-parser";
-import { CURATED_JOBS_CATALOG } from "@/lib/jobs-catalog";
+import { VALIDATED_DEMO_JOBS } from "@/lib/jobs-catalog";
 import { SuggestedJobsSection } from "@/components/suggested-jobs-section";
 import { MissingFieldsModal } from "@/components/missing-fields-modal";
 import { ApplyPortalModal } from "@/components/apply-portal-modal";
@@ -146,7 +146,7 @@ function MatchScoreRing({ score }: { score: number }) {
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
@@ -156,6 +156,8 @@ function DashboardPage() {
   const [reminders, setReminders] = useState<ReminderDocument[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoadingApps, setIsLoadingApps] = useState(true);
+  const [applicationsLoadError, setApplicationsLoadError] = useState<string | null>(null);
+  const [applicationsReloadKey, setApplicationsReloadKey] = useState(0);
 
   // Modals & UI Controls
   const [searchTerm, setSearchTerm] = useState("");
@@ -172,7 +174,7 @@ function DashboardPage() {
   const [isScoring, setIsScoring] = useState(false);
 
   // Suggested Jobs
-  const [suggestedJobs, setSuggestedJobs] = useState<SuggestedJob[]>(CURATED_JOBS_CATALOG);
+  const [suggestedJobs, setSuggestedJobs] = useState<SuggestedJob[]>(VALIDATED_DEMO_JOBS);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved profile on mount
@@ -181,9 +183,9 @@ function DashboardPage() {
     const p = getProfile(user.id);
     const initialProfile: UserProfile = {
       ...p,
-      fullName: p.fullName || user.name || "Alex Morgan",
-      email: p.email || user.email || "alex.morgan@example.com",
-      targetRole: p.targetRole || user.targetRole || "Software Developer II",
+      fullName: p.fullName || user.name,
+      email: p.email || user.email,
+      targetRole: p.targetRole || user.targetRole,
     };
     setProfile(initialProfile);
     setResumeDraft(initialProfile.resumeText || "");
@@ -201,14 +203,13 @@ function DashboardPage() {
           email: p.email,
           phone: p.phone,
           city: p.city || p.location,
-          ageOrExperience: p.ageOrExperience || "4+ YOE",
-          targetRole: p.targetRole || "Software Developer II",
-          skills:
-            p.skills && p.skills.length > 0 ? p.skills : ["React", "TypeScript", "Node.js", "C#"],
-          education: p.education || "Computer Science",
+          ageOrExperience: p.ageOrExperience || "",
+          targetRole: p.targetRole || "",
+          skills: p.skills || [],
+          education: p.education || "",
           summary: p.summary || p.resumeText.slice(0, 180),
         },
-        CURATED_JOBS_CATALOG,
+        VALIDATED_DEMO_JOBS,
       );
       setSuggestedJobs(ranked);
     } catch {
@@ -222,6 +223,7 @@ function DashboardPage() {
 
     const loadData = async () => {
       setIsLoadingApps(true);
+      setApplicationsLoadError(null);
       try {
         const [apps, rems] = await Promise.all([getApplications(user.id), getReminders(user.id)]);
         setApplications(apps);
@@ -247,14 +249,25 @@ function DashboardPage() {
         });
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
-        toast.error("Failed to load your applications.");
+        setApplicationsLoadError(error instanceof Error ? error.message : "Unable to load applications.");
       } finally {
         setIsLoadingApps(false);
       }
     };
 
     void loadData();
-  }, [user?.id]);
+
+    const refreshApplications = () => void loadData();
+    window.addEventListener("jobpilot:data-changed", refreshApplications);
+    window.addEventListener("focus", refreshApplications);
+    window.addEventListener("storage", refreshApplications);
+
+    return () => {
+      window.removeEventListener("jobpilot:data-changed", refreshApplications);
+      window.removeEventListener("focus", refreshApplications);
+      window.removeEventListener("storage", refreshApplications);
+    };
+  }, [user?.id, applicationsReloadKey]);
 
   // Handle File Upload & Instant AI Extraction
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,16 +335,22 @@ function DashboardPage() {
   const handleApplyAndTrackJob = async (job: SuggestedJob) => {
     if (!user) return;
     try {
+      const existingApplication = applications.find(
+        (application) =>
+          application.company.trim().toLowerCase() === job.company.trim().toLowerCase() &&
+          application.jobTitle.trim().toLowerCase() === job.role.trim().toLowerCase(),
+      );
       const newApp = await createApplication(user.id, {
         company: job.company,
         jobTitle: job.role,
-        applicationSource: job.source,
+        applicationSource: job.applicationSource || "Other",
         status: "Applied",
-        applicationUrl: job.portalUrl,
+        applicationUrl: job.externalApplyUrl,
         location: job.location,
         salaryRange: job.salaryRange,
         jobDescription: job.description,
-        notes: `Applied via 1-Click AI Portal. Match score: ${job.matchScore ?? 92}%.`,
+        matchScore: job.matchScore,
+        notes: `Application recorded via dashboard.${job.matchScore === undefined ? " Match score unavailable." : ` Match score: ${job.matchScore}%.`}`,
       });
 
       setApplications((prev) => [
@@ -342,8 +361,13 @@ function DashboardPage() {
         if (!prev) return null;
         return {
           ...prev,
-          totalApplications: prev.totalApplications + 1,
-          byStatus: { ...prev.byStatus, applied: prev.byStatus.applied + 1 },
+          totalApplications: existingApplication ? prev.totalApplications : prev.totalApplications + 1,
+          byStatus: {
+            ...prev.byStatus,
+            applied: existingApplication
+              ? prev.byStatus.applied
+              : prev.byStatus.applied + 1,
+          },
           recentApplications: [newApp, ...prev.recentApplications].slice(0, 5),
         };
       });
@@ -433,6 +457,14 @@ function DashboardPage() {
     return computeDashboardCareerIntelligence(profile, suggestedJobs, applications, user?.id);
   }, [profile, suggestedJobs, applications, user?.id]);
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <Loader2 size={20} className="animate-spin text-primary" aria-label="Restoring session" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated && !user) {
     return (
       <div className="min-h-screen bg-[#f8f9fb] dark:bg-background text-foreground flex items-center justify-center p-4">
@@ -487,8 +519,12 @@ function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {topMatches.map((job, idx) => {
               const theme = MATCH_CARD_THEMES[idx % MATCH_CARD_THEMES.length]!;
-              const matchScore =
-                job.matchScore || (idx === 0 ? 71 : idx === 1 ? 60 : idx === 2 ? 64 : 58);
+              const matchScore = job.matchScore;
+              const trackedApplication = applications.find(
+                (application) =>
+                  application.company.trim().toLowerCase() === job.company.trim().toLowerCase() &&
+                  application.jobTitle.trim().toLowerCase() === job.role.trim().toLowerCase(),
+              );
 
               return (
                 <div
@@ -505,7 +541,13 @@ function DashboardPage() {
                         {job.role}
                       </h3>
                     </div>
-                    <MatchScoreRing score={matchScore} />
+                    {matchScore === undefined ? (
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        Match unavailable
+                      </span>
+                    ) : (
+                      <MatchScoreRing score={matchScore} />
+                    )}
                   </div>
 
                   {/* Card Footer: Company Label + Black Pill Apply Button */}
@@ -513,13 +555,23 @@ function DashboardPage() {
                     <span className="text-xs text-muted-foreground font-medium truncate">
                       {job.company}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedApplyJob(job)}
-                      className="inline-flex items-center justify-center rounded-full bg-[#0d131f] hover:bg-black text-white px-4 py-1.5 text-xs font-bold shadow-sm transition-transform active:scale-95"
-                    >
-                      Apply
-                    </button>
+                    {trackedApplication ? (
+                      <span
+                        className="inline-flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 text-xs font-bold"
+                        aria-label={`Application status: ${trackedApplication.status}`}
+                      >
+                        {trackedApplication.status}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedApplyJob(job)}
+                        disabled={isLoadingApps}
+                        className="inline-flex items-center justify-center rounded-full bg-[#0d131f] hover:bg-black text-white px-4 py-1.5 text-xs font-bold shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                      >
+                        {isLoadingApps ? "Loading..." : "Apply"}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -754,7 +806,7 @@ function DashboardPage() {
                 className="px-4 py-1.5 rounded-full bg-[#0d131f] hover:bg-black text-white text-xs font-bold shadow-sm transition-transform active:scale-95 flex items-center gap-1"
               >
                 <Plus size={13} />
-                Submit all
+                Track application
               </button>
             </div>
           </div>
@@ -782,10 +834,33 @@ function DashboardPage() {
                         </div>
                       </td>
                     </tr>
+                  ) : applicationsLoadError ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center">
+                        <p className="font-semibold text-foreground">Unable to load applications</p>
+                        <p className="mt-1 text-muted-foreground">{applicationsLoadError}</p>
+                        <button
+                          type="button"
+                          onClick={() => setApplicationsReloadKey((key) => key + 1)}
+                          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 font-semibold text-foreground hover:bg-secondary"
+                        >
+                          <RotateCw size={13} /> Retry
+                        </button>
+                      </td>
+                    </tr>
                   ) : applications.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-muted-foreground">
-                        No applications tracked yet. Click "Apply" on any top job match!
+                        <div className="space-y-3">
+                          <p className="font-semibold text-foreground">No applications yet</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddModal(true)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground"
+                          >
+                            <Plus size={13} /> Track your first application
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (

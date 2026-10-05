@@ -1,6 +1,7 @@
 import { useState, useEffect as import_react_useEffect, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+import { firebaseConfigurationError } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Logo } from "@/components/landing/Logo";
 import {
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/signup")({
       { title: "Sign Up — Create your JobPilot Account" },
       {
         name: "description",
-        content: "Create an account and let JobPilot automate your job applications.",
+        content: "Create an account to track applications, analyze career fit, and prepare for your next role.",
       },
     ],
   }),
@@ -42,6 +43,8 @@ const POPULAR_ROLES = [
 function SignUpPage() {
   const navigate = useNavigate();
   const { signup, demoLogin, googleLogin, isAuthenticated } = useAuth();
+  const demoAvailable = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === "true";
+  const firebaseConfigured = firebaseConfigurationError === null;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,8 +58,10 @@ function SignUpPage() {
 
   const handleDemoLogin = () => {
     demoLogin();
-    toast.success("Logged in with Demo Account (Alex Carter)!");
-    navigate({ to: "/dashboard" });
+    if (demoAvailable) {
+      toast.success("Logged in with Demo Account (Alex Carter)!");
+      navigate({ to: "/dashboard" });
+    }
   };
 
   // If already authenticated, redirect to dashboard
@@ -157,7 +162,7 @@ function SignUpPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
           {/* Quick Demo Banner */}
-          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3">
+          {demoAvailable && <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/20 text-primary">
                 <Zap size={15} />
@@ -176,7 +181,7 @@ function SignUpPage() {
             >
               Demo Account
             </button>
-          </div>
+          </div>}
 
           <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
             <div className="text-center mb-8">
@@ -192,12 +197,18 @@ function SignUpPage() {
               </p>
             </div>
 
+            {firebaseConfigurationError && !demoAvailable && (
+              <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive">
+                {firebaseConfigurationError}
+              </div>
+            )}
+
             {/* Google Firebase Sign Up Button */}
             <div className="mb-6">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
-                disabled={googleLoading}
+                disabled={googleLoading || !firebaseConfigured}
                 className="w-full flex items-center justify-center gap-3 rounded-xl border border-border bg-secondary/50 py-3 text-sm font-semibold hover:bg-secondary hover:border-primary/40 transition-all shadow-sm group disabled:opacity-50"
               >
                 {googleLoading ? (

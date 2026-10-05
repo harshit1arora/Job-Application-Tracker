@@ -59,7 +59,7 @@ const SYSTEM_PROMPT: ChatMessage = {
     "You are JobPilot Copilot, an expert career strategist, interview coach, and navigational assistant inside the JobPilot platform. " +
     "JobPilot has 7 main sections: " +
     "1. /dashboard (Analytics, match stats, recent activity) " +
-    "2. /browse (50,000+ live jobs from Workday, Greenhouse, Lever, Ashby) " +
+    "2. /browse (curated opportunities with profile-to-role analysis) " +
     "3. /applications (Submission tracking and detailed logs) " +
     "4. /tracker (Kanban board with Applied, Screening, Interview, Offer stages) " +
     "5. /inbox (Recruiter messages & correspondence) " +
@@ -73,14 +73,14 @@ const ONBOARDING_STEPS = [
     step: 1,
     title: "Upload & Parse Résumé",
     route: "/profile",
-    desc: "AI extracts your skills, work history, and target roles in seconds to match jobs automatically.",
+    desc: "AI-assisted parsing identifies skills and target roles from your résumé for job-fit analysis.",
     badge: "Profile",
   },
   {
     step: 2,
-    title: "Browse & Match 50k+ Jobs",
+    title: "Browse & Analyze Role Fit",
     route: "/browse",
-    desc: "Discover real-time openings aggregated across Workday, Greenhouse, Lever, and Ashby with AI match scores.",
+    desc: "Review curated opportunities and compare role requirements with your profile.",
     badge: "Browse",
   },
   {
@@ -1012,10 +1012,8 @@ export function ChatWidget() {
                 <div>
                   <p className="font-bold">Offline Intelligence Mode Active</p>
                   <p className="mt-0.5 opacity-90">
-                    Smart local career strategies, voice navigation, and resume tips are fully
-                    operational. Add{" "}
-                    <code className="font-mono font-bold">VITE_OPENROUTER_API_KEY</code> for live
-                    LLM completions.
+                    Provider-backed AI is unavailable until Firebase is configured and you sign
+                    in. Local deterministic career help remains available.
                   </p>
                 </div>
               </div>

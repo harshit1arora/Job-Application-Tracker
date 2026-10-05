@@ -37,7 +37,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -55,6 +55,7 @@ function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated && !user) {
       navigate({ to: "/login" });
       return;
@@ -71,7 +72,7 @@ function ProfilePage() {
       setSkillsInput((initial.skills || []).join(", "));
       setProjects(initial.projects || []);
     }
-  }, [user, isAuthenticated, navigate]);
+  }, [user, isAuthenticated, isAuthLoading, navigate]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

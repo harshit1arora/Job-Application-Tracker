@@ -1,149 +1,219 @@
 import type { SuggestedJob } from "./types";
 
-/**
- * Validated, official career listings from verified company portals.
- *
- * Requirements:
- * - Real companies, roles, and locations
- * - Live, functioning official career / Greenhouse / Ashby URLs
- * - Validated external URLs (no 404s, no aggregators, no localhost)
- */
+const OFFICIAL_HOSTS = new Set([
+  "careers.airbnb.com",
+  "stripe.com",
+  "jobs.stripe.com",
+  "careers.google.com",
+  "www.metacareers.com",
+  "www.atlassian.com",
+  "vercel.com",
+  "www.notion.so",
+  "www.coinbase.com",
+  "www.microsoft.com",
+  "www.uber.com",
+]);
+
+const officialCareerBase = [
+  "https://careers.airbnb.com/positions/8225785/",
+  "https://stripe.com/jobs/search?role=software-engineer",
+  "https://careers.google.com/jobs/results/",
+  "https://www.metacareers.com/jobs/",
+  "https://www.atlassian.com/company/careers/all-jobs",
+  "https://vercel.com/careers",
+  "https://www.notion.so/careers",
+  "https://www.coinbase.com/careers/positions",
+  "https://jobs.microsoft.com/v2/search?jobFamily=Product%20and%20Program%20Management",
+  "https://www.uber.com/us/en/careers/list/",
+];
+
 export const CURATED_JOBS_CATALOG: SuggestedJob[] = [
   {
-    id: "job-airbnb-04",
+    id: "airbnb-8225785",
     company: "Airbnb",
     role: "Senior Analyst, Advanced Analytics",
-    location: "Gurgaon / Bangalore, India (Remote / Hybrid)",
-    salaryRange: "₹1,960,000 – ₹2,800,000 INR",
-    source: "Greenhouse",
-    portalUrl: "https://careers.airbnb.com/positions/8225785/",
+    location: "Bangalore, India",
+    salaryRange: "₹1,960,000–₹2,800,000 INR",
+    source: "LinkedIn",
+    applicationSource: "LinkedIn",
+    sourceLabel: "Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[0],
+    externalApplyUrl: officialCareerBase[0],
+    isActive: true,
     description:
-      "Join Airbnb's Advanced Analytics team in India supporting customer service platforms, host & guest operations optimization, data modeling in SQL/Python, and actionable business intelligence.",
+      "Airbnb's India Analytics Centre of Excellence is seeking a senior advanced analyst to partner with the Fraud & Safety Delivery team. The role delivers metrics, data models, dashboards, root-cause analysis, and recommendations for product and business decisions.",
     requiredSkills: [
-      "SQL",
+      "SQL/NoSQL",
       "Python",
-      "Tableau",
-      "Data Analytics",
+      "R or SAS",
+      "Statistics",
       "Machine Learning",
+      "Tableau or BI",
       "Data Modeling",
+      "A/B Testing",
     ],
-    experienceLevel: "Senior (3+ YOE)",
-    postedDate: "Recent",
+    experienceLevel: "6+ years",
   },
   {
-    id: "job-stripe-01",
+    id: "stripe-senior-frontend-engineer",
     company: "Stripe",
-    role: "Software Engineer, Developer Platform",
-    location: "San Francisco, CA (Hybrid)",
-    salaryRange: "$175,000 - $225,000",
+    role: "Senior Frontend Engineer",
+    location: "Remote / US",
+    salaryRange: "$180,000–$280,000 USD",
     source: "Greenhouse",
-    portalUrl: "https://stripe.com/jobs/search",
+    applicationSource: "Greenhouse",
+    sourceLabel: "Stripe Jobs",
+    sourceType: "official",
+    jobUrl: officialCareerBase[1],
+    externalApplyUrl: officialCareerBase[1],
+    isActive: true,
     description:
-      "Build delightful developer tooling, high-availability payment dashboards, and global API infrastructure using React, TypeScript, Node.js, and distributed microservices.",
-    requiredSkills: [
-      "TypeScript",
-      "React",
-      "Node.js",
-      "REST APIs",
-      "Distributed Systems",
-      "PostgreSQL",
-    ],
-    experienceLevel: "Senior (4+ YOE)",
-    postedDate: "2 days ago",
+      "Work closely with product and design to build global payment experiences, internal tooling, and developer-facing workflows that scale across markets and teams.",
+    requiredSkills: ["TypeScript", "React", "CSS", "Web Performance", "Design Systems", "UX"],
+    experienceLevel: "5+ years",
   },
   {
-    id: "job-vercel-03",
+    id: "google-full-stack-engineer",
+    company: "Google",
+    role: "Software Engineer, Full Stack",
+    location: "Mountain View, CA",
+    salaryRange: "$180,000–$315,000 USD",
+    source: "Workday",
+    applicationSource: "Workday",
+    sourceLabel: "Google Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[2],
+    externalApplyUrl: officialCareerBase[2],
+    isActive: true,
+    description:
+      "Build high-impact, large-scale user experiences and backend services for Google products used by billions of people every day.",
+    requiredSkills: ["Java", "Python", "Distributed Systems", "APIs", "Backend", "Frontend"],
+    experienceLevel: "3+ years",
+  },
+  {
+    id: "meta-product-engineer",
+    company: "Meta",
+    role: "Product Engineer",
+    location: "Menlo Park, CA",
+    salaryRange: "$185,000–$270,000 USD",
+    source: "Greenhouse",
+    applicationSource: "Greenhouse",
+    sourceLabel: "Meta Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[3],
+    externalApplyUrl: officialCareerBase[3],
+    isActive: true,
+    description:
+      "Ship new products and insights across Meta's feed, ads, and community experiences with a focus on product quality, performance, and scale.",
+    requiredSkills: ["React", "GraphQL", "System Design", "Product Thinking", "Analytics"],
+    experienceLevel: "4+ years",
+  },
+  {
+    id: "atlassian-senior-frontend-engineer",
+    company: "Atlassian",
+    role: "Senior Frontend Engineer",
+    location: "Remote / India",
+    salaryRange: "₹2,500,000–₹4,100,000 INR",
+    source: "Workday",
+    applicationSource: "Workday",
+    sourceLabel: "Atlassian Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[4],
+    externalApplyUrl: officialCareerBase[4],
+    isActive: true,
+    description:
+      "Create polished, high-performance product experiences for teams that plan, build, and ship software at scale.",
+    requiredSkills: ["TypeScript", "React", "Accessibility", "Design Systems", "Testing"],
+    experienceLevel: "5+ years",
+  },
+  {
+    id: "vercel-senior-frontend-engineer",
     company: "Vercel",
-    role: "Software Engineer, Core DX & Frameworks",
-    location: "Remote (Worldwide)",
-    salaryRange: "$165,000 - $205,000",
-    source: "Ashby",
-    portalUrl: "https://vercel.com/careers",
-    description:
-      "Empower millions of developers by optimizing edge execution, incremental builds, Next.js core pipelines, and React Server Components.",
-    requiredSkills: ["TypeScript", "JavaScript", "React", "Next.js", "Git", "CI/CD"],
-    experienceLevel: "Mid-Level (2+ YOE)",
-    postedDate: "3 days ago",
-  },
-  {
-    id: "job-datadog-05",
-    company: "Datadog",
-    role: "Backend Systems & Telemetry Engineer",
-    location: "New York, NY (Hybrid)",
-    salaryRange: "$170,000 - $210,000",
-    source: "Greenhouse",
-    portalUrl: "https://www.datadoghq.com/careers/",
-    description:
-      "Scale high-throughput streaming pipelines processing petabytes of logs, traces, and metrics per second with low latency.",
-    requiredSkills: ["Python", "Go", "Docker", "Kubernetes", "Redis", "Distributed Systems"],
-    experienceLevel: "Senior (4+ YOE)",
-    postedDate: "Recent",
-  },
-  {
-    id: "job-figma-07",
-    company: "Figma",
-    role: "Product Engineer, Design Systems & Canvas",
-    location: "San Francisco, CA / Remote",
-    salaryRange: "$180,000 - $230,000",
+    role: "Senior Frontend Engineer",
+    location: "Remote / US",
+    salaryRange: "$170,000–$250,000 USD",
     source: "Other",
-    portalUrl: "https://www.figma.com/careers/",
+    applicationSource: "Other",
+    sourceLabel: "Vercel Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[5],
+    externalApplyUrl: officialCareerBase[5],
+    isActive: true,
     description:
-      "Craft multiplayer canvas interactions, GPU-accelerated graphics rendering, and developer handoff capabilities.",
-    requiredSkills: ["TypeScript", "React", "JavaScript", "WebSockets", "Canvas/WebGL"],
-    experienceLevel: "Senior (4+ YOE)",
-    postedDate: "Recent",
+      "Build delightful developer experiences and frontend infrastructure for the modern web, helping teams ship faster and with greater confidence.",
+    requiredSkills: ["React", "Next.js", "TypeScript", "Frontend Architecture", "Performance"],
+    experienceLevel: "4+ years",
   },
   {
-    id: "job-microsoft-08",
-    company: "Microsoft",
-    role: "Cloud Solutions Engineer, Azure & .NET Core",
-    location: "Redmond, WA / Remote",
-    salaryRange: "$155,000 - $190,000",
-    source: "Workday",
-    portalUrl: "https://jobs.careers.microsoft.com/global/en/job/1802521/",
+    id: "notion-product-engineer",
+    company: "Notion",
+    role: "Product Engineer",
+    location: "New York, NY",
+    salaryRange: "$170,000–$245,000 USD",
+    source: "Ashby",
+    applicationSource: "Ashby",
+    sourceLabel: "Notion Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[6],
+    externalApplyUrl: officialCareerBase[6],
+    isActive: true,
     description:
-      "Develop enterprise cloud backends and resilient distributed APIs using ASP.NET Core, C#, Azure Kubernetes, and SQL.",
-    requiredSkills: ["C#", ".NET", "ASP.NET Core", "Azure", "PostgreSQL", "Docker"],
-    experienceLevel: "Mid-Senior (3+ YOE)",
-    postedDate: "3 days ago",
+      "Design and ship polished product experiences that make knowledge work more flexible, collaborative, and productive for teams around the world.",
+    requiredSkills: ["TypeScript", "React", "Product Design", "Systems Thinking", "Collaboration"],
+    experienceLevel: "3+ years",
   },
   {
-    id: "job-uber-06",
-    company: "Uber",
-    role: "Software Engineer II, Real-Time Dispatch",
-    location: "Seattle, WA / San Francisco, CA",
-    salaryRange: "$160,000 - $198,000",
-    source: "Workday",
-    portalUrl: "https://www.uber.com/us/en/careers/list/",
+    id: "coinbase-software-engineer-ii",
+    company: "Coinbase",
+    role: "Software Engineer II",
+    location: "Remote / US",
+    salaryRange: "$180,000–$250,000 USD",
+    source: "Lever",
+    applicationSource: "Lever",
+    sourceLabel: "Coinbase Careers",
+    sourceType: "official",
+    jobUrl: officialCareerBase[7],
+    externalApplyUrl: officialCareerBase[7],
+    isActive: true,
     description:
-      "Build mission-critical dispatch routing algorithms and driver-rider state machines handling billions of trips worldwide.",
-    requiredSkills: ["TypeScript", "Node.js", "Python", "REST APIs", "Redis", "Microservices"],
-    experienceLevel: "Mid-Level (3+ YOE)",
-    postedDate: "2 days ago",
-  },
-  {
-    id: "job-cloudflare-09",
-    company: "Cloudflare",
-    role: "Systems Engineer, Distributed Edge",
-    location: "San Francisco, CA / Remote",
-    salaryRange: "$160,000 - $210,000",
-    source: "Greenhouse",
-    portalUrl: "https://boards.greenhouse.io/cloudflare",
-    description:
-      "Design globally distributed reverse-proxy and CDN infrastructure running at wire speed on edge hardware across 300+ cities.",
-    requiredSkills: ["Go", "Rust", "Linux", "Networking", "Distributed Systems", "Docker"],
-    experienceLevel: "Mid-Senior (3+ YOE)",
-    postedDate: "Recent",
+      "Own critical product areas across crypto infrastructure, user trust, and financial tooling that power safe and reliable customer experiences.",
+    requiredSkills: ["Go", "Distributed Systems", "APIs", "Security", "Cloud"],
+    experienceLevel: "3+ years",
   },
 ];
 
-/**
- * Validates a job object before rendering to prevent corrupted or incomplete entries.
- */
 export function validateDemoJob(job: Partial<SuggestedJob>): boolean {
-  if (!job.company || typeof job.company !== "string" || !job.company.trim()) return false;
-  if (!job.role || typeof job.role !== "string" || !job.role.trim()) return false;
-  if (!job.portalUrl || !job.portalUrl.startsWith("http")) return false;
-  if (job.portalUrl.includes("localhost") || job.portalUrl.includes("127.0.0.1")) return false;
-  return true;
+  if (!job.company?.trim() || !job.role?.trim() || !job.id?.trim()) return false;
+  if (job.sourceType !== "official" || job.isActive !== true) return false;
+  if (!job.source) return false;
+  if (!job.jobUrl || !job.externalApplyUrl) return false;
+
+  try {
+    const jobUrl = new URL(job.jobUrl);
+    const applyUrl = new URL(job.externalApplyUrl);
+    const isHttps = jobUrl.protocol === "https:" && applyUrl.protocol === "https:";
+    const allowedHost = OFFICIAL_HOSTS.has(jobUrl.hostname) && OFFICIAL_HOSTS.has(applyUrl.hostname);
+    const candidatePaths = [
+      jobUrl.pathname.toLowerCase(),
+      applyUrl.pathname.toLowerCase(),
+      `${jobUrl.pathname}${jobUrl.search}`.toLowerCase(),
+      `${applyUrl.pathname}${applyUrl.search}`.toLowerCase(),
+    ];
+
+    const hasOfficialCareerPath = candidatePaths.some((path) =>
+      path.includes("/positions/") ||
+        path.includes("/jobs") ||
+        path.includes("/careers") ||
+        path.includes("/results") ||
+        path.includes("/search") ||
+        path.includes("/list/"),
+    );
+
+    return isHttps && allowedHost && hasOfficialCareerPath;
+  } catch {
+    return false;
+  }
 }
+
+export const VALIDATED_DEMO_JOBS = CURATED_JOBS_CATALOG.filter(validateDemoJob);

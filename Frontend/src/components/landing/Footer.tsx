@@ -30,7 +30,7 @@ export function Footer() {
             <span className="font-semibold tracking-tight">JobPilot</span>
           </div>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            A transparent autonomous AI agent for job applications and tracking.
+            AI-assisted career intelligence and job application tracking. You review your materials and apply on employer sites.
           </p>
           <div className="mt-5 flex gap-2">
             {[Linkedin, Twitter, Mail].map((Icon, i) => (

@@ -69,6 +69,8 @@ export const createApplicationSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
     .optional(),
+
+  matchScore: z.number().min(0).max(100).optional(),
 });
 
 // Partial schema for updates — every field becomes optional.

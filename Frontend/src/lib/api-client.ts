@@ -20,16 +20,56 @@ import type {
 import { AppError } from "./types";
 
 import { auth } from "./firebase";
+import { getSafeStorage } from "./storage";
 
 const isBrowser = typeof window !== "undefined" && typeof window.document !== "undefined";
 const envApiUrl = import.meta.env?.VITE_API_URL as string | undefined;
-export const isDemoMode = import.meta.env?.VITE_DEMO_MODE === "true";
 
-const API_BASE = isBrowser
-  ? (envApiUrl || "/api")
-  : (envApiUrl && !envApiUrl.startsWith("/") ? envApiUrl : "http://localhost:5117/api");
+const isTestEnvironment =
+  typeof process !== "undefined" &&
+  (process.env?.VITEST === "true" || process.env?.NODE_ENV === "test");
 
-const REQUEST_TIMEOUT_MS = 6000;
+const isDemoModeFlag = import.meta.env?.VITE_DEMO_MODE === "true";
+export const isDemoMode = isDemoModeFlag || isTestEnvironment;
+
+const PRODUCTION_API_BASE = "https://job-tracker-api-fo65.onrender.com/api";
+const defaultApiBase = isBrowser
+  ? import.meta.env.PROD
+    ? PRODUCTION_API_BASE
+    : "/api"
+  : "http://localhost:5117/api";
+const configuredApiBase = envApiUrl?.trim();
+const API_BASE = (() => {
+  if (!configuredApiBase) return defaultApiBase;
+  if (import.meta.env.PROD && configuredApiBase.startsWith("/")) return PRODUCTION_API_BASE;
+  const base = configuredApiBase.replace(/\/+$/, "");
+  return base.endsWith("/api/api") ? base.slice(0, -4) : base;
+})();
+
+const REQUEST_TIMEOUT_MS = 30000;
+
+function shouldUseLocalFallback(): boolean {
+  if (isDemoMode) return true;
+  if (isTestEnvironment) return true;
+  if (isBrowser && typeof navigator !== "undefined" && !navigator.onLine) return true;
+  return false;
+}
+
+export function shouldUseLocalPersistence(): boolean {
+  return shouldUseLocalFallback();
+}
+
+function applyLocalFallback<T>(fallback: () => T, userId: string, label: string): T | undefined {
+  if (!shouldUseLocalFallback()) return undefined;
+  try {
+    return fallback();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn(`[api-client] ${label} fallback failed for user ${userId}:`, error);
+    }
+    return undefined;
+  }
+}
 
 // --- LocalStorage Demo Persistence Keys ---
 function getLocalAppsKey(userId: string) {
@@ -40,9 +80,10 @@ function getLocalRemindersKey(userId: string) {
 }
 
 function getStoredApps(userId: string): ApplicationDocument[] {
-  if (!isBrowser) return [];
+  const storage = getSafeStorage();
+  if (!storage) return [];
   try {
-    const raw = localStorage.getItem(getLocalAppsKey(userId));
+    const raw = storage.getItem(getLocalAppsKey(userId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -50,18 +91,21 @@ function getStoredApps(userId: string): ApplicationDocument[] {
 }
 
 function setStoredApps(userId: string, apps: ApplicationDocument[]) {
-  if (!isBrowser) return;
+  const storage = getSafeStorage();
+  if (!storage) return;
   try {
-    localStorage.setItem(getLocalAppsKey(userId), JSON.stringify(apps));
-  } catch {
-    // quota exceeded or private mode
+    storage.setItem(getLocalAppsKey(userId), JSON.stringify(apps));
+  } catch (error) {
+    if (import.meta.env.DEV) console.error("[api-client] Could not persist applications locally:", error);
+    throw new AppError("SERVER_ERROR", "Could not save applications in this browser.");
   }
 }
 
 function getStoredReminders(userId: string): ReminderDocument[] {
-  if (!isBrowser) return [];
+  const storage = getSafeStorage();
+  if (!storage) return [];
   try {
-    const raw = localStorage.getItem(getLocalRemindersKey(userId));
+    const raw = storage.getItem(getLocalRemindersKey(userId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -69,9 +113,35 @@ function getStoredReminders(userId: string): ReminderDocument[] {
 }
 
 function setStoredReminders(userId: string, reminders: ReminderDocument[]) {
-  if (!isBrowser) return;
+  const storage = getSafeStorage();
+  if (!storage) return;
   try {
-    localStorage.setItem(getLocalRemindersKey(userId), JSON.stringify(reminders));
+    storage.setItem(getLocalRemindersKey(userId), JSON.stringify(reminders));
+  } catch {
+    // ignore
+  }
+}
+
+function getLocalDocsKey(userId: string) {
+  return `jobpilot_documents_${userId}`;
+}
+
+function getStoredDocuments(userId: string): DocumentMetadata[] {
+  const storage = getSafeStorage();
+  if (!storage) return [];
+  try {
+    const raw = storage.getItem(getLocalDocsKey(userId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setStoredDocuments(userId: string, docs: DocumentMetadata[]) {
+  const storage = getSafeStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(getLocalDocsKey(userId), JSON.stringify(docs));
   } catch {
     // ignore
   }
@@ -84,51 +154,31 @@ async function apiRequest<T>(
   init: RequestInit = {},
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    "X-User-Id": userId,
-  };
+  const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(init.signal?.reason);
+  init.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  if (init.signal?.aborted) abortFromCaller();
 
-  // Try to attach Firebase ID Token for production authentication
-  if (auth?.currentUser) {
-    try {
-      const token = await auth.currentUser.getIdToken(false);
-      headers["Authorization"] = `Bearer ${token}`;
-    } catch (e) {
-      if (import.meta.env.DEV) {
-        console.warn("[api-client] Failed to get Firebase token:", e);
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const request = (async (): Promise<T> => {
+    const headers: Record<string, string> = { "X-User-Id": userId };
+
+    if (auth?.currentUser) {
+      try {
+        const token = await auth.currentUser.getIdToken(false);
+        headers.Authorization = `Bearer ${token}`;
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn("[api-client] Failed to get Firebase token:", error);
       }
     }
-  }
 
-  // Only set Content-Type to JSON if it's not a FormData payload
-  if (!(init.body instanceof FormData)) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const mergedHeaders = { ...headers, ...((init.headers as Record<string, string>) || {}) };
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort(new Error(`Request timed out after ${timeoutMs}ms`));
-  }, timeoutMs);
-
-  // Link existing signal if provided
-  if (init.signal) {
-    init.signal.addEventListener("abort", () => controller.abort(init.signal?.reason));
-  }
-
-  try {
+    if (!(init.body instanceof FormData)) headers["Content-Type"] = "application/json";
+    const mergedHeaders = { ...headers, ...((init.headers as Record<string, string>) || {}) };
     const res = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: mergedHeaders,
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
-
-    if (res.status === 204) {
-      return undefined as any;
-    }
 
     if (!res.ok) {
       let errorMessage = `Request failed with status ${res.status}`;
@@ -136,27 +186,50 @@ async function apiRequest<T>(
         const errData = await res.json();
         errorMessage = errData.detail || errData.message || errorMessage;
       } catch {
-        const textData = await res.text();
-        if (textData) errorMessage = textData;
+        // Keep the status-based message when the server response is not JSON.
       }
 
       if (res.status === 400 || res.status === 422)
         throw new AppError("VALIDATION_ERROR", errorMessage);
       if (res.status === 401 || res.status === 403) throw new AppError("AUTH_ERROR", errorMessage);
-      if (res.status === 404) {
-        throw new AppError("NOT_FOUND", errorMessage);
-      }
+      if (res.status === 404) throw new AppError("NOT_FOUND", errorMessage);
       throw new AppError("SERVER_ERROR", errorMessage);
     }
 
-    return await res.json();
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    if (err?.name === "AbortError" || err?.message?.includes("timed out")) {
-      throw new AppError("SERVER_ERROR", `Network request timed out (${timeoutMs}ms)`);
+    if (res.status === 204) return undefined as T;
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      throw new AppError(
+        "SERVER_ERROR",
+        "The API returned a non-JSON response. Check the production API URL and Vercel rewrites.",
+      );
     }
+    try {
+      return (await res.json()) as T;
+    } catch {
+      throw new AppError("SERVER_ERROR", "The server returned an invalid response.");
+    }
+  })();
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new AppError("SERVER_ERROR", `Request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([request, timeout]);
+  } catch (err: unknown) {
     if (err instanceof AppError) throw err;
-    throw new AppError("SERVER_ERROR", err.message || "Network request failed");
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new AppError("SERVER_ERROR", "The network request was cancelled.");
+    }
+    if (import.meta.env.DEV) console.error("[api-client] Request failed:", err);
+    throw new AppError("SERVER_ERROR", "Network request failed.");
+  } finally {
+    clearTimeout(timeoutId);
+    init.signal?.removeEventListener("abort", abortFromCaller);
   }
 }
 
@@ -215,26 +288,17 @@ export async function fetchApplications(
 
   const qs = queryParams.toString() ? `?${queryParams.toString()}` : "";
 
-  // If in demo mode, prioritize or fallback immediately
   if (isDemoMode) {
-    const local = getStoredApps(userId);
-    if (local.length > 0) return local;
+    return getStoredApps(userId);
   }
 
   try {
     const remote = await apiRequest<ApplicationDocument[]>(`/applications${qs}`, userId);
-    if (remote && Array.isArray(remote)) {
-      if (isDemoMode) {
-        setStoredApps(userId, remote);
-      }
-      return remote;
-    }
-    return getStoredApps(userId);
+    if (Array.isArray(remote)) return remote;
+    throw new AppError("SERVER_ERROR", "The server returned an invalid application list.");
   } catch (err) {
-    if (isDemoMode || isBrowser) {
-      const local = getStoredApps(userId);
-      if (local.length > 0) return local;
-    }
+    const localFallback = applyLocalFallback(() => getStoredApps(userId), userId, "fetchApplications");
+    if (localFallback !== undefined) return localFallback;
     throw err;
   }
 }
@@ -244,16 +308,19 @@ export async function fetchApplication(
   applicationId: string,
 ): Promise<ApplicationDocument | null> {
   if (isDemoMode) {
-    const local = getStoredApps(userId).find((a) => a.id === applicationId);
-    if (local) return local;
+    return getStoredApps(userId).find((a) => a.id === applicationId) ?? null;
   }
 
   try {
     return await apiRequest<ApplicationDocument>(`/applications/${applicationId}`, userId);
   } catch (err: any) {
     if (err instanceof AppError && err.type === "NOT_FOUND") return null;
-    const local = getStoredApps(userId).find((a) => a.id === applicationId);
-    if (local) return local;
+    const localFallback = applyLocalFallback(
+      () => getStoredApps(userId).find((a) => a.id === applicationId) ?? null,
+      userId,
+      "fetchApplication",
+    );
+    if (localFallback !== undefined) return localFallback;
     throw err;
   }
 }
@@ -264,7 +331,6 @@ export async function createApplicationApi(
 ): Promise<ApplicationDocument> {
   if (input.applicationUrl === "") delete input.applicationUrl;
 
-  // Optimistic / Demo object
   const now = Date.now();
   const demoApp: ApplicationDocument = {
     id: `app_${now}_${Math.random().toString(36).substring(2, 7)}`,
@@ -279,6 +345,7 @@ export async function createApplicationApi(
     salaryRange: input.salaryRange,
     jobDescription: input.jobDescription,
     notes: input.notes,
+    matchScore: input.matchScore,
     resumeDocumentId: input.resumeDocumentId,
     createdAt: now,
     updatedAt: now,
@@ -286,17 +353,24 @@ export async function createApplicationApi(
 
   if (isDemoMode) {
     const current = getStoredApps(userId);
-    const updated = [demoApp, ...current.filter((a) => a.company !== input.company || a.jobTitle !== input.jobTitle)];
+    const duplicate = current.find(
+      (app) =>
+        app.company.trim().toLowerCase() === input.company.trim().toLowerCase() &&
+        app.jobTitle.trim().toLowerCase() === input.jobTitle.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      if (duplicate.status === "Saved" && input.status === "Applied") {
+        const promoted = { ...duplicate, status: "Applied" as const, updatedAt: now };
+        setStoredApps(
+          userId,
+          current.map((application) => (application.id === duplicate.id ? promoted : application)),
+        );
+        return promoted;
+      }
+      return duplicate;
+    }
+    const updated = [demoApp, ...current];
     setStoredApps(userId, updated);
-
-    // Also attempt fire-and-forget sync to backend without blocking
-    apiRequest<ApplicationDocument>("/applications", userId, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }).catch(() => {
-      // Backend may be offline in pure demo mode; ignore
-    });
-
     return demoApp;
   }
 
@@ -305,18 +379,26 @@ export async function createApplicationApi(
       method: "POST",
       body: JSON.stringify(input),
     });
-    // Sync local store
-    const current = getStoredApps(userId);
-    setStoredApps(userId, [created, ...current.filter((a) => a.id !== created.id)]);
+    if (!created || typeof created.id !== "string") {
+      throw new AppError("SERVER_ERROR", "The server returned an invalid application record.");
+    }
     return created;
   } catch (err) {
-    // If backend is down or timed out, save locally in browser so the user is never stuck
-    if (isBrowser) {
+    const localFallback = applyLocalFallback(() => {
       const current = getStoredApps(userId);
-      const updated = [demoApp, ...current.filter((a) => a.company !== input.company || a.jobTitle !== input.jobTitle)];
+      const duplicate = current.find(
+        (app) =>
+          app.company.trim().toLowerCase() === input.company.trim().toLowerCase() &&
+          app.jobTitle.trim().toLowerCase() === input.jobTitle.trim().toLowerCase(),
+      );
+      if (duplicate) return duplicate;
+      const updated = [demoApp, ...current];
       setStoredApps(userId, updated);
       return demoApp;
-    }
+    }, userId, "createApplicationApi");
+
+    if (localFallback !== undefined) return localFallback;
+    if (import.meta.env.DEV) console.error("[api-client] Production application save failed:", err);
     throw err;
   }
 }
@@ -331,6 +413,9 @@ export async function updateApplicationApi(
   if (isDemoMode) {
     const current = getStoredApps(userId);
     const existing = current.find((a) => a.id === applicationId);
+    if (!existing) {
+      throw new AppError("NOT_FOUND", "Application not found");
+    }
     const updated: ApplicationDocument = {
       ...(existing || ({} as any)),
       ...changes,
@@ -350,19 +435,19 @@ export async function updateApplicationApi(
       method: "PATCH",
       body: JSON.stringify(changes),
     });
-    const current = getStoredApps(userId);
-    setStoredApps(
-      userId,
-      current.map((a) => (a.id === applicationId ? result : a)),
-    );
     return result;
   } catch (err) {
-    const current = getStoredApps(userId);
-    const existing = current.find((a) => a.id === applicationId);
-    if (existing) {
+    const localFallback = applyLocalFallback(() => {
+      const current = getStoredApps(userId);
+      const existing = current.find((a) => a.id === applicationId);
+      if (!existing) {
+        throw new AppError("NOT_FOUND", "Application not found");
+      }
       const updated: ApplicationDocument = {
-        ...existing,
+        ...(existing || ({} as any)),
         ...changes,
+        id: applicationId,
+        userId,
         updatedAt: Date.now(),
       };
       setStoredApps(
@@ -370,26 +455,39 @@ export async function updateApplicationApi(
         current.map((a) => (a.id === applicationId ? updated : a)),
       );
       return updated;
-    }
+    }, userId, "updateApplicationApi");
+
+    if (localFallback !== undefined) return localFallback;
     throw err;
   }
 }
 
 export async function deleteApplicationApi(userId: string, applicationId: string): Promise<void> {
-  const current = getStoredApps(userId);
-  setStoredApps(
-    userId,
-    current.filter((a) => a.id !== applicationId),
-  );
-
-  if (!isDemoMode) {
-    try {
-      await apiRequest(`/applications/${applicationId}`, userId, {
-        method: "DELETE",
-      });
-    } catch {
-      // ignore
+  if (isDemoMode) {
+    const current = getStoredApps(userId);
+    const exists = current.some((application) => application.id === applicationId);
+    if (!exists) {
+      throw new AppError("NOT_FOUND", "Application not found");
     }
+    setStoredApps(userId, current.filter((application) => application.id !== applicationId));
+    return;
+  }
+
+  try {
+    await apiRequest(`/applications/${applicationId}`, userId, { method: "DELETE" });
+  } catch (err) {
+    const localFallback = applyLocalFallback(() => {
+      const current = getStoredApps(userId);
+      const exists = current.some((application) => application.id === applicationId);
+      if (!exists) {
+        throw new AppError("NOT_FOUND", "Application not found");
+      }
+      setStoredApps(userId, current.filter((application) => application.id !== applicationId));
+      return undefined;
+    }, userId, "deleteApplicationApi");
+
+    if (localFallback !== undefined) return;
+    throw err;
   }
 }
 
@@ -402,7 +500,19 @@ export async function fetchDocuments(
   applicationId?: string,
 ): Promise<DocumentMetadata[]> {
   const qs = applicationId ? `?applicationId=${applicationId}` : "";
-  return await apiRequest<DocumentMetadata[]>(`/documents${qs}`, userId);
+
+  if (isDemoMode) {
+    const local = getStoredDocuments(userId);
+    return applicationId ? local.filter((doc) => doc.applicationId === applicationId) : local;
+  }
+
+  try {
+    return await apiRequest<DocumentMetadata[]>(`/documents${qs}`, userId);
+  } catch (err) {
+    const local = getStoredDocuments(userId);
+    if (applicationId) return local.filter((doc) => doc.applicationId === applicationId);
+    return local;
+  }
 }
 
 export async function createDocumentApi(userId: string, input: any): Promise<DocumentMetadata> {
@@ -410,9 +520,16 @@ export async function createDocumentApi(userId: string, input: any): Promise<Doc
 }
 
 export async function deleteDocumentApi(userId: string, documentId: string): Promise<void> {
-  await apiRequest(`/documents/${documentId}`, userId, {
-    method: "DELETE",
-  });
+  try {
+    await apiRequest(`/documents/${documentId}`, userId, {
+      method: "DELETE",
+    });
+  } catch (err) {
+    if (!shouldUseLocalFallback()) throw err;
+    const local = getStoredDocuments(userId).filter((doc) => doc.id !== documentId);
+    setStoredDocuments(userId, local);
+    return;
+  }
 }
 
 export { apiRequest };
@@ -441,7 +558,8 @@ export async function fetchReminders(
   try {
     return await apiRequest<ReminderDocument[]>(`/reminders${qs}`, userId);
   } catch (err) {
-    if (isBrowser) {
+    const storage = getSafeStorage();
+    if (storage) {
       let list = getStoredReminders(userId);
       if (applicationId) list = list.filter((r) => r.applicationId === applicationId);
       if (isCompleted !== undefined) list = list.filter((r) => r.isCompleted === isCompleted);
@@ -479,7 +597,8 @@ export async function createReminderApi(
       body: JSON.stringify(input),
     });
   } catch (err) {
-    if (isBrowser) {
+    const storage = getSafeStorage();
+    if (storage) {
       const list = getStoredReminders(userId);
       setStoredReminders(userId, [demoReminder, ...list]);
       return demoReminder;
@@ -498,6 +617,9 @@ export async function updateReminderApi(
   if (isDemoMode) {
     const list = getStoredReminders(userId);
     const existing = list.find((r) => r.id === reminderId);
+    if (!existing) {
+      throw new AppError("NOT_FOUND", "Reminder not found");
+    }
     const updated = { ...(existing || ({} as any)), ...changes, id: reminderId };
     setStoredReminders(
       userId,
@@ -514,6 +636,9 @@ export async function updateReminderApi(
 
 export async function deleteReminderApi(userId: string, reminderId: string): Promise<void> {
   const list = getStoredReminders(userId);
+  if (!list.some((r) => r.id === reminderId)) {
+    throw new AppError("NOT_FOUND", "Reminder not found");
+  }
   setStoredReminders(
     userId,
     list.filter((r) => r.id !== reminderId),
@@ -552,7 +677,7 @@ export async function fetchDashboardStatsApi(userId: string): Promise<DashboardS
   try {
     return await apiRequest<DashboardStats>("/dashboard/stats", userId);
   } catch (err) {
-    if (isBrowser) {
+    if (typeof localStorage !== "undefined") {
       const apps = getStoredApps(userId);
       const byStatus = { applied: 0, screening: 0, interviewing: 0, offered: 0, rejected: 0 };
       apps.forEach((a) => {
@@ -562,7 +687,7 @@ export async function fetchDashboardStatsApi(userId: string): Promise<DashboardS
       return {
         totalApplications: apps.length,
         byStatus,
-      recentApplications: apps.slice(0, 5),
+        recentApplications: apps.slice(0, 5),
       };
     }
     throw err;

@@ -38,7 +38,7 @@ export const Route = createFileRoute("/applications/$applicationId")({
 
 function ApplicationDetailsPage() {
   const { applicationId } = Route.useParams();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   const [application, setApplication] = useState<ApplicationDocument | null>(null);
@@ -96,14 +96,15 @@ function ApplicationDetailsPage() {
 
   // Redirect if not logged in
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!user) {
-      navigate({ to: "/" });
+      navigate({ to: "/login" });
     }
-  }, [user, navigate]);
+  }, [user, isAuthLoading, navigate]);
 
   // Load application data
   useEffect(() => {
-    if (!user) return;
+    if (isAuthLoading || !user) return;
 
     const loadData = async () => {
       try {
@@ -126,7 +127,7 @@ function ApplicationDetailsPage() {
     };
 
     void loadData();
-  }, [user, applicationId, navigate]);
+  }, [user, isAuthLoading, applicationId, navigate]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

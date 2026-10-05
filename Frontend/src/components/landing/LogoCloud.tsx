@@ -19,7 +19,7 @@ export function LogoCloud() {
       <div className="mx-auto max-w-7xl px-5">
         <Reveal>
           <p className="text-sm font-medium text-muted-foreground">
-            Automated Applications Across Major ATS Platforms & Job Portals
+            Use saved profile details with supported employer application portals
           </p>
         </Reveal>
         <Reveal delay={80}>

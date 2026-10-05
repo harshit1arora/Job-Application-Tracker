@@ -75,21 +75,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "JobPilot — The AI agent that applies to every job that fits you" },
+      { title: "JobPilot — AI-Powered Career Intelligence & Job Application Tracker" },
       {
         name: "description",
         content:
-          "JobPilot watches 50,000+ career pages across Workday, Greenhouse, Lever, Ashby, and submits tailored applications automatically.",
+          "JobPilot analyzes profile-to-role fit, helps prepare application materials, and tracks applications. Candidates submit applications directly on employer sites.",
       },
       { name: "author", content: "JobPilot" },
       {
         property: "og:title",
-        content: "JobPilot — The AI agent that applies to every job that fits you",
+        content: "JobPilot — AI-Powered Career Intelligence & Job Application Tracker",
       },
       {
         property: "og:description",
         content:
-          "JobPilot watches 50,000+ career pages across Workday, Greenhouse, Lever, Ashby, and submits tailored applications automatically.",
+          "Analyze career readiness, prepare application materials, practice interviews, and track your job search with JobPilot.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

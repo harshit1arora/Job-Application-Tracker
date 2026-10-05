@@ -84,12 +84,35 @@ export const EMPTY_PROFILE: UserProfile = {
   github: "",
   twitter: "",
   resumeText: "",
-  resumeFileName: "Alex_Carter_Resume.pdf",
+  resumeFileName: "",
   summary: "",
   customAnswers: {},
 };
 
 const storageKey = (uid: string) => `jobpilot:profile:${uid}`;
+
+const DEMO_PROFILE: UserProfile = {
+  ...EMPTY_PROFILE,
+  fullName: "Alex Carter",
+  firstName: "Alex",
+  lastName: "Carter",
+  email: "alex.carter@example.com",
+  countryCode: "+91",
+  country: "India",
+  city: "Bengaluru",
+  location: "Bengaluru, India",
+  ageOrExperience: "6+ years",
+  yearsOfExperience: "6+ years",
+  targetRole: "Senior Data Analyst",
+  currentTitle: "Data Analyst",
+  skills: ["SQL", "Python", "Tableau", "Statistics", "Machine Learning", "A/B Testing"],
+  education: "Master's degree in Statistics",
+  resumeText:
+    "Demo resume: Senior data analyst with 6+ years of experience using SQL, Python, Tableau, statistics, machine learning, and experimentation to support product and operations decisions.",
+  summary:
+    "Senior data analyst with 6+ years of experience delivering data models, dashboards, statistical analysis, and product insights.",
+  resumeFileName: "Demo_Resume.pdf",
+};
 
 export function extractFirstAndLastName(fullName: string): { firstName: string; lastName: string } {
   if (!fullName || !fullName.trim()) return { firstName: "", lastName: "" };
@@ -104,7 +127,7 @@ export function getProfile(uid: string): UserProfile {
   if (typeof window === "undefined") return EMPTY_PROFILE; // SSR guard
   try {
     const raw = window.localStorage.getItem(storageKey(uid));
-    if (!raw) return EMPTY_PROFILE;
+    if (!raw) return import.meta.env.VITE_DEMO_MODE === "true" ? DEMO_PROFILE : EMPTY_PROFILE;
     const parsed = JSON.parse(raw) as Partial<UserProfile>;
     const names = extractFirstAndLastName(parsed.fullName || "");
     return {

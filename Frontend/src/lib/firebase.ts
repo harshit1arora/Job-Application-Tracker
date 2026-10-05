@@ -5,6 +5,7 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from "firebase/auth";
+import type { Auth } from "firebase/auth";
 
 /**
  * Firebase Web Configuration
@@ -22,15 +23,30 @@ const firebaseConfig = {
   appId: (import.meta.env["VITE_FIREBASE_APP_ID"] as string | undefined) || "",
 };
 
-// Initialize Firebase App singleton safely
-const isConfigured = Boolean(firebaseConfig.apiKey);
-export const app = isConfigured
+const REQUIRED_FIREBASE_CONFIG: Array<keyof typeof firebaseConfig> = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "messagingSenderId",
+  "appId",
+];
+
+export const missingFirebaseConfig = REQUIRED_FIREBASE_CONFIG
+  .filter((key) => !firebaseConfig[key].trim())
+  .map((key) => `VITE_FIREBASE_${key.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`);
+
+export const firebaseConfigurationError = missingFirebaseConfig.length
+  ? `Firebase authentication is not configured for this deployment. Add ${missingFirebaseConfig.join(", ")} in the hosting environment and redeploy.`
+  : null;
+
+// Initialize Firebase only when the complete authentication config is present.
+export const app = missingFirebaseConfig.length === 0
   ? !getApps().length
     ? initializeApp(firebaseConfig)
     : getApp()
   : null;
 
-export const auth = app ? getAuth(app) : (null as any);
+export const auth: Auth | null = app ? getAuth(app) : null;
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
@@ -41,8 +57,7 @@ export async function signInWithGooglePopup() {
   if (!auth) {
     return {
       success: false,
-      error:
-        "Firebase is not configured. Please create a .env file with your VITE_FIREBASE_API_KEY (see .env.example).",
+      error: firebaseConfigurationError || "Firebase authentication is unavailable.",
       code: "auth/not-configured",
     };
   }

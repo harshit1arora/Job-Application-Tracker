@@ -76,7 +76,9 @@ export async function createApplication(
     );
   }
 
-  return await createApplicationApi(userId, result.data as CreateApplicationInput);
+  const created = await createApplicationApi(userId, result.data as CreateApplicationInput);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("jobpilot:data-changed"));
+  return created;
 }
 
 export async function getApplications(
@@ -107,11 +109,14 @@ export async function updateApplication(
     );
   }
 
-  return await updateApplicationApi(userId, applicationId, result.data as UpdateApplicationInput);
+  const updated = await updateApplicationApi(userId, applicationId, result.data as UpdateApplicationInput);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("jobpilot:data-changed"));
+  return updated;
 }
 
 export async function deleteApplication(userId: string, applicationId: string): Promise<void> {
   await deleteApplicationApi(userId, applicationId);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("jobpilot:data-changed"));
 }
 
 export async function hasAppliedToJob(

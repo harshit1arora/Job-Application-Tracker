@@ -13,15 +13,15 @@ const ITEMS = [
   },
   {
     q: "How does 1-click application autofill work?",
-    a: "JobPilot pre-fills all your contact information, résumé attachments, and answers to common screening questions (such as country of residence, hybrid schedule preferences, and visa status). When you answer a new question once, it's remembered permanently across future applications.",
+    a: "JobPilot uses profile details you provide to populate or copy fields in supported application workflows. Review the information and submit your application directly on the employer's site; JobPilot does not submit applications for you.",
   },
   {
     q: "How does AI cover letter generation work?",
-    a: "JobPilot analyzes the specific job description and company culture, combining them with your verified résumé skills to craft an authentic, first-person 8-10 line cover note in seconds.",
+    a: "JobPilot can draft a role-specific letter from the profile and job details available. Review and edit the draft to ensure it accurately reflects your experience before using it.",
   },
   {
     q: "Can I track my application pipeline and interviews?",
-    a: "Yes. Every application you submit is recorded on your dashboard with an interactive Kanban board (Saved, Applied, Under Review, Interview, Offer, Rejected), timeline calendar, and follow-up reminders.",
+    a: "Yes. Track applications you choose to record, update their stages, and manage interview dates and follow-up reminders in the dashboard and calendar.",
   },
   {
     q: "Is there a free trial?",

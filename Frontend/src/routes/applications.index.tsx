@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
-import { getApplications, createApplication } from "@/lib/applications-service";
+import { getApplications, createApplication, updateApplication } from "@/lib/applications-service";
+import { matchScore, suggestJobsForResume } from "@/lib/ai";
+import { getProfile } from "@/lib/profile";
+import { VALIDATED_DEMO_JOBS } from "@/lib/jobs-catalog";
 import type { ApplicationDocument, ApplicationStatus, ApplicationSource } from "@/lib/types";
 import { AppError } from "@/lib/types";
 import { toast } from "sonner";
@@ -14,6 +17,7 @@ import {
   ArrowUpRight,
   ExternalLink,
   Loader2,
+  RotateCw,
   Filter,
   CheckCircle,
   Clock,
@@ -28,16 +32,18 @@ export const Route = createFileRoute("/applications/")({
 });
 
 function ApplicationsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   const [applications, setApplications] = useState<ApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "All">("All");
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated && !user) {
       navigate({ to: "/login" });
       return;
@@ -45,15 +51,83 @@ function ApplicationsPage() {
     if (user) {
       void loadApplications(user.id);
     }
-  }, [user, isAuthenticated, navigate]);
+  }, [user, isAuthenticated, isAuthLoading, navigate]);
 
   const loadApplications = async (userId: string) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await getApplications(userId);
       setApplications(data);
-    } catch {
-      toast.error("Failed to load applications.");
+      setIsLoading(false);
+      const profile = getProfile(userId);
+      const rankedCatalog = await suggestJobsForResume(
+        {
+          fullName: profile.fullName,
+          email: profile.email,
+          phone: profile.phone,
+          city: profile.city || profile.location,
+          ageOrExperience: profile.ageOrExperience || "",
+          targetRole: profile.targetRole || user?.targetRole || "",
+          skills: profile.skills || [],
+          education: profile.education || "",
+          summary: profile.summary || profile.resumeText.slice(0, 180),
+        },
+        VALIDATED_DEMO_JOBS,
+      );
+      const candidateText = [
+        profile.targetRole || user?.targetRole,
+        ...(profile.skills || []),
+        profile.summary,
+        profile.resumeText,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      if (!candidateText.trim()) {
+        setApplications(data);
+        return;
+      }
+
+      const scoreByJob = new Map(
+        rankedCatalog.map((job) => [
+          `${job.company.trim().toLowerCase()}::${job.role.trim().toLowerCase()}`,
+          job.matchScore,
+        ]),
+      );
+
+      const scored = await Promise.all(
+        data.map(async (application) => {
+          const jobKey = `${application.company.trim().toLowerCase()}::${application.jobTitle.trim().toLowerCase()}`;
+          const catalogScore = scoreByJob.get(jobKey);
+          if (catalogScore !== undefined) {
+            if (application.matchScore === catalogScore) return application;
+            try {
+              const updated = await updateApplication(userId, application.id, {
+                matchScore: catalogScore,
+              });
+              return { ...application, ...updated, matchScore: catalogScore };
+            } catch {
+              return { ...application, matchScore: catalogScore };
+            }
+          }
+
+          if (application.matchScore !== undefined || !application.jobDescription?.trim()) return application;
+
+          try {
+            const score = await matchScore(candidateText, application.jobDescription);
+            const updated = await updateApplication(userId, application.id, { matchScore: score });
+            return { ...application, ...updated, matchScore: score };
+          } catch {
+            return application;
+          }
+        }),
+      );
+      setApplications(scored);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load applications.";
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -197,10 +271,37 @@ function ApplicationsPage() {
                       </div>
                     </td>
                   </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 text-center">
+                      <p className="font-semibold text-foreground">Unable to load applications</p>
+                      <p className="mt-1 text-muted-foreground">{loadError}</p>
+                      <button
+                        type="button"
+                        onClick={() => user && void loadApplications(user.id)}
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 font-semibold text-foreground hover:bg-secondary"
+                      >
+                        <RotateCw size={13} /> Retry
+                      </button>
+                    </td>
+                  </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                      No applications found matching your criteria.
+                      {applications.length === 0 ? (
+                        <div className="space-y-3">
+                          <p className="font-semibold text-foreground">No applications yet</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddModal(true)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground"
+                          >
+                            <Plus size={13} /> Track your first application
+                          </button>
+                        </div>
+                      ) : (
+                        "No applications found matching your criteria."
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -239,7 +340,7 @@ function ApplicationsPage() {
 
                       <td className="py-4 px-6">
                         <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                          {app.matchScore ?? 90}%
+                          {app.matchScore === undefined ? "Not scored" : `${app.matchScore}%`}
                         </span>
                       </td>
 

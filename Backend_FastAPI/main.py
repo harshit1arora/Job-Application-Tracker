@@ -1,16 +1,20 @@
 import os
 import uuid
 import shutil
+import io
+import zipfile
 from datetime import datetime, timezone
 from typing import Optional, List
-from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form
+from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
+import httpx
 
 from auth import get_current_user_id
+from services.gemini_service import gemini_service
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -28,8 +32,22 @@ ALLOWED_MIME_TYPES = {
     "application/pdf": ".pdf",
     "application/msword": ".doc",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-    "text/plain": ".txt"
 }
+
+
+def validate_document_content(content: bytes, content_type: str) -> bool:
+    if content_type == "application/pdf":
+        return content.startswith(b"%PDF-")
+    if content_type == "application/msword":
+        return content.startswith(bytes.fromhex("D0CF11E0A1B11AE1"))
+    if content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                names = set(archive.namelist())
+                return "[Content_Types].xml" in names and "word/document.xml" in names
+        except (zipfile.BadZipFile, OSError):
+            return False
+    return False
 
 # ---------------------------------------------------------
 # SQLAlchemy Models
@@ -92,7 +110,13 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="JobTracker FastAPI")
 
-CORS_ORIGINS = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:4173").split(",") if origin.strip()]
+CONFIGURED_CORS_ORIGINS = {
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:4173").split(",")
+    if origin.strip()
+}
+PRODUCTION_FRONTEND_ORIGIN = "https://job-application-tracker-pearl-nine.vercel.app"
+CORS_ORIGINS = sorted(CONFIGURED_CORS_ORIGINS | {PRODUCTION_FRONTEND_ORIGIN})
 
 app.add_middleware(
     CORSMiddleware,
@@ -124,6 +148,7 @@ class ApplicationBase(BaseModel):
     location: Optional[str] = None
     notes: Optional[str] = None
     followUpDate: Optional[str] = None
+    matchScore: Optional[float] = None
 
 class ApplicationCreate(ApplicationBase):
     pass
@@ -139,6 +164,7 @@ class ApplicationUpdate(BaseModel):
     location: Optional[str] = None
     notes: Optional[str] = None
     followUpDate: Optional[str] = None
+    matchScore: Optional[float] = None
 
 class ApplicationOut(ApplicationBase):
     id: str
@@ -211,6 +237,124 @@ def root():
 def health_check():
     return {"status": "ok"}
 
+ALLOWED_GEMINI_MODELS = {
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "google/gemini-2.5-flash",
+    "google/gemini-2.5-flash-lite",
+    "google/gemini-2.5-pro",
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "liquid/lfm-2.5-embedding-350m:free",
+}
+
+class AIChatRequest(BaseModel):
+    messages: List[dict]
+    max_tokens: int = 700
+
+class AIResumeParseRequest(BaseModel):
+    resumeText: str = Field(..., min_length=1, max_length=200000)
+
+class AICoverLetterRequest(BaseModel):
+    applicantName: str = ""
+    company: str = Field(..., min_length=1, max_length=200)
+    jobTitle: str = Field(..., min_length=1, max_length=200)
+    jobDescription: Optional[str] = Field(default=None, max_length=20000)
+    resumeHighlights: Optional[str] = Field(default=None, max_length=20000)
+
+class AIInterviewRequest(BaseModel):
+    role: str = Field(..., min_length=1, max_length=300)
+    context: str = Field(..., min_length=1, max_length=20000)
+
+class AIMatchRequest(BaseModel):
+    resumeText: str = Field(..., min_length=1, max_length=200000)
+    jobText: str = Field(..., min_length=1, max_length=200000)
+
+
+@app.post("/api/ai/chat")
+async def ai_chat(request: AIChatRequest, user_id: str = Depends(get_current_user_id)):
+    if not isinstance(request.messages, list) or not 1 <= len(request.messages) <= 20:
+        raise HTTPException(status_code=422, detail="Invalid AI conversation")
+    if any(not isinstance(message, dict) or not isinstance(message.get("content"), str) or len(message["content"]) > 12000 for message in request.messages):
+        raise HTTPException(status_code=422, detail="AI message is invalid or too large")
+    if not 1 <= request.max_tokens <= 2000:
+        raise HTTPException(status_code=422, detail="AI token limit is invalid")
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    return {"content": await gemini_service.chat(request.messages, request.max_tokens)}
+
+
+@app.post("/api/ai/chat/completions")
+async def legacy_ai_chat_completions(payload: dict = Body(...), user_id: str = Depends(get_current_user_id)):
+    model = payload.get("model")
+    if model is not None and str(model) not in ALLOWED_GEMINI_MODELS:
+        raise HTTPException(status_code=422, detail="AI model is not allowed")
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="AI service is not configured")
+    messages = payload.get("messages")
+    if not isinstance(messages, list) or not 1 <= len(messages) <= 20:
+        raise HTTPException(status_code=422, detail="Invalid AI conversation")
+    if any(not isinstance(message, dict) or not isinstance(message.get("content"), str) or len(message["content"]) > 12000 for message in messages):
+        raise HTTPException(status_code=422, detail="AI message is invalid or too large")
+    max_tokens = payload.get("max_tokens", 700)
+    if not isinstance(max_tokens, int) or not 1 <= max_tokens <= 2000:
+        raise HTTPException(status_code=422, detail="AI token limit is invalid")
+    content = await gemini_service.chat(messages, max_tokens)
+    return {"choices": [{"message": {"content": content}}]}
+
+
+@app.post("/api/ai/embeddings")
+async def legacy_ai_embeddings(payload: dict = Body(...), user_id: str = Depends(get_current_user_id)):
+    model = payload.get("model")
+    if model is not None and str(model) not in ALLOWED_GEMINI_MODELS and str(model) != "gemini-embedding-001":
+        raise HTTPException(status_code=422, detail="AI model is not allowed")
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="AI service is not configured")
+    input_value = payload.get("input")
+    texts = input_value if isinstance(input_value, list) else [input_value]
+    if not texts or len(texts) > 8 or any(not isinstance(text, str) or len(text) > 12000 for text in texts):
+        raise HTTPException(status_code=422, detail="AI embedding input is invalid or too large")
+    embeddings = await gemini_service.embed(texts)
+    return {"data": [{"embedding": embedding} for embedding in embeddings]}
+
+
+@app.post("/api/ai/resume-parse")
+async def ai_resume_parse(request: AIResumeParseRequest, user_id: str = Depends(get_current_user_id)):
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    return await gemini_service.parse_resume(request.resumeText)
+
+
+@app.post("/api/ai/cover-letter")
+async def ai_cover_letter(request: AICoverLetterRequest, user_id: str = Depends(get_current_user_id)):
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    content = await gemini_service.generate_cover_letter(
+        request.applicantName,
+        request.company,
+        request.jobTitle,
+        request.jobDescription,
+        request.resumeHighlights,
+    )
+    return {"content": content}
+
+
+@app.post("/api/ai/interview")
+async def ai_interview(request: AIInterviewRequest, user_id: str = Depends(get_current_user_id)):
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    return {"content": await gemini_service.generate_interview_questions(request.role, request.context)}
+
+
+@app.post("/api/ai/match")
+async def ai_match(request: AIMatchRequest, user_id: str = Depends(get_current_user_id)):
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    score = await gemini_service.match_score(request.resumeText, request.jobText)
+    return {"score": score}
+
 # ---------------------------------------------------------
 # Application Endpoints
 # ---------------------------------------------------------
@@ -246,6 +390,21 @@ def get_application(app_id: str, user_id: str = Depends(get_current_user_id), db
 
 @app.post("/api/applications", response_model=ApplicationOut, status_code=201)
 def create_application(app_in: ApplicationCreate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    existing_apps = db.query(ApplicationDB).filter(ApplicationDB.userId == user_id).all()
+    normalized_company = app_in.company.strip().casefold()
+    normalized_title = app_in.jobTitle.strip().casefold()
+    for existing in existing_apps:
+        if (
+            existing.company.strip().casefold() == normalized_company
+            and existing.jobTitle.strip().casefold() == normalized_title
+        ):
+            if existing.status == "Saved" and app_in.status == "Applied":
+                existing.status = "Applied"
+                existing.updatedAt = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                db.commit()
+                db.refresh(existing)
+            return existing
+
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     new_app = ApplicationDB(
         id=f"app-{uuid.uuid4().hex[:10]}",
@@ -304,22 +463,23 @@ def get_documents(applicationId: Optional[str] = None, user_id: str = Depends(ge
     return query.order_by(DocumentDB.createdAt.desc()).all()
 
 @app.post("/api/documents/upload", response_model=DocumentOut, status_code=201)
-def upload_document(
+async def upload_document(
     file: UploadFile = File(...),
     applicationId: Optional[str] = Form(None),
     displayName: Optional[str] = Form(None),
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    if file.content_type not in ALLOWED_MIME_TYPES:
+    extension = ALLOWED_MIME_TYPES.get(file.content_type or "")
+    if not extension:
         raise HTTPException(status_code=422, detail="Unsupported file type")
-        
-    file.file.seek(0, os.SEEK_END)
-    file_size = file.file.tell()
-    file.file.seek(0)
-    
+
+    content = await file.read(MAX_FILE_SIZE + 1)
+    file_size = len(content)
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="File too large (max 5MB)")
+    if not validate_document_content(content, file.content_type or ""):
+        raise HTTPException(status_code=422, detail="File content does not match the selected document type")
 
     if applicationId:
         app_doc = db.query(ApplicationDB).filter(ApplicationDB.id == applicationId, ApplicationDB.userId == user_id).first()
@@ -327,16 +487,17 @@ def upload_document(
             raise HTTPException(status_code=404, detail="Application not found or access denied")
     
     file_id = uuid.uuid4().hex
-    safe_filename = "".join(c for c in (file.filename or "") if c.isalnum() or c in " ._-")
+    original_name = os.path.basename(file.filename or "")
+    safe_filename = "".join(c for c in original_name if c.isalnum() or c in " ._-").strip(" .")
     if not safe_filename:
-        safe_filename = "document" + ALLOWED_MIME_TYPES.get(file.content_type, ".file")
+        safe_filename = "document" + extension
         
     storage_path = os.path.join(UPLOAD_DIR, f"{file_id}_{safe_filename}")
     
     try:
         with open(storage_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
+            buffer.write(content)
+    except OSError:
         if os.path.exists(storage_path):
             os.remove(storage_path)
         raise HTTPException(status_code=500, detail="Failed to save file")
@@ -347,15 +508,21 @@ def upload_document(
         userId=user_id,
         applicationId=applicationId,
         fileName=file.filename or safe_filename,
-        fileType=file.content_type or "application/octet-stream",
+        fileType=file.content_type,
         fileSize=file_size,
         storageRef=storage_path,
         displayName=displayName,
         createdAt=now
     )
-    db.add(new_doc)
-    db.commit()
-    db.refresh(new_doc)
+    try:
+        db.add(new_doc)
+        db.commit()
+        db.refresh(new_doc)
+    except Exception:
+        db.rollback()
+        if os.path.exists(storage_path):
+            os.remove(storage_path)
+        raise HTTPException(status_code=500, detail="Failed to record uploaded document")
     return new_doc
 
 @app.get("/api/documents/{doc_id}/download")

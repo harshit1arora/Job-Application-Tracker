@@ -50,7 +50,7 @@ export const Route = createFileRoute("/tracker")({
 });
 
 function TrackerPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   const [applications, setApplications] = useState<ApplicationDocument[]>([]);
@@ -68,6 +68,7 @@ function TrackerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated && !user) {
       navigate({ to: "/login" });
       return;
@@ -75,7 +76,7 @@ function TrackerPage() {
     if (user) {
       void loadData(user.id);
     }
-  }, [user, isAuthenticated, navigate]);
+  }, [user, isAuthenticated, isAuthLoading, navigate]);
 
   const loadData = async (userId: string) => {
     try {
@@ -224,11 +225,15 @@ function TrackerPage() {
       });
 
       setReminders((prev) => [newRem, ...prev]);
+      const scheduledDate = parseISO(formDate);
+      setSelectedDate(scheduledDate);
+      setCurrentMonth(scheduledDate);
       toast.success("Event scheduled on your calendar!");
       setShowAddForm(false);
       setFormMessage("");
-    } catch {
-      toast.error("Failed to add event.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to add event.";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

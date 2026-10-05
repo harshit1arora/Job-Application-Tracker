@@ -1,37 +1,35 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Reveal } from "./Reveal";
-import { MatchBadge } from "./MatchBadge";
 
 const STEPS = [
   {
     id: "01",
     name: "Discover",
-    copy: "Explore top opportunities across engineering, product, and design, ranked automatically by AI compatibility with your résumé skills and target role.",
+    copy: "Compare your profile with curated opportunities using explainable role and skill signals.",
   },
   {
     id: "02",
     name: "Tailor",
-    copy: "Instantly generate tailored, first-person cover letters specifically crafted for each job description and company culture in 1 click.",
+    copy: "Draft a job-specific cover letter from the profile and role details you provide, then review and edit it before using it.",
   },
   {
     id: "03",
     name: "Autofill",
-    copy: "Auto-fill application fields with pre-parsed résumé details and screening answers that are permanently remembered across all your applications.",
+    copy: "Use your saved profile to copy or populate supported application fields. Review the information and submit directly on the employer's site.",
   },
   {
     id: "04",
     name: "Track",
-    copy: "Manage applications on an interactive Kanban board and timeline calendar with automated follow-up reminders and AI interview coaching.",
+    copy: "Track application stages, schedule follow-ups, and practice role-specific interview questions.",
   },
 ];
 
 function FindMock() {
   const lines = [
-    { t: "Live Match", url: "stripe.com/jobs", n: "92% match", hot: true },
-    { t: "Live Match", url: "openai.com/careers", n: "95% match", hot: true },
-    { t: "Live Match", url: "vercel.com/careers", n: "91% match", hot: true },
-    { t: "Live Match", url: "figma.com/careers", n: "88% match", hot: true },
+    { t: "Example", url: "curated role", n: "Role signals", hot: true },
+    { t: "Example", url: "curated role", n: "Skill overlap", hot: true },
+    { t: "Example", url: "curated role", n: "Profile fit", hot: true },
   ];
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -40,20 +38,20 @@ function FindMock() {
           01 · AI DISCOVERY & MATCHING
         </p>
         <p className="mt-3 text-lg font-semibold">
-          AI matches your skills with relevant opportunities in real-time.
+          Compare profile skills with role requirements.
         </p>
         <div className="mt-5 space-y-1.5 rounded-xl bg-primary-foreground/5 p-3 font-mono text-[11px]">
           {lines.map((l) => (
             <div key={l.url} className="flex items-center justify-between gap-3">
               <span className="truncate opacity-55">
-                [{l.t}] scanning {l.url}…
+                [{l.t}] {l.url}
               </span>
               <span className={l.hot ? "shrink-0 text-accent" : "shrink-0 opacity-40"}>{l.n}</span>
             </div>
           ))}
           <div className="mt-2 flex items-center justify-between gap-3 rounded-md bg-accent/15 px-2 py-1.5">
-            <span className="truncate">● stripe.com/jobs · Senior Frontend Engineer</span>
-            <span className="shrink-0 font-bold text-accent">MATCH 92%</span>
+            <span className="truncate">Profile signals · example role</span>
+            <span className="shrink-0 font-bold text-accent">ANALYZED</span>
           </div>
         </div>
       </div>
@@ -64,10 +62,9 @@ function FindMock() {
         <p className="mt-3 text-lg font-semibold">Matched to your résumé</p>
         <div className="mt-5 space-y-2">
           {[
-            { role: "Senior Frontend Engineer", co: "Stripe", s: 92, on: true },
-            { role: "React Developer (intern)", co: "Acme HR", s: 31 },
-            { role: "Lead .NET Engineer", co: "Nimbus", s: 18 },
-            { role: "Java Backend, on-site", co: "Zypher", s: 24 },
+            { role: "Senior Frontend Engineer", co: "Example role", s: "Example", on: true },
+            { role: "Product Engineer", co: "Example role", s: "Review fit" },
+            { role: "Backend Engineer", co: "Example role", s: "Skill overlap" },
           ].map((j) => (
             <div
               key={j.role}
@@ -88,7 +85,7 @@ function FindMock() {
                   j.on ? "bg-card text-emerald-600" : "text-muted-foreground"
                 }`}
               >
-                {j.s}%
+                {j.s}
               </span>
             </div>
           ))}
@@ -102,15 +99,15 @@ function PrepMock() {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
       <p className="text-[10px] font-semibold tracking-widest text-muted-foreground">
-        RÉSUMÉ DIFF · SENIOR FRONTEND ENGINEER
+        ILLUSTRATIVE DRAFT · REVIEW AND REPLACE WITH YOUR EVIDENCE
       </p>
       <div className="mt-4 space-y-1 rounded-xl border border-border bg-secondary/40 p-4 font-mono text-xs">
         {[
           { s: "-", t: "Worked on various web projects using JavaScript." },
-          { s: "+", t: "Shipped a React + TypeScript design system used by 40 engineers." },
+          { s: "+", t: "Describe a project and the specific contribution you made." },
           { s: "-", t: "Helped improve performance." },
-          { s: "+", t: "Cut LCP from 4.1s → 1.2s across 12 revenue pages." },
-          { s: "+", t: "Owned payment checkout UI — matches Stripe JD line 3." },
+          { s: "+", t: "Add a measurable result only when you can substantiate it." },
+          { s: "+", t: "Connect your evidence to a requirement in the role description." },
         ].map((l) => (
           <p
             key={l.t}
@@ -123,13 +120,13 @@ function PrepMock() {
         ))}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <span className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">
-          Approve &amp; send
+          <span className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">
+          Open employer portal
         </span>
         <span className="rounded-full border border-border px-4 py-2 text-xs font-medium">
           Edit draft
         </span>
-        <span className="text-xs text-muted-foreground">Auto-approves in 30 min</span>
+        <span className="text-xs text-muted-foreground">Review before using</span>
       </div>
     </div>
   );
@@ -140,7 +137,7 @@ function ApplyMock() {
     "Full name",
     "Email",
     "Phone",
-    "Résumé (tailored)",
+    "Résumé file",
     "Cover letter",
     "Work authorization",
     "Years of experience",
@@ -150,10 +147,10 @@ function ApplyMock() {
     <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-semibold tracking-widest text-muted-foreground">
-          GREENHOUSE · SUBMISSION RECEIPT
+          APPLICATION PREPARATION · EXAMPLE
         </p>
         <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-          Submitted
+          Ready to review
         </span>
       </div>
       <div className="mt-4 grid gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -165,7 +162,7 @@ function ApplyMock() {
         ))}
       </div>
       <p className="mt-4 border-t border-border pt-3 font-mono text-xs text-muted-foreground">
-        8 of 8 fields · 0 skipped · applicant #4 of 312
+        Review your details, then continue to the employer's application page.
       </p>
     </div>
   );
@@ -173,10 +170,10 @@ function ApplyMock() {
 
 function TrackMock() {
   const cols = [
-    { name: "Applied", items: ["Vercel", "Notion", "Figma"] },
-    { name: "Viewed", items: ["Stripe", "Linear"] },
-    { name: "Replied", items: ["Atlassian"] },
-    { name: "Interview", items: ["Blue Origin"] },
+    { name: "Applied", items: ["Sample company A", "Sample company B"] },
+    { name: "Under review", items: ["Sample company C"] },
+    { name: "Interview", items: ["Sample company D"] },
+    { name: "Offer", items: ["Example stage"] },
   ];
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -207,7 +204,7 @@ export function HowItWorks() {
     <section id="how-it-works" className="mx-auto max-w-7xl scroll-mt-20 px-5 py-24">
       <Reveal>
         <h2 className="max-w-2xl text-4xl leading-[1.05] font-semibold tracking-[-0.03em] sm:text-5xl">
-          Four stages. One agent. Zero spreadsheets.
+          Four steps to a clearer job search.
         </h2>
       </Reveal>
 

@@ -3,7 +3,13 @@
  */
 import type { DocumentMetadata } from "./types";
 import { AppError } from "./types";
-import { apiRequest, apiDownloadRequest, deleteDocumentApi } from "./api-client";
+import {
+  apiRequest,
+  apiDownloadRequest,
+  deleteDocumentApi,
+  shouldUseLocalPersistence,
+} from "./api-client";
+import { getSafeStorage } from "./storage";
 
 const ALLOWED_TYPES = new Set([
   "application/pdf",
@@ -36,10 +42,33 @@ export async function uploadDocument(
   if (applicationId) formData.append("applicationId", applicationId);
   if (displayName) formData.append("displayName", displayName);
 
-  return await apiRequest<DocumentMetadata>("/documents/upload", userId, {
-    method: "POST",
-    body: formData,
-  });
+  try {
+    return await apiRequest<DocumentMetadata>("/documents/upload", userId, {
+      method: "POST",
+      body: formData,
+    });
+  } catch (error) {
+    if (!shouldUseLocalPersistence()) throw error;
+    const id = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const doc: DocumentMetadata = {
+      id,
+      userId,
+      applicationId: applicationId ?? null,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      storageRef: `local://${id}`,
+      displayName: displayName ?? file.name,
+      createdAt: new Date().toISOString(),
+    };
+
+    const storage = getSafeStorage();
+    if (storage) {
+      const existing = JSON.parse(storage.getItem(`jobpilot_documents_${userId}`) || "[]");
+      storage.setItem(`jobpilot_documents_${userId}`, JSON.stringify([doc, ...existing]));
+    }
+    return doc;
+  }
 }
 
 export async function getDocuments(
@@ -47,7 +76,16 @@ export async function getDocuments(
   applicationId?: string,
 ): Promise<DocumentMetadata[]> {
   const qs = applicationId ? `?applicationId=${applicationId}` : "";
-  return await apiRequest<DocumentMetadata[]>(`/documents${qs}`, userId);
+
+  try {
+    return await apiRequest<DocumentMetadata[]>(`/documents${qs}`, userId);
+  } catch (error) {
+    if (!shouldUseLocalPersistence()) throw error;
+    const storage = getSafeStorage();
+    const raw = storage ? storage.getItem(`jobpilot_documents_${userId}`) || "[]" : "[]";
+    const docs = JSON.parse(raw) as DocumentMetadata[];
+    return applicationId ? docs.filter((doc) => doc.applicationId === applicationId) : docs;
+  }
 }
 
 export async function getDocumentDownloadUrl(userId: string, documentId: string): Promise<string> {
@@ -56,5 +94,17 @@ export async function getDocumentDownloadUrl(userId: string, documentId: string)
 }
 
 export async function deleteDocument(userId: string, documentId: string): Promise<void> {
-  await deleteDocumentApi(userId, documentId);
+  try {
+    await deleteDocumentApi(userId, documentId);
+  } catch (error) {
+    if (!shouldUseLocalPersistence()) throw error;
+    const storage = getSafeStorage();
+    if (!storage) return;
+    const raw = storage.getItem(`jobpilot_documents_${userId}`) || "[]";
+    const docs = JSON.parse(raw) as DocumentMetadata[];
+    storage.setItem(
+      `jobpilot_documents_${userId}`,
+      JSON.stringify(docs.filter((doc) => doc.id !== documentId)),
+    );
+  }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect as import_react_useEffect, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+import { firebaseConfigurationError } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Logo } from "@/components/landing/Logo";
 import { ArrowLeft, Lock, Mail, Eye, EyeOff, Zap, ArrowRight } from "lucide-react";
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/login")({
       { title: "Log In — Access your JobPilot Dashboard" },
       {
         name: "description",
-        content: "Log in to track applications, review matches, and manage automated submissions.",
+        content: "Log in to track applications, review role fit, and access your job search insights.",
       },
     ],
   }),
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login, demoLogin, isAuthenticated } = useAuth();
+  const { login, demoLogin, resetPassword, isAuthenticated } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +30,10 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { googleLogin } = useAuth();
+  const demoAvailable = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === "true";
+  const firebaseConfigured = firebaseConfigurationError === null;
 
   // If already authenticated, redirect to dashboard
   import_react_useEffect(() => {
@@ -70,7 +74,7 @@ function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await login(email, password);
+      const res = await login(email, password, rememberMe);
       if (!res.success) {
         setError(res.error || "Invalid credentials.");
         toast.error(res.error || "Failed to log in.");
@@ -88,8 +92,26 @@ function LoginPage() {
 
   const handleDemoLogin = () => {
     demoLogin();
-    toast.success("Logged in with Demo Account (Alex Carter)!");
-    navigate({ to: "/dashboard" });
+    if (demoAvailable) {
+      toast.success("Logged in with Demo Account (Alex Carter)!");
+      navigate({ to: "/dashboard" });
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setError("Enter your email address to reset your password.");
+      return;
+    }
+    setIsResettingPassword(true);
+    const result = await resetPassword(email);
+    setIsResettingPassword(false);
+    if (result.success) {
+      toast.success("Password reset email accepted by Firebase. Check your inbox.");
+    } else {
+      setError(result.error || "Unable to request a password reset.");
+      toast.error(result.error || "Unable to request a password reset.");
+    }
   };
 
   return (
@@ -121,7 +143,7 @@ function LoginPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Quick Demo Banner */}
-          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3">
+          {demoAvailable && <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/20 text-primary">
                 <Zap size={15} />
@@ -141,22 +163,28 @@ function LoginPage() {
               Demo Login
               <ArrowRight size={12} />
             </button>
-          </div>
+          </div>}
 
           <div className="rounded-2xl border border-border bg-card p-8 shadow-xl">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
               <p className="text-sm text-muted-foreground mt-2">
-                Log in to monitor your applications and active AI agent jobs.
+                Log in to review your applications and career insights.
               </p>
             </div>
+
+            {firebaseConfigurationError && !demoAvailable && (
+              <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive">
+                {firebaseConfigurationError}
+              </div>
+            )}
 
             {/* Google Sign-In Button */}
             <div className="mb-6">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
-                disabled={googleLoading}
+                disabled={googleLoading || !firebaseConfigured}
                 className="w-full flex items-center justify-center gap-3 rounded-xl border border-border bg-secondary/50 py-3 text-sm font-semibold hover:bg-secondary hover:border-primary/40 transition-all shadow-sm group disabled:opacity-50"
               >
                 {googleLoading ? (
@@ -229,10 +257,11 @@ function LoginPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => toast.info("Password reset link sent (Demo)")}
+                    onClick={() => void handlePasswordReset()}
+                    disabled={isResettingPassword}
                     className="text-xs text-primary hover:underline"
                   >
-                    Forgot password?
+                    {isResettingPassword ? "Sending..." : "Forgot password?"}
                   </button>
                 </div>
                 <div className="relative">
@@ -266,7 +295,7 @@ function LoginPage() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="rounded border-border text-primary focus:ring-primary"
                   />
-                  Remember me for 30 days
+                  Keep me signed in
                 </label>
               </div>
 
@@ -288,9 +317,7 @@ function LoginPage() {
         </div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-muted-foreground">
-        JobPilot &copy; 2026. Protected by end-to-end encryption.
-      </footer>
+      <footer className="py-6 text-center text-xs text-muted-foreground">JobPilot &copy; 2026.</footer>
     </div>
   );
 }
