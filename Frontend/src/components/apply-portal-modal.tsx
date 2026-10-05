@@ -292,7 +292,6 @@ export function ApplyPortalModal({
 
     submitLock.current = true;
     setSubmitStatus("saving");
-    let submitTimeout: ReturnType<typeof setTimeout> | undefined;
     try {
       // 1. Save profile to ensure memory across future roles
       const updatedProfile: UserProfile = {
@@ -320,15 +319,7 @@ export function ApplyPortalModal({
       onProfileUpdated?.(updatedProfile);
 
       // 2. Track application
-      await Promise.race([
-        onApplyAndTrack(job),
-        new Promise<never>((_, reject) => {
-          submitTimeout = setTimeout(
-            () => reject(new Error("Saving timed out. Please try again.")),
-            10000,
-          );
-        }),
-      ]);
+      await onApplyAndTrack(job);
 
       setSubmitStatus("submitted");
       setIsAlreadyApplied(true);
@@ -339,7 +330,6 @@ export function ApplyPortalModal({
       const message = err instanceof Error ? err.message : "Couldn't save your application. Please try again.";
       toast.error(message);
     } finally {
-      if (submitTimeout) clearTimeout(submitTimeout);
       submitLock.current = false;
       setSubmitStatus((prev) => (prev === "saving" ? "idle" : prev));
     }
