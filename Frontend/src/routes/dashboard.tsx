@@ -148,6 +148,23 @@ function DashboardPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
 
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      navigate({ to: "/login" });
+    }
+  }, [isAuthLoading, user, navigate]);
+
+  if (isAuthLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="mt-4 text-sm text-muted-foreground">Checking your session…</p>
+        </div>
+      </div>
+    );
+  }
+
   // Navigation State
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
 

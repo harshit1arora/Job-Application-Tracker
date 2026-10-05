@@ -148,7 +148,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     if (!auth) {
-      if (LOCAL_DEMO_ENABLED) {
+      if (import.meta.env.PROD) {
+        setUser(null);
+        localStorage.removeItem("jobpilot_local_user");
+      } else if (LOCAL_DEMO_ENABLED) {
         try {
           const savedLocal = localStorage.getItem("jobpilot_local_user");
           if (savedLocal) setUser(JSON.parse(savedLocal));
