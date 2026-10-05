@@ -48,6 +48,30 @@ const API_BASE = (() => {
 
 const REQUEST_TIMEOUT_MS = 30000;
 
+function handleAuthFailure() {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("jobpilot_local_user");
+      localStorage.removeItem("jobpilot_target_role");
+    } catch {
+      // ignore storage errors in private browsing or locked-down environments
+    }
+
+    try {
+      if (auth?.currentUser) {
+        void auth.signOut();
+      }
+    } catch {
+      // ignore sign-out errors; the app should simply redirect to login
+    }
+
+    const current = window.location.pathname;
+    if (current !== "/login" && current !== "/signup") {
+      window.location.assign("/login");
+    }
+  }
+}
+
 function shouldUseLocalFallback(): boolean {
   if (isDemoMode) return true;
   if (isTestEnvironment) return true;
@@ -189,9 +213,12 @@ async function apiRequest<T>(
         // Keep the status-based message when the server response is not JSON.
       }
 
+      if (res.status === 401 || res.status === 403) {
+        handleAuthFailure();
+        throw new AppError("AUTH_ERROR", errorMessage);
+      }
       if (res.status === 400 || res.status === 422)
         throw new AppError("VALIDATION_ERROR", errorMessage);
-      if (res.status === 401 || res.status === 403) throw new AppError("AUTH_ERROR", errorMessage);
       if (res.status === 404) throw new AppError("NOT_FOUND", errorMessage);
       throw new AppError("SERVER_ERROR", errorMessage);
     }
