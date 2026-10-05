@@ -65,6 +65,7 @@ import {
   Send,
   MoreVertical,
   CheckCircle2,
+  RotateCw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({

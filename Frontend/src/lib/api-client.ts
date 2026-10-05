@@ -48,28 +48,24 @@ const API_BASE = (() => {
 
 const REQUEST_TIMEOUT_MS = 30000;
 
-function handleAuthFailure() {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.removeItem("jobpilot_local_user");
-      localStorage.removeItem("jobpilot_target_role");
-    } catch {
-      // ignore storage errors in private browsing or locked-down environments
-    }
-
-    try {
-      if (auth?.currentUser) {
-        void auth.signOut();
-      }
-    } catch {
-      // ignore sign-out errors; the app should simply redirect to login
-    }
-
-    const current = window.location.pathname;
-    if (current !== "/login" && current !== "/signup") {
-      window.location.assign("/login");
-    }
+export function handleAuthFailure(hasAuthenticatedFirebaseUser = Boolean(auth?.currentUser)) {
+  if (
+    typeof window === "undefined" ||
+    hasAuthenticatedFirebaseUser ||
+    window.location.pathname === "/login" ||
+    window.location.pathname === "/signup"
+  ) {
+    return;
   }
+
+  try {
+    localStorage.removeItem("jobpilot_local_user");
+    localStorage.removeItem("jobpilot_target_role");
+  } catch {
+    // ignore storage errors in private browsing or locked-down environments
+  }
+
+  window.location.assign("/login");
 }
 
 function shouldUseLocalFallback(): boolean {
@@ -198,11 +194,22 @@ async function apiRequest<T>(
 
     if (!(init.body instanceof FormData)) headers["Content-Type"] = "application/json";
     const mergedHeaders = { ...headers, ...((init.headers as Record<string, string>) || {}) };
-    const res = await fetch(`${API_BASE}${path}`, {
+    const requestInit = {
       ...init,
       headers: mergedHeaders,
       signal: controller.signal,
-    });
+    };
+    let res = await fetch(`${API_BASE}${path}`, requestInit);
+
+    if (res.status === 401 && auth?.currentUser) {
+      try {
+        const refreshedToken = await auth.currentUser.getIdToken(true);
+        mergedHeaders.Authorization = `Bearer ${refreshedToken}`;
+        res = await fetch(`${API_BASE}${path}`, requestInit);
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn("[api-client] Failed to refresh Firebase token:", error);
+      }
+    }
 
     if (!res.ok) {
       let errorMessage = `Request failed with status ${res.status}`;
@@ -213,10 +220,11 @@ async function apiRequest<T>(
         // Keep the status-based message when the server response is not JSON.
       }
 
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) {
         handleAuthFailure();
         throw new AppError("AUTH_ERROR", errorMessage);
       }
+      if (res.status === 403) throw new AppError("AUTH_ERROR", errorMessage);
       if (res.status === 400 || res.status === 422)
         throw new AppError("VALIDATION_ERROR", errorMessage);
       if (res.status === 404) throw new AppError("NOT_FOUND", errorMessage);
