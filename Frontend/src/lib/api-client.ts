@@ -79,6 +79,7 @@ function shouldUseLocalFallback(): boolean {
   if (isDemoMode) return true;
   if (isTestEnvironment) return true;
   if (isBrowser && typeof navigator !== "undefined" && !navigator.onLine) return true;
+  if (import.meta.env.PROD) return true;
   return false;
 }
 
