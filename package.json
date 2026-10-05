@@ -7,7 +7,7 @@
     "dev": "npm --prefix Frontend run dev",
     "build": "npm --prefix Frontend run build",
     "test": "npm --prefix Frontend test",
-    "backend": "cd Backend_FastAPI && uvicorn main:app --port 5117 --reload",
+    "backend": "cd Backend_FastAPI && .\\venv\\Scripts\\uvicorn main:app --port 5117 --reload",
     "start:all": "concurrently \"npm --prefix Frontend run dev\" \"npm run backend\""
   },
   "devDependencies": {

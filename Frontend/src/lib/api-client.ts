@@ -52,7 +52,7 @@ const API_BASE = (() => {
   return base.endsWith("/api/api") ? base.slice(0, -4) : base;
 })();
 
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 90000;
 const APPLICATION_SAVE_TIMEOUT_MS = 120000;
 
 export function handleAuthFailure(hasAuthenticatedFirebaseUser = Boolean(auth?.currentUser)) {

@@ -846,9 +846,14 @@ function DashboardPage() {
                   {isLoadingApps ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-muted-foreground">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 size={16} className="animate-spin" />
-                          Loading applications...
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>Loading applications...</span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground/60 max-w-[200px]">
+                            (If using the free-tier backend, servers may take up to 60 seconds to wake up)
+                          </span>
                         </div>
                       </td>
                     </tr>
