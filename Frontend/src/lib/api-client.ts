@@ -55,6 +55,44 @@ const API_BASE = (() => {
 const REQUEST_TIMEOUT_MS = 90000;
 const APPLICATION_SAVE_TIMEOUT_MS = 120000;
 
+// ---------------------------------------------------------------------------
+// Backend reachability probe
+// ---------------------------------------------------------------------------
+// On first request in production we do a fast 5-second health check.
+// If the backend is sleeping or dead we flip backendReachable = false and
+// every subsequent call instantly uses localStorage instead of waiting 90s.
+const HEALTH_PROBE_TIMEOUT_MS = 5000;
+let backendReachable: boolean | null = isDemoMode ? false : null; // null = not yet checked
+let healthProbePromise: Promise<boolean> | null = null;
+
+async function probeBackend(): Promise<boolean> {
+  if (!isBrowser || isDemoMode) return false;
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), HEALTH_PROBE_TIMEOUT_MS);
+    const res = await fetch(`${API_BASE}/health`, { signal: controller.signal, cache: "no-store" });
+    clearTimeout(id);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Returns true only if the backend has been confirmed reachable this session. */
+async function ensureBackendReachable(): Promise<boolean> {
+  if (backendReachable !== null) return backendReachable;
+  if (!healthProbePromise) {
+    healthProbePromise = probeBackend().then((ok) => {
+      backendReachable = ok;
+      if (!ok && import.meta.env.DEV) {
+        console.warn("[api-client] Backend health probe failed — switching to localStorage fallback.");
+      }
+      return ok;
+    });
+  }
+  return healthProbePromise;
+}
+
 export function handleAuthFailure(hasAuthenticatedFirebaseUser = Boolean(auth?.currentUser)) {
   if (
     typeof window === "undefined" ||
@@ -335,6 +373,12 @@ export async function fetchApplications(
     return getStoredApps(userId);
   }
 
+  // Fast-path: skip network entirely if the backend is known to be unreachable.
+  const isReachable = await ensureBackendReachable();
+  if (!isReachable) {
+    return getStoredApps(userId);
+  }
+
   try {
     const remote = await apiRequest<ApplicationDocument[]>(`/applications${qs}`, userId);
     if (Array.isArray(remote)) return remote;
@@ -598,6 +642,15 @@ export async function fetchReminders(
     return list;
   }
 
+  // Fast-path: skip network entirely if the backend is known to be unreachable.
+  const isReachable = await ensureBackendReachable();
+  if (!isReachable) {
+    let list = getStoredReminders(userId);
+    if (applicationId) list = list.filter((r) => r.applicationId === applicationId);
+    if (isCompleted !== undefined) list = list.filter((r) => r.isCompleted === isCompleted);
+    return list;
+  }
+
   try {
     return await apiRequest<ReminderDocument[]>(`/reminders${qs}`, userId);
   } catch (err) {
@@ -715,6 +768,18 @@ export async function fetchDashboardStatsApi(userId: string): Promise<DashboardS
       byStatus,
       recentApplications: apps.slice(0, 5),
     };
+  }
+
+  // Fast-path: skip network entirely if the backend is known to be unreachable.
+  const isReachable = await ensureBackendReachable();
+  if (!isReachable) {
+    const apps = getStoredApps(userId);
+    const byStatus = { applied: 0, screening: 0, interviewing: 0, offered: 0, rejected: 0 };
+    apps.forEach((a) => {
+      const key = a.status.toLowerCase() as keyof typeof byStatus;
+      if (byStatus[key] !== undefined) byStatus[key]++;
+    });
+    return { totalApplications: apps.length, byStatus, recentApplications: apps.slice(0, 5) };
   }
 
   try {
