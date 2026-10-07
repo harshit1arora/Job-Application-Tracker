@@ -15,7 +15,6 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { FollowUpDraftModal } from "@/components/followup-draft-modal";
-import { getApplications } from "@/lib/applications-service";
 import { getProfile } from "@/lib/profile";
 import {
   deleteFollowUpLog,
@@ -65,7 +64,8 @@ function FollowUpsPage() {
 
   const load = useCallback(async () => {
     if (!userId) return null;
-    const [snap, apps] = await Promise.all([getFollowUpSnapshot(userId), getApplications(userId)]);
+    const snap = await getFollowUpSnapshot(userId);
+    const apps = snap.applications;
     setSnapshot(snap);
     setApplications(apps);
     setSettingsDraft(snap.settings);
@@ -84,12 +84,6 @@ function FollowUpsPage() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        // Auto-create reminders first (no-op when disabled), then read the fresh state.
-        const scan = await scanAndCreateReminders(userId).catch(() => null);
-        if (!active) return;
-        if (scan && scan.created.length > 0) {
-          toast.success(`Created ${scan.created.length} follow-up reminder${scan.created.length > 1 ? "s" : ""}`);
-        }
         const loaded = await load();
         if (!active || !loaded) return;
 
@@ -105,6 +99,14 @@ function FollowUpsPage() {
         if (target) {
           setDraftItem(buildFollowUpItem(target, loaded.snap.logs, loaded.snap.settings));
         }
+
+        void scanAndCreateReminders(userId, { snapshot: loaded.snap })
+          .then(async (scan) => {
+            if (!active || scan.created.length === 0) return;
+            toast.success(`Created ${scan.created.length} follow-up reminder${scan.created.length > 1 ? "s" : ""}`);
+            await load();
+          })
+          .catch(() => {});
       } catch (error) {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Unable to load follow-ups.";

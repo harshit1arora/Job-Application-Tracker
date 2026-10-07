@@ -214,6 +214,7 @@ export async function deleteFollowUpLog(userId: string, logId: string): Promise<
 
 export interface FollowUpSnapshot {
   settings: FollowUpSettings;
+  applications: Awaited<ReturnType<typeof getApplications>>;
   logs: FollowUpLog[];
   reminders: ReminderDocument[];
   evaluation: FollowUpEvaluation;
@@ -228,6 +229,7 @@ export async function getFollowUpSnapshot(userId: string, now: number = Date.now
   ]);
   return {
     settings,
+    applications,
     logs,
     reminders,
     evaluation: evaluateFollowUps({ applications, reminders, logs, settings, now }),
@@ -266,14 +268,14 @@ const AUTO_SCAN_MIN_INTERVAL_MS = 5 * 60 * 1000;
  */
 export function scanAndCreateReminders(
   userId: string,
-  options: { force?: boolean; now?: number } = {},
+  options: { force?: boolean; now?: number; snapshot?: FollowUpSnapshot } = {},
 ): Promise<ScanResult> {
   const existing = inFlightScans.get(userId);
   if (existing) return existing;
 
   const run = (async (): Promise<ScanResult> => {
     const scanTime = options.now ?? Date.now();
-    const snapshot = await getFollowUpSnapshot(userId, scanTime);
+    const snapshot = options.snapshot ?? (await getFollowUpSnapshot(userId, scanTime));
     const { settings, reminders, evaluation } = snapshot;
     if (!settings.enabled) return { created: [], skipped: "disabled", evaluation };
     if (!settings.autoCreateReminders && !options.force) return { created: [], skipped: "auto-off", evaluation };
