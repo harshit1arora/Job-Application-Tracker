@@ -4,17 +4,19 @@
  * Pings the Render backend /health endpoint to prevent the free-tier service
  * from going to sleep.
  *
- * Deploy: Add to vercel.json crons to run every 10 minutes:
- *   { "path": "/api/keep-alive", "schedule": "*/10 * * * *" }
- *
- * This function is safe to call via a GET request at any time.
+ * Scheduled via vercel.json crons to run every 10 minutes.
+ * Can also be triggered manually via GET /api/keep-alive
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const BACKEND_URL = "https://job-tracker-api-fo65.onrender.com/api/health";
 const TIMEOUT_MS = 20_000;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(
+  req: { method?: string },
+  res: {
+    status: (code: number) => { json: (body: unknown) => void };
+  },
+) {
   const started = Date.now();
   try {
     const controller = new AbortController();
@@ -33,11 +35,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       backend: BACKEND_URL,
       pinged_at: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     const elapsed = Date.now() - started;
+    const message = err instanceof Error ? err.message : "unknown error";
     res.status(200).json({
       ok: false,
-      error: err?.message ?? "unknown",
+      error: message,
       elapsed_ms: elapsed,
       backend: BACKEND_URL,
       pinged_at: new Date().toISOString(),
