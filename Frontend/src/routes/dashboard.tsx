@@ -31,6 +31,7 @@ import { ApplyPortalModal } from "@/components/apply-portal-modal";
 import { QuickFillWidget } from "@/components/quick-fill-widget";
 import { InterviewCalendarModal } from "@/components/interview-calendar-modal";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { FollowUpsDueCard } from "@/components/followups-due-card";
 import { JobCareerIntelligencePanel } from "@/components/job-career-intelligence-panel";
 import {
   computeDashboardCareerIntelligence,
@@ -518,6 +519,8 @@ function DashboardPage() {
 
       {/* MAIN CONTENT AREA matching reference image layout */}
       <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl mx-auto overflow-y-auto w-full space-y-9">
+        {user ? <FollowUpsDueCard userId={user.id} /> : null}
+
         {/* Top Section: "Top job matches" */}
         <section>
           <div className="flex items-center justify-between mb-4">

@@ -238,6 +238,164 @@ export interface CreateReminderInput {
 }
 
 // ---------------------------------------------------------------------------
+// Offers & Negotiation
+// ---------------------------------------------------------------------------
+
+export const OFFER_STATUSES = ["Pending", "Negotiating", "Accepted", "Declined"] as const;
+export type OfferStatus = (typeof OFFER_STATUSES)[number];
+
+export const WORK_MODES = ["Remote", "Hybrid", "On-site"] as const;
+export type WorkMode = (typeof WORK_MODES)[number];
+
+export const CURRENCIES = ["USD", "INR", "EUR", "GBP", "CAD", "AUD", "SGD", "AED"] as const;
+export type CurrencyCode = (typeof CURRENCIES)[number];
+
+export const NEGOTIATION_TONES = ["collaborative", "firm", "enthusiastic"] as const;
+export type NegotiationTone = (typeof NEGOTIATION_TONES)[number];
+
+/** A job offer. Money fields are yearly amounts in `currency` (equityValue is the total grant). */
+export interface OfferDocument {
+  id: string;
+  userId: string;
+  applicationId?: string | undefined;
+  company: string;
+  jobTitle: string;
+  location?: string | undefined;
+  workMode: WorkMode;
+  currency: string;
+  baseSalary: number;
+  annualBonus: number;
+  signingBonus: number;
+  equityValue: number;
+  equityVestYears: number;
+  retirementMatchPct: number;
+  otherBenefitsValue: number;
+  ptoDays?: number | undefined;
+  growthRating: number; // 1-5
+  workLifeRating: number; // 1-5
+  cultureRating: number; // 1-5
+  deadline?: string | undefined; // YYYY-MM-DD
+  status: OfferStatus;
+  notes?: string | undefined;
+  negotiationPlan?: string | undefined; // JSON string of the last NegotiationPlan
+  annualTotalComp?: number | undefined; // computed by the API; the UI recomputes locally
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOfferInput {
+  applicationId?: string | undefined;
+  company: string;
+  jobTitle: string;
+  location?: string | undefined;
+  workMode: WorkMode;
+  currency: string;
+  baseSalary: number;
+  annualBonus: number;
+  signingBonus: number;
+  equityValue: number;
+  equityVestYears: number;
+  retirementMatchPct: number;
+  otherBenefitsValue: number;
+  ptoDays?: number | undefined;
+  growthRating: number;
+  workLifeRating: number;
+  cultureRating: number;
+  deadline?: string | undefined;
+  status: OfferStatus;
+  notes?: string | undefined;
+}
+
+export type UpdateOfferInput = Partial<CreateOfferInput> & {
+  negotiationPlan?: string | undefined;
+};
+
+export interface NegotiationCounter {
+  floor: number;
+  target: number;
+  opening: number;
+  raisePct: number;
+  aggressive: boolean;
+  rationale: string;
+}
+
+export interface NegotiationPlan {
+  strategy: string;
+  counter: NegotiationCounter;
+  talkingPoints: string[];
+  email: { subject: string; body: string };
+  phoneScript: string;
+  pushbackResponses: Array<{ objection: string; response: string }>;
+  risks: string[];
+  /** "ai" = Gemini wrote the prose, "template" = offline fallback was used. */
+  source: "ai" | "template";
+  generatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Smart Follow-ups
+// ---------------------------------------------------------------------------
+
+export const FOLLOWUP_TONES = ["polite", "friendly", "direct"] as const;
+export type FollowUpTone = (typeof FOLLOWUP_TONES)[number];
+
+export const FOLLOWUP_CHANNELS = ["email", "linkedin", "call", "other"] as const;
+export type FollowUpChannel = (typeof FOLLOWUP_CHANNELS)[number];
+
+export interface FollowUpSettings {
+  enabled: boolean;
+  appliedDays: number;
+  underReviewDays: number;
+  interviewDays: number;
+  maxFollowUps: number;
+  autoCreateReminders: boolean;
+  defaultTone: FollowUpTone;
+}
+
+export interface FollowUpLog {
+  id: string;
+  userId: string;
+  applicationId: string;
+  channel: FollowUpChannel;
+  tone?: string | undefined;
+  subject?: string | undefined;
+  body?: string | undefined;
+  note?: string | undefined;
+  createdAt: string;
+}
+
+export interface CreateFollowUpLogInput {
+  applicationId: string;
+  channel: FollowUpChannel;
+  tone?: string | undefined;
+  subject?: string | undefined;
+  body?: string | undefined;
+  note?: string | undefined;
+}
+
+export interface FollowUpItem {
+  application: ApplicationDocument;
+  /** Whole days since the last activity on the application. */
+  daysQuiet: number;
+  thresholdDays: number;
+  /** 1 for the first follow-up, 2 for the second, ... */
+  followUpNumber: number;
+  sentCount: number;
+  lastActivityAt: number; // epoch ms
+  /** Days until the application becomes "quiet" (0 when already due). */
+  daysUntilDue: number;
+  /** When an open follow-up reminder is scheduled in the future (a snooze). */
+  snoozedUntil?: string | undefined;
+}
+
+export interface FollowUpEvaluation {
+  due: FollowUpItem[];
+  exhausted: FollowUpItem[];
+  snoozed: FollowUpItem[];
+  upcoming: FollowUpItem[];
+}
+
+// ---------------------------------------------------------------------------
 // Error Handling
 // ---------------------------------------------------------------------------
 

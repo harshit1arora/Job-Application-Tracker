@@ -18,7 +18,15 @@
  *   so we don't have to define the same shape twice.
  */
 import { z } from "zod";
-import { APPLICATION_STATUSES, APPLICATION_SOURCES, REMINDER_TYPES } from "./types";
+import {
+  APPLICATION_STATUSES,
+  APPLICATION_SOURCES,
+  REMINDER_TYPES,
+  OFFER_STATUSES,
+  WORK_MODES,
+  FOLLOWUP_TONES,
+  FOLLOWUP_CHANNELS,
+} from "./types";
 
 // ---------------------------------------------------------------------------
 // Application Schemas
@@ -131,3 +139,119 @@ export const createReminderSchema = z.object({
 });
 
 export type CreateReminderData = z.infer<typeof createReminderSchema>;
+
+// ---------------------------------------------------------------------------
+// Offer Schemas
+// ---------------------------------------------------------------------------
+
+const MONEY_MAX = 1_000_000_000;
+
+const moneyField = (label: string) =>
+  z
+    .number({ invalid_type_error: `${label} must be a number` })
+    .min(0, `${label} cannot be negative`)
+    .max(MONEY_MAX, `${label} is too large`);
+
+const ratingField = (label: string) =>
+  z
+    .number({ invalid_type_error: `${label} must be a number` })
+    .int(`${label} must be a whole number`)
+    .min(1, `${label} must be between 1 and 5`)
+    .max(5, `${label} must be between 1 and 5`);
+
+export const createOfferSchema = z.object({
+  applicationId: z.string().max(100).optional(),
+  company: z
+    .string()
+    .trim()
+    .min(1, "Company name is required")
+    .max(100, "Company name must be 100 characters or fewer"),
+  jobTitle: z
+    .string()
+    .trim()
+    .min(1, "Job title is required")
+    .max(150, "Job title must be 150 characters or fewer"),
+  location: z.string().max(100, "Location must be 100 characters or fewer").optional(),
+  workMode: z.enum(WORK_MODES, { errorMap: () => ({ message: "Select Remote, Hybrid or On-site" }) }),
+  currency: z.string().regex(/^[A-Z]{3}$/, "Currency must be a 3-letter code such as USD"),
+  baseSalary: moneyField("Base salary").gt(0, "Base salary is required"),
+  annualBonus: moneyField("Bonus"),
+  signingBonus: moneyField("Signing bonus"),
+  equityValue: moneyField("Equity value"),
+  equityVestYears: z
+    .number({ invalid_type_error: "Vesting period must be a number" })
+    .gt(0, "Vesting period must be greater than 0")
+    .max(10, "Vesting period must be 10 years or fewer"),
+  retirementMatchPct: z
+    .number({ invalid_type_error: "Retirement match must be a number" })
+    .min(0, "Retirement match cannot be negative")
+    .max(100, "Retirement match cannot exceed 100%"),
+  otherBenefitsValue: moneyField("Other benefits"),
+  ptoDays: z
+    .number({ invalid_type_error: "PTO days must be a number" })
+    .int("PTO days must be a whole number")
+    .min(0, "PTO days cannot be negative")
+    .max(366, "PTO days cannot exceed 366")
+    .optional(),
+  growthRating: ratingField("Growth rating"),
+  workLifeRating: ratingField("Work-life rating"),
+  cultureRating: ratingField("Culture rating"),
+  deadline: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Deadline must be in YYYY-MM-DD format")
+    .optional(),
+  status: z.enum(OFFER_STATUSES, { errorMap: () => ({ message: "Select a valid offer status" }) }),
+  notes: z.string().max(2000, "Notes must be 2000 characters or fewer").optional(),
+});
+
+/**
+ * Partial update. The four optional columns accept `null` so a form can clear them
+ * (JSON drops `undefined`, so `null` is the only way to tell the API "remove this value").
+ */
+export const updateOfferSchema = createOfferSchema.partial().extend({
+  location: z.string().max(100).nullable().optional(),
+  ptoDays: z.number().int().min(0).max(366).nullable().optional(),
+  deadline: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Deadline must be in YYYY-MM-DD format")
+    .nullable()
+    .optional(),
+  notes: z.string().max(2000, "Notes must be 2000 characters or fewer").nullable().optional(),
+  negotiationPlan: z.string().max(30000).optional(),
+});
+
+export type CreateOfferData = z.infer<typeof createOfferSchema>;
+
+// ---------------------------------------------------------------------------
+// Follow-up Schemas
+// ---------------------------------------------------------------------------
+
+const dayField = (label: string) =>
+  z
+    .number({ invalid_type_error: `${label} must be a number` })
+    .int(`${label} must be a whole number`)
+    .min(1, `${label} must be at least 1 day`)
+    .max(90, `${label} must be 90 days or fewer`);
+
+export const followUpSettingsSchema = z.object({
+  enabled: z.boolean(),
+  appliedDays: dayField("Applied threshold"),
+  underReviewDays: dayField("Under-review threshold"),
+  interviewDays: dayField("Interview threshold"),
+  maxFollowUps: z
+    .number({ invalid_type_error: "Max follow-ups must be a number" })
+    .int("Max follow-ups must be a whole number")
+    .min(1, "Max follow-ups must be at least 1")
+    .max(10, "Max follow-ups must be 10 or fewer"),
+  autoCreateReminders: z.boolean(),
+  defaultTone: z.enum(FOLLOWUP_TONES, { errorMap: () => ({ message: "Select a valid tone" }) }),
+});
+
+export const createFollowUpLogSchema = z.object({
+  applicationId: z.string().min(1, "Application ID is required").max(100),
+  channel: z.enum(FOLLOWUP_CHANNELS, { errorMap: () => ({ message: "Select a valid channel" }) }),
+  tone: z.string().max(20).optional(),
+  subject: z.string().max(200, "Subject must be 200 characters or fewer").optional(),
+  body: z.string().max(5000, "Message must be 5000 characters or fewer").optional(),
+  note: z.string().max(1000, "Note must be 1000 characters or fewer").optional(),
+});

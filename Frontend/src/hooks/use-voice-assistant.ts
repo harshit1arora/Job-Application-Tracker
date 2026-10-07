@@ -60,6 +60,33 @@ const NAVIGATION_INTENTS: Array<{
     ],
   },
   {
+    route: "/offers",
+    label: "Offers",
+    keywords: [
+      "offers",
+      "my offers",
+      "job offers",
+      "compare offers",
+      "offer comparison",
+      "negotiate",
+      "negotiation",
+      "salary negotiation",
+    ],
+  },
+  {
+    route: "/followups",
+    label: "Follow-ups",
+    keywords: [
+      "follow ups",
+      "follow-ups",
+      "followups",
+      "follow up",
+      "follow-up",
+      "follow up emails",
+      "quiet applications",
+    ],
+  },
+  {
     route: "/profile",
     label: "Profile & Résumé",
     keywords: [

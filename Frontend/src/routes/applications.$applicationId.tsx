@@ -383,6 +383,42 @@ function ApplicationDetailsPage() {
               {new Date(application.createdAt).toLocaleDateString()}
             </p>
           </div>
+          <div className="flex flex-wrap gap-2">
+            {(application.status === "Applied" ||
+              application.status === "Under Review" ||
+              application.status === "Interview") && (
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("jobpilot_followup_focus", application.id);
+                  } catch {
+                    // sessionStorage unavailable — the follow-up page still works without the shortcut
+                  }
+                  navigate({ to: "/followups" });
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-input px-4 py-2 text-xs font-bold hover:bg-secondary/60"
+              >
+                Draft follow-up
+              </button>
+            )}
+            {application.status === "Offer" && (
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("jobpilot_offer_prefill", application.id);
+                  } catch {
+                    // sessionStorage unavailable — the offer form can still be opened manually
+                  }
+                  navigate({ to: "/offers" });
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-95"
+              >
+                Compare &amp; negotiate offer
+              </button>
+            )}
+          </div>
         </div>
 
         {/* AI Career Intelligence (Predictor, Proof, Twin, Next-Best-Action) */}

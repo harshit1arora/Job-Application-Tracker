@@ -5,6 +5,11 @@ import { useState, useEffect } from "react";
 import { getApplications } from "@/lib/applications-service";
 import { getUnreadInboxCount } from "@/lib/inbox-state";
 import {
+  FOLLOWUPS_CHANGED_EVENT,
+  getDueFollowUpCount,
+  maybeAutoScan,
+} from "@/lib/followups-service";
+import {
   LayoutDashboard,
   Search,
   FileText,
@@ -16,6 +21,8 @@ import {
   LogOut,
   Sparkles,
   Globe,
+  Scale,
+  BellRing,
 } from "lucide-react";
 
 interface DashboardSidebarProps {
@@ -31,6 +38,7 @@ export function DashboardSidebar({
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [liveApplicationsCount, setLiveApplicationsCount] = useState(0);
   const [liveInboxCount, setLiveInboxCount] = useState(0);
+  const [dueFollowUps, setDueFollowUps] = useState(0);
 
   // Get current pathname to highlight active link
   const routerState = useRouterState();
@@ -71,6 +79,31 @@ export function DashboardSidebar({
       window.removeEventListener("focus", refreshCounts);
     };
   }, [user?.id, applicationsCount]);
+
+  // Smart follow-ups: create reminders for quiet applications (throttled) and keep the badge fresh.
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+    let isActive = true;
+
+    const refreshDue = async () => {
+      const count = await getDueFollowUpCount(userId);
+      if (isActive) setDueFollowUps(count);
+    };
+
+    void (async () => {
+      await maybeAutoScan(userId);
+      await refreshDue();
+    })();
+    window.addEventListener(FOLLOWUPS_CHANGED_EVENT, refreshDue);
+    window.addEventListener("focus", refreshDue);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener(FOLLOWUPS_CHANGED_EVENT, refreshDue);
+      window.removeEventListener("focus", refreshDue);
+    };
+  }, [user?.id]);
 
   const displayedApplicationsCount = applicationsCount ?? liveApplicationsCount;
   const displayedInboxCount = inboxCount ?? liveInboxCount;
@@ -202,6 +235,45 @@ export function DashboardSidebar({
               />
               <span>Tracker</span>
             </div>
+          </Link>
+
+          <Link
+            to="/offers"
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all ${
+              currentPath === "/offers"
+                ? "bg-[#f1f3f7] dark:bg-secondary font-bold text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Scale
+                size={18}
+                className={currentPath === "/offers" ? "text-foreground" : "text-muted-foreground"}
+              />
+              <span>Offers</span>
+            </div>
+          </Link>
+
+          <Link
+            to="/followups"
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all ${
+              currentPath === "/followups"
+                ? "bg-[#f1f3f7] dark:bg-secondary font-bold text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <BellRing
+                size={18}
+                className={currentPath === "/followups" ? "text-foreground" : "text-muted-foreground"}
+              />
+              <span>Follow-ups</span>
+            </div>
+            {dueFollowUps > 0 ? (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-500">
+                {dueFollowUps}
+              </span>
+            ) : null}
           </Link>
 
           <div className="pt-4 mt-4 border-t border-border/60 space-y-1">

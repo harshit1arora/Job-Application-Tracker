@@ -111,6 +111,33 @@ flowchart TB
 - **Protocol Security**: Zod validation restricts application URLs strictly to `http://` and `https://`, blocking malicious schemes (`javascript:`, `data:`, `vbscript:`).
 - **Zod AI Schema Validation & Fallback**: AI extraction is parsed against strict runtime schemas with automatic deterministic fallback if LLM inference times out or fails.
 
+### 7. 🤝 Offer Comparison & Salary Negotiation Coach
+- **Offers workspace (`/offers`)**: record offers with base, bonus, signing bonus, equity (spread over its vesting period), retirement match, benefits, PTO, work mode and growth / work-life / culture ratings. Offers can be linked to a tracked application (an application in the **Offer** stage gets a *Compare & negotiate offer* shortcut that pre-fills the form from its salary range).
+- **True yearly value**: total comp / yr, first-year total and a flat 4-year value per offer, so a big signing bonus or equity grant can't hide a lower base.
+- **Side-by-side comparison**: pick up to 4 offers (same currency), tune the weights (compensation / growth / work-life / culture) and get a ranked weighted score with the best value highlighted in every row.
+- **Negotiation coach**: choose a tone (collaborative / firm / enthusiastic), priorities, leverage and selling points. The coach returns a strategy, talking points, a ready-to-send email, a phone script and answers to three likely pushbacks. **Numbers are computed deterministically** (opening ask / target / lowest counter, capped and flagged above +25%) and handed to Gemini, which only writes the words — it can never invent a figure. If the AI is unavailable an offline template is used. Plans are saved on the offer.
+- **Deadline reminders**: an offer with a decision deadline creates a `deadline` reminder on the Tracker calendar.
+
+### 8. 🔔 Smart Follow-up Automation
+- **Quiet-application detection (`/followups`)**: an application in *Applied*, *Under Review* or *Interview* is "quiet" after a configurable number of days (defaults 7 / 10 / 4) measured from its last update or your last logged follow-up.
+- **Auto-created reminders**: quiet applications automatically get a `follow-up` reminder (visible on the Tracker calendar). The scan is idempotent — one open reminder per application, no duplicates — and runs when the app loads (throttled) or via **Scan now**.
+- **AI-drafted messages**: one click drafts a polite / friendly / direct email or LinkedIn message that escalates with each follow-up (check-in → add value → graceful close). Placeholders such as `[Recruiter name]` are used instead of invented details; an offline template covers AI outages.
+- **Actions**: *Mark as sent* (logs it, completes the open reminder and restarts the clock), *Snooze 3d*, per-user history, and a "consider moving on" list once your max follow-ups are reached.
+- **Visibility**: sidebar badge, dashboard "Follow-ups due" card, and voice navigation ("open offers", "go to follow-ups").
+
+#### New API endpoints (all require auth and are scoped to the signed-in user)
+| Method | Path | Purpose |
+|---|---|---|
+| GET / POST | `/api/offers` | List / create offers |
+| GET / PATCH / DELETE | `/api/offers/{id}` | Read / update / delete an offer (deleting an application only detaches its offers) |
+| POST | `/api/ai/negotiate` | AI negotiation plan (503 when Gemini is not configured → frontend template fallback) |
+| GET / PUT | `/api/followups/settings` | Per-user quiet-day thresholds, max follow-ups, auto-reminder switch, default tone |
+| GET / POST | `/api/followups/logs` | List / log a sent follow-up (also restarts the application's quiet clock) |
+| DELETE | `/api/followups/logs/{id}` | Remove a log entry |
+| POST | `/api/ai/followup-email` | AI follow-up draft (503 → frontend template fallback) |
+
+New tables (`offers`, `followup_settings`, `followup_logs`) are created automatically on startup; no migration of existing tables is required.
+
 ---
 
 ## 📂 Project Structure
@@ -265,7 +292,8 @@ npm test
 cd Backend_FastAPI
 pytest
 ```
-- Passes 6/6 integration tests covering CRUD operations, physical document uploads, stats generation, cross-user isolation, and production authentication rejection (`test_production_auth_rejection`).
+- Also covers offers CRUD/validation/isolation, follow-up settings & logs, and the AI endpoints (`test_main.py`), plus pure-logic tests in `test_negotiation_logic.py`.
+- Passes 6/6 original integration tests covering CRUD operations, physical document uploads, stats generation, cross-user isolation, and production authentication rejection (`test_production_auth_rejection`).
 
 **Frontend Tests (Vitest)**
 ```bash
@@ -297,6 +325,14 @@ npm run test
 ✓ src/lib/__tests__/dashboard-service.test.ts (1 test)
 ✓ src/lib/__tests__/autofill-pipeline.test.ts (5 tests)
 ✓ src/lib/__tests__/reminders-calendar.test.ts (2 tests)
+✓ src/lib/__tests__/offer-math.test.ts (15 tests)
+    ✓ Total-comp maths, weighted ranking, counter-offer rules (mirrors the backend), salary-range parsing
+✓ src/lib/__tests__/followup-logic.test.ts (17 tests)
+    ✓ Quiet detection, thresholds, snooze/exhausted states, idempotent reminder targeting, email template
+✓ src/lib/__tests__/offers-service.test.ts (9 tests)
+    ✓ Offer CRUD, validation, user isolation, saved plans, deadline-reminder integration
+✓ src/lib/__tests__/followups-service.test.ts (10 tests)
+    ✓ Settings, logs, auto-reminder scan (idempotent, race-safe), mark-sent, snooze, draft fallback
 
 Test Files  11 passed (11)
      Tests  78 passed (78)

@@ -17,7 +17,7 @@ export function isAiConfigured(): boolean {
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-async function aiRequest<T>(path: string, body: unknown, timeoutMs = 22000): Promise<T> {
+export async function aiRequest<T>(path: string, body: unknown, timeoutMs = 22000): Promise<T> {
   const userId = auth?.currentUser?.uid;
   if (!userId) throw new Error("Sign in to use JobPilot AI features.");
   return apiRequest<T>(path, userId, {

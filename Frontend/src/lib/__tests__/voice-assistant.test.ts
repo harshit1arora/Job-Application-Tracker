@@ -25,6 +25,14 @@ describe("Voice Assistant Navigation Matcher", () => {
     expect(match2?.route).toBe("/tracker");
   });
 
+  it("matches 'offers' and 'follow-ups' commands", () => {
+    expect(matchVoiceNavigation("open offers")?.route).toBe("/offers");
+    expect(matchVoiceNavigation("compare offers")?.route).toBeUndefined(); // needs an action prefix
+    expect(matchVoiceNavigation("go to offer comparison")?.route).toBe("/offers");
+    expect(matchVoiceNavigation("show follow ups")?.route).toBe("/followups");
+    expect(matchVoiceNavigation("go to follow-ups")?.label).toBe("Follow-ups");
+  });
+
   it("matches 'edit resume' and 'profile' commands", () => {
     const match1 = matchVoiceNavigation("edit resume");
     expect(match1?.route).toBe("/profile");

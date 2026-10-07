@@ -214,3 +214,248 @@ def test_ai_proxy_reports_missing_provider_configuration(monkeypatch):
 
     assert response.status_code == 503
     assert response.json()["detail"] == "AI service is not configured"
+
+
+# ---------------------------------------------------------
+# Offers + negotiation coach
+# ---------------------------------------------------------
+
+def _offer_payload(**overrides):
+    payload = {
+        "company": "Acme",
+        "jobTitle": "Backend Engineer",
+        "currency": "USD",
+        "baseSalary": 100000,
+        "annualBonus": 10000,
+        "equityValue": 80000,
+        "equityVestYears": 4,
+        "retirementMatchPct": 5,
+        "otherBenefitsValue": 2000,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_offer_crud_and_computed_total_comp():
+    headers = {"X-User-Id": "offer-user"}
+    created = client.post("/api/offers", json=_offer_payload(deadline="2026-12-01"), headers=headers)
+    assert created.status_code == 201
+    offer = created.json()
+    assert offer["status"] == "Pending"
+    assert offer["annualTotalComp"] == 137000  # 100k + 10k + 20k equity + 5k match + 2k benefits
+
+    listed = client.get("/api/offers", headers=headers).json()
+    assert [o["id"] for o in listed] == [offer["id"]]
+
+    patched = client.patch(
+        f"/api/offers/{offer['id']}",
+        json={"baseSalary": 120000, "status": "Negotiating", "negotiationPlan": '{"strategy":"x"}'},
+        headers=headers,
+    )
+    assert patched.status_code == 200
+    assert patched.json()["baseSalary"] == 120000
+    assert patched.json()["status"] == "Negotiating"
+    assert patched.json()["negotiationPlan"] == '{"strategy":"x"}'
+
+    assert client.delete(f"/api/offers/{offer['id']}", headers=headers).status_code == 204
+    assert client.get(f"/api/offers/{offer['id']}", headers=headers).status_code == 404
+
+
+def test_offer_validation_rejects_bad_input():
+    headers = {"X-User-Id": "offer-user"}
+    assert client.post("/api/offers", json=_offer_payload(baseSalary=-1), headers=headers).status_code == 422
+    assert client.post("/api/offers", json=_offer_payload(currency="dollars"), headers=headers).status_code == 422
+    assert client.post("/api/offers", json=_offer_payload(growthRating=9), headers=headers).status_code == 422
+    assert client.post("/api/offers", json=_offer_payload(deadline="next friday"), headers=headers).status_code == 422
+    assert client.post("/api/offers", json=_offer_payload(status="Maybe"), headers=headers).status_code == 422
+
+
+def test_offer_cross_user_isolation():
+    owner = {"X-User-Id": "offer-owner"}
+    other = {"X-User-Id": "offer-other"}
+    offer_id = client.post("/api/offers", json=_offer_payload(), headers=owner).json()["id"]
+
+    assert client.get(f"/api/offers/{offer_id}", headers=other).status_code == 404
+    assert client.patch(f"/api/offers/{offer_id}", json={"baseSalary": 1}, headers=other).status_code == 404
+    assert client.delete(f"/api/offers/{offer_id}", headers=other).status_code == 404
+    assert client.get("/api/offers", headers=other).json() == []
+
+
+def test_offer_application_link_is_owned_and_detached_on_delete():
+    owner = {"X-User-Id": "offer-link-owner"}
+    other = {"X-User-Id": "offer-link-other"}
+    app_id = client.post("/api/applications", json={
+        "company": "Linked", "jobTitle": "Dev", "applicationSource": "Other", "status": "Offer"
+    }, headers=owner).json()["id"]
+
+    # another user cannot attach an offer to someone else's application
+    assert client.post("/api/offers", json=_offer_payload(applicationId=app_id), headers=other).status_code == 404
+
+    offer = client.post("/api/offers", json=_offer_payload(applicationId=app_id), headers=owner).json()
+    assert offer["applicationId"] == app_id
+
+    # deleting the application keeps the offer but clears the link
+    assert client.delete(f"/api/applications/{app_id}", headers=owner).status_code == 204
+    kept = client.get(f"/api/offers/{offer['id']}", headers=owner)
+    assert kept.status_code == 200
+    assert kept.json()["applicationId"] is None
+
+
+def test_negotiate_requires_ai_configuration(monkeypatch):
+    from main import gemini_service
+
+    monkeypatch.setattr(gemini_service, "is_configured", lambda: False)
+    response = client.post(
+        "/api/ai/negotiate",
+        headers={"X-User-Id": "nego-user"},
+        json={"company": "Acme", "jobTitle": "Dev", "baseSalary": 100000},
+    )
+    assert response.status_code == 503
+
+
+def test_negotiate_validates_request(monkeypatch):
+    from main import gemini_service
+
+    monkeypatch.setattr(gemini_service, "is_configured", lambda: True)
+    headers = {"X-User-Id": "nego-user"}
+    assert client.post("/api/ai/negotiate", headers=headers, json={"company": "A", "jobTitle": "B", "baseSalary": 0}).status_code == 422
+    too_many = [{"company": f"C{i}", "baseSalary": 1, "totalComp": 1} for i in range(5)]
+    assert client.post(
+        "/api/ai/negotiate", headers=headers,
+        json={"company": "A", "jobTitle": "B", "baseSalary": 10, "competingOffers": too_many},
+    ).status_code == 422
+
+
+def test_negotiate_returns_plan_from_service(monkeypatch):
+    from main import gemini_service
+
+    captured = {}
+
+    async def fake_plan(ctx):
+        captured.update(ctx)
+        return {"strategy": "ok", "counter": {"target": 110000}, "talkingPoints": [], "email": {"subject": "s", "body": "b"},
+                "phoneScript": "", "pushbackResponses": [], "risks": []}
+
+    monkeypatch.setattr(gemini_service, "is_configured", lambda: True)
+    monkeypatch.setattr(gemini_service, "generate_negotiation_plan", fake_plan)
+    response = client.post(
+        "/api/ai/negotiate",
+        headers={"X-User-Id": "nego-user"},
+        json={"company": "Acme", "jobTitle": "Dev", "baseSalary": 100000, "tone": "aggressive-nonsense",
+              "priorities": ["base", "  ", "equity"]},
+    )
+    assert response.status_code == 200
+    assert response.json()["strategy"] == "ok"
+    assert captured["tone"] == "collaborative"  # unknown tones fall back safely
+    assert captured["priorities"] == ["base", "equity"]
+
+
+# ---------------------------------------------------------
+# Smart follow-ups
+# ---------------------------------------------------------
+
+def test_followup_settings_defaults_then_upsert():
+    headers = {"X-User-Id": "fu-settings-user"}
+    defaults = client.get("/api/followups/settings", headers=headers).json()
+    assert defaults["enabled"] is True
+    assert defaults["appliedDays"] == 7
+    assert defaults["maxFollowUps"] == 3
+
+    saved = client.put(
+        "/api/followups/settings",
+        json={"enabled": True, "appliedDays": 5, "underReviewDays": 8, "interviewDays": 2,
+              "maxFollowUps": 4, "autoCreateReminders": False, "defaultTone": "friendly"},
+        headers=headers,
+    )
+    assert saved.status_code == 200
+    assert saved.json()["appliedDays"] == 5
+    assert client.get("/api/followups/settings", headers=headers).json()["defaultTone"] == "friendly"
+
+    # a second PUT updates the same row instead of creating a duplicate
+    client.put("/api/followups/settings", json={"appliedDays": 9}, headers=headers)
+    assert client.get("/api/followups/settings", headers=headers).json()["appliedDays"] == 9
+
+    # other users are unaffected
+    assert client.get("/api/followups/settings", headers={"X-User-Id": "fu-settings-other"}).json()["appliedDays"] == 7
+
+
+def test_followup_settings_validation():
+    headers = {"X-User-Id": "fu-settings-user"}
+    assert client.put("/api/followups/settings", json={"appliedDays": 0}, headers=headers).status_code == 422
+    assert client.put("/api/followups/settings", json={"maxFollowUps": 99}, headers=headers).status_code == 422
+    assert client.put("/api/followups/settings", json={"defaultTone": "rude"}, headers=headers).status_code == 422
+
+
+def test_followup_log_lifecycle_and_isolation():
+    owner = {"X-User-Id": "fu-log-owner"}
+    other = {"X-User-Id": "fu-log-other"}
+    app_row = client.post("/api/applications", json={
+        "company": "LogCo", "jobTitle": "Dev", "applicationSource": "Other", "status": "Applied"
+    }, headers=owner).json()
+
+    assert client.post("/api/followups/logs", json={"applicationId": app_row["id"]}, headers=other).status_code == 404
+
+    created = client.post(
+        "/api/followups/logs",
+        json={"applicationId": app_row["id"], "channel": "email", "tone": "polite", "subject": "Hi", "body": "Checking in"},
+        headers=owner,
+    )
+    assert created.status_code == 201
+    log = created.json()
+
+    # logging a follow-up restarts the application's quiet-clock
+    refreshed = client.get(f"/api/applications/{app_row['id']}", headers=owner).json()
+    assert refreshed["updatedAt"] >= app_row["updatedAt"]
+    assert refreshed["updatedAt"] == log["createdAt"]
+
+    assert [l["id"] for l in client.get("/api/followups/logs", headers=owner).json()] == [log["id"]]
+    assert client.get("/api/followups/logs", headers=other).json() == []
+    assert client.delete(f"/api/followups/logs/{log['id']}", headers=other).status_code == 404
+    assert client.delete(f"/api/followups/logs/{log['id']}", headers=owner).status_code == 204
+
+
+def test_followup_logs_are_removed_with_application():
+    owner = {"X-User-Id": "fu-cascade-owner"}
+    app_id = client.post("/api/applications", json={
+        "company": "CascadeCo", "jobTitle": "Dev", "applicationSource": "Other", "status": "Applied"
+    }, headers=owner).json()["id"]
+    client.post("/api/followups/logs", json={"applicationId": app_id}, headers=owner)
+    assert len(client.get("/api/followups/logs", headers=owner).json()) == 1
+
+    assert client.delete(f"/api/applications/{app_id}", headers=owner).status_code == 204
+    assert client.get("/api/followups/logs", headers=owner).json() == []
+
+
+def test_followup_email_requires_ai_configuration(monkeypatch):
+    from main import gemini_service
+
+    monkeypatch.setattr(gemini_service, "is_configured", lambda: False)
+    response = client.post(
+        "/api/ai/followup-email",
+        headers={"X-User-Id": "fu-ai-user"},
+        json={"company": "Acme", "jobTitle": "Dev"},
+    )
+    assert response.status_code == 503
+
+
+def test_followup_email_returns_draft_from_service(monkeypatch):
+    from main import gemini_service
+
+    captured = {}
+
+    async def fake_email(ctx):
+        captured.update(ctx)
+        return {"subject": "Checking in", "body": "Hello"}
+
+    monkeypatch.setattr(gemini_service, "is_configured", lambda: True)
+    monkeypatch.setattr(gemini_service, "generate_followup_email", fake_email)
+    response = client.post(
+        "/api/ai/followup-email",
+        headers={"X-User-Id": "fu-ai-user"},
+        json={"company": "Acme", "jobTitle": "Dev", "tone": "shouty", "channel": "carrier-pigeon", "followUpNumber": 2},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"subject": "Checking in", "body": "Hello"}
+    assert captured["tone"] == "polite"
+    assert captured["channel"] == "email"
+    assert captured["followUpNumber"] == 2

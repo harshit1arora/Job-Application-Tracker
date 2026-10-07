@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FollowupsRouteImport } from './routes/followups'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OffersRouteImport } from './routes/offers'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -36,6 +38,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FollowupsRoute = FollowupsRouteImport.update({
+  id: '/followups',
+  path: '/followups',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -44,6 +51,11 @@ const InboxRoute = InboxRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OffersRoute = OffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -82,8 +94,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/dashboard': typeof DashboardRoute
+  '/followups': typeof FollowupsRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
+  '/offers': typeof OffersRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
@@ -95,8 +109,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/dashboard': typeof DashboardRoute
+  '/followups': typeof FollowupsRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
+  '/offers': typeof OffersRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
@@ -109,8 +125,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/dashboard': typeof DashboardRoute
+  '/followups': typeof FollowupsRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
+  '/offers': typeof OffersRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
@@ -124,8 +142,10 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/dashboard'
+    | '/followups'
     | '/inbox'
     | '/login'
+    | '/offers'
     | '/profile'
     | '/settings'
     | '/signup'
@@ -137,8 +157,10 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/dashboard'
+    | '/followups'
     | '/inbox'
     | '/login'
+    | '/offers'
     | '/profile'
     | '/settings'
     | '/signup'
@@ -150,8 +172,10 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/dashboard'
+    | '/followups'
     | '/inbox'
     | '/login'
+    | '/offers'
     | '/profile'
     | '/settings'
     | '/signup'
@@ -164,8 +188,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrowseRoute: typeof BrowseRoute
   DashboardRoute: typeof DashboardRoute
+  FollowupsRoute: typeof FollowupsRoute
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
+  OffersRoute: typeof OffersRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
@@ -197,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/followups': {
+      id: '/followups'
+      path: '/followups'
+      fullPath: '/followups'
+      preLoaderRoute: typeof FollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inbox': {
       id: '/inbox'
       path: '/inbox'
@@ -209,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offers': {
+      id: '/offers'
+      path: '/offers'
+      fullPath: '/offers'
+      preLoaderRoute: typeof OffersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -260,8 +300,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrowseRoute: BrowseRoute,
   DashboardRoute: DashboardRoute,
+  FollowupsRoute: FollowupsRoute,
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
+  OffersRoute: OffersRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,

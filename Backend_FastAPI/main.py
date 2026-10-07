@@ -4,17 +4,23 @@ import shutil
 import io
 import zipfile
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Literal
 from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 import httpx
 
 from auth import get_current_user_id, get_firebase_auth_diagnostics
 from services.gemini_service import gemini_service
+from services.negotiation_logic import (
+    TONES_FOLLOWUP,
+    TONES_NEGOTIATION,
+    annual_total_comp,
+    tone_or_default,
+)
 
 DATA_DIR = os.environ.get("DATA_DIR", "./data")
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -73,6 +79,7 @@ class ApplicationDB(Base):
     
     documents = relationship("DocumentDB", back_populates="application", cascade="all, delete-orphan")
     reminders = relationship("ReminderDB", back_populates="application", cascade="all, delete-orphan")
+    followUpLogs = relationship("FollowUpLogDB", back_populates="application", cascade="all, delete-orphan")
 
 class DocumentDB(Base):
     __tablename__ = "documents"
@@ -100,6 +107,61 @@ class ReminderDB(Base):
     createdAt = Column(String)
     
     application = relationship("ApplicationDB", back_populates="reminders")
+
+class OfferDB(Base):
+    __tablename__ = "offers"
+    id = Column(String, primary_key=True, index=True)
+    userId = Column(String, index=True)
+    # Optional link to the tracked application; kept (set to NULL) if the application is deleted.
+    applicationId = Column(String, nullable=True, index=True)
+    company = Column(String)
+    jobTitle = Column(String)
+    location = Column(String, nullable=True)
+    workMode = Column(String, default="Hybrid")
+    currency = Column(String, default="USD")
+    baseSalary = Column(Float, default=0)
+    annualBonus = Column(Float, default=0)
+    signingBonus = Column(Float, default=0)
+    equityValue = Column(Float, default=0)
+    equityVestYears = Column(Float, default=4)
+    retirementMatchPct = Column(Float, default=0)
+    otherBenefitsValue = Column(Float, default=0)
+    ptoDays = Column(Integer, nullable=True)
+    growthRating = Column(Integer, default=3)
+    workLifeRating = Column(Integer, default=3)
+    cultureRating = Column(Integer, default=3)
+    deadline = Column(String, nullable=True)
+    status = Column(String, default="Pending")
+    notes = Column(Text, nullable=True)
+    negotiationPlan = Column(Text, nullable=True)  # JSON string of the last generated plan
+    createdAt = Column(String)
+    updatedAt = Column(String)
+
+class FollowUpSettingsDB(Base):
+    __tablename__ = "followup_settings"
+    userId = Column(String, primary_key=True, index=True)
+    enabled = Column(Boolean, default=True)
+    appliedDays = Column(Integer, default=7)
+    underReviewDays = Column(Integer, default=10)
+    interviewDays = Column(Integer, default=4)
+    maxFollowUps = Column(Integer, default=3)
+    autoCreateReminders = Column(Boolean, default=True)
+    defaultTone = Column(String, default="polite")
+    updatedAt = Column(String)
+
+class FollowUpLogDB(Base):
+    __tablename__ = "followup_logs"
+    id = Column(String, primary_key=True, index=True)
+    userId = Column(String, index=True)
+    applicationId = Column(String, ForeignKey("applications.id", ondelete="CASCADE"), index=True)
+    channel = Column(String, default="email")
+    tone = Column(String, nullable=True)
+    subject = Column(String, nullable=True)
+    body = Column(Text, nullable=True)
+    note = Column(Text, nullable=True)
+    createdAt = Column(String)
+
+    application = relationship("ApplicationDB", back_populates="followUpLogs")
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -447,6 +509,10 @@ def delete_application(app_id: str, user_id: str = Depends(get_current_user_id),
             except Exception:
                 pass
 
+    # Offers outlive the tracker entry: just detach them.
+    db.query(OfferDB).filter(OfferDB.userId == user_id, OfferDB.applicationId == app_id).update(
+        {"applicationId": None}
+    )
     db.delete(app_doc)
     db.commit()
     return None
@@ -612,6 +678,322 @@ def delete_reminder(rem_id: str, user_id: str = Depends(get_current_user_id), db
     db.delete(rem)
     db.commit()
     return None
+
+# ---------------------------------------------------------
+# Offers: comparison data + AI negotiation coach
+# ---------------------------------------------------------
+
+OfferStatus = Literal["Pending", "Negotiating", "Accepted", "Declined"]
+WorkMode = Literal["Remote", "Hybrid", "On-site"]
+_MONEY_MAX = 1_000_000_000
+# Columns that may legitimately be set to NULL; every other None in a PATCH is ignored.
+_OFFER_NULLABLE = {"applicationId", "location", "ptoDays", "deadline", "notes", "negotiationPlan"}
+
+
+class OfferBase(BaseModel):
+    applicationId: Optional[str] = Field(default=None, max_length=100)
+    company: str = Field(..., min_length=1, max_length=100)
+    jobTitle: str = Field(..., min_length=1, max_length=150)
+    location: Optional[str] = Field(default=None, max_length=100)
+    workMode: WorkMode = "Hybrid"
+    currency: str = Field(default="USD", pattern=r"^[A-Z]{3}$")
+    baseSalary: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    annualBonus: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    signingBonus: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    equityValue: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    equityVestYears: float = Field(default=4, gt=0, le=10)
+    retirementMatchPct: float = Field(default=0, ge=0, le=100)
+    otherBenefitsValue: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    ptoDays: Optional[int] = Field(default=None, ge=0, le=366)
+    growthRating: int = Field(default=3, ge=1, le=5)
+    workLifeRating: int = Field(default=3, ge=1, le=5)
+    cultureRating: int = Field(default=3, ge=1, le=5)
+    deadline: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    status: OfferStatus = "Pending"
+    notes: Optional[str] = Field(default=None, max_length=2000)
+
+
+class OfferCreate(OfferBase):
+    pass
+
+
+class OfferUpdate(BaseModel):
+    applicationId: Optional[str] = Field(default=None, max_length=100)
+    company: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    jobTitle: Optional[str] = Field(default=None, min_length=1, max_length=150)
+    location: Optional[str] = Field(default=None, max_length=100)
+    workMode: Optional[WorkMode] = None
+    currency: Optional[str] = Field(default=None, pattern=r"^[A-Z]{3}$")
+    baseSalary: Optional[float] = Field(default=None, ge=0, le=_MONEY_MAX)
+    annualBonus: Optional[float] = Field(default=None, ge=0, le=_MONEY_MAX)
+    signingBonus: Optional[float] = Field(default=None, ge=0, le=_MONEY_MAX)
+    equityValue: Optional[float] = Field(default=None, ge=0, le=_MONEY_MAX)
+    equityVestYears: Optional[float] = Field(default=None, gt=0, le=10)
+    retirementMatchPct: Optional[float] = Field(default=None, ge=0, le=100)
+    otherBenefitsValue: Optional[float] = Field(default=None, ge=0, le=_MONEY_MAX)
+    ptoDays: Optional[int] = Field(default=None, ge=0, le=366)
+    growthRating: Optional[int] = Field(default=None, ge=1, le=5)
+    workLifeRating: Optional[int] = Field(default=None, ge=1, le=5)
+    cultureRating: Optional[int] = Field(default=None, ge=1, le=5)
+    deadline: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    status: Optional[OfferStatus] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    negotiationPlan: Optional[str] = Field(default=None, max_length=30000)
+
+
+class OfferOut(OfferBase):
+    id: str
+    userId: str
+    negotiationPlan: Optional[str] = None
+    createdAt: str
+    updatedAt: str
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def annualTotalComp(self) -> float:
+        return annual_total_comp(
+            self.baseSalary,
+            self.annualBonus,
+            self.equityValue,
+            self.equityVestYears,
+            self.retirementMatchPct,
+            self.otherBenefitsValue,
+        )
+
+    class Config:
+        from_attributes = True
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _require_owned_application(db: Session, user_id: str, application_id: Optional[str]) -> None:
+    if not application_id:
+        return
+    owned = db.query(ApplicationDB.id).filter(ApplicationDB.id == application_id, ApplicationDB.userId == user_id).first()
+    if not owned:
+        raise HTTPException(status_code=404, detail="Application not found or access denied")
+
+
+@app.get("/api/offers", response_model=List[OfferOut])
+def get_offers(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    offers = db.query(OfferDB).filter(OfferDB.userId == user_id).all()
+    offers.sort(key=lambda o: o.createdAt, reverse=True)
+    return offers
+
+
+@app.get("/api/offers/{offer_id}", response_model=OfferOut)
+def get_offer(offer_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    offer = db.query(OfferDB).filter(OfferDB.id == offer_id, OfferDB.userId == user_id).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return offer
+
+
+@app.post("/api/offers", response_model=OfferOut, status_code=201)
+def create_offer(offer_in: OfferCreate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    _require_owned_application(db, user_id, offer_in.applicationId)
+    now = _utc_now()
+    offer = OfferDB(id=f"offer-{uuid.uuid4().hex[:10]}", userId=user_id, createdAt=now, updatedAt=now, **offer_in.model_dump())
+    db.add(offer)
+    db.commit()
+    db.refresh(offer)
+    return offer
+
+
+@app.patch("/api/offers/{offer_id}", response_model=OfferOut)
+def update_offer(offer_id: str, offer_in: OfferUpdate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    offer = db.query(OfferDB).filter(OfferDB.id == offer_id, OfferDB.userId == user_id).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    changes = offer_in.model_dump(exclude_unset=True)
+    if changes.get("applicationId"):
+        _require_owned_application(db, user_id, changes["applicationId"])
+    for key, value in changes.items():
+        if value is None and key not in _OFFER_NULLABLE:
+            continue
+        setattr(offer, key, value)
+    offer.updatedAt = _utc_now()
+    db.commit()
+    db.refresh(offer)
+    return offer
+
+
+@app.delete("/api/offers/{offer_id}", status_code=204)
+def delete_offer(offer_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    offer = db.query(OfferDB).filter(OfferDB.id == offer_id, OfferDB.userId == user_id).first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    db.delete(offer)
+    db.commit()
+    return None
+
+
+class CompetingOfferIn(BaseModel):
+    company: str = Field(..., min_length=1, max_length=100)
+    baseSalary: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    totalComp: float = Field(default=0, ge=0, le=_MONEY_MAX)
+
+
+class AINegotiationRequest(BaseModel):
+    applicantName: str = Field(default="", max_length=100)
+    company: str = Field(..., min_length=1, max_length=100)
+    jobTitle: str = Field(..., min_length=1, max_length=150)
+    currency: str = Field(default="USD", pattern=r"^[A-Z]{3}$")
+    baseSalary: float = Field(..., gt=0, le=_MONEY_MAX)
+    annualBonus: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    signingBonus: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    equityValue: float = Field(default=0, ge=0, le=_MONEY_MAX)
+    equityVestYears: float = Field(default=4, gt=0, le=10)
+    ptoDays: Optional[int] = Field(default=None, ge=0, le=366)
+    workMode: Optional[str] = Field(default=None, max_length=20)
+    targetBase: Optional[float] = Field(default=None, ge=0, le=_MONEY_MAX)
+    tone: str = "collaborative"
+    leverage: Optional[str] = Field(default=None, max_length=1500)
+    candidateHighlights: Optional[str] = Field(default=None, max_length=3000)
+    competingOffers: List[CompetingOfferIn] = Field(default_factory=list, max_length=4)
+    priorities: List[str] = Field(default_factory=list, max_length=5)
+
+
+@app.post("/api/ai/negotiate")
+async def ai_negotiate(request: AINegotiationRequest, user_id: str = Depends(get_current_user_id)):
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    ctx = request.model_dump()
+    ctx["tone"] = tone_or_default(request.tone, TONES_NEGOTIATION, "collaborative")
+    ctx["priorities"] = [p.strip()[:40] for p in request.priorities if p.strip()]
+    return await gemini_service.generate_negotiation_plan(ctx)
+
+
+# ---------------------------------------------------------
+# Smart follow-ups: settings, send log, AI drafting
+# ---------------------------------------------------------
+
+FollowUpTone = Literal["polite", "friendly", "direct"]
+FollowUpChannel = Literal["email", "linkedin", "call", "other"]
+
+
+class FollowUpSettingsIn(BaseModel):
+    enabled: bool = True
+    appliedDays: int = Field(default=7, ge=1, le=90)
+    underReviewDays: int = Field(default=10, ge=1, le=90)
+    interviewDays: int = Field(default=4, ge=1, le=90)
+    maxFollowUps: int = Field(default=3, ge=1, le=10)
+    autoCreateReminders: bool = True
+    defaultTone: FollowUpTone = "polite"
+
+
+class FollowUpSettingsOut(FollowUpSettingsIn):
+    updatedAt: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FollowUpLogCreate(BaseModel):
+    applicationId: str = Field(..., min_length=1, max_length=100)
+    channel: FollowUpChannel = "email"
+    tone: Optional[str] = Field(default=None, max_length=20)
+    subject: Optional[str] = Field(default=None, max_length=200)
+    body: Optional[str] = Field(default=None, max_length=5000)
+    note: Optional[str] = Field(default=None, max_length=1000)
+
+
+class FollowUpLogOut(BaseModel):
+    id: str
+    userId: str
+    applicationId: str
+    channel: str
+    tone: Optional[str] = None
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    note: Optional[str] = None
+    createdAt: str
+
+    class Config:
+        from_attributes = True
+
+
+class AIFollowUpRequest(BaseModel):
+    applicantName: str = Field(default="", max_length=100)
+    recruiterName: Optional[str] = Field(default=None, max_length=100)
+    company: str = Field(..., min_length=1, max_length=100)
+    jobTitle: str = Field(..., min_length=1, max_length=150)
+    status: str = Field(default="Applied", max_length=30)
+    daysQuiet: int = Field(default=0, ge=0, le=3650)
+    followUpNumber: int = Field(default=1, ge=1, le=10)
+    tone: str = "polite"
+    channel: str = "email"
+    notes: Optional[str] = Field(default=None, max_length=1500)
+    jobDescription: Optional[str] = Field(default=None, max_length=1500)
+
+
+@app.get("/api/followups/settings", response_model=FollowUpSettingsOut)
+def get_followup_settings(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    row = db.query(FollowUpSettingsDB).filter(FollowUpSettingsDB.userId == user_id).first()
+    if not row:
+        return FollowUpSettingsOut()
+    return row
+
+
+@app.put("/api/followups/settings", response_model=FollowUpSettingsOut)
+def put_followup_settings(settings_in: FollowUpSettingsIn, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    row = db.query(FollowUpSettingsDB).filter(FollowUpSettingsDB.userId == user_id).first()
+    if not row:
+        row = FollowUpSettingsDB(userId=user_id)
+        db.add(row)
+    for key, value in settings_in.model_dump().items():
+        setattr(row, key, value)
+    row.updatedAt = _utc_now()
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@app.get("/api/followups/logs", response_model=List[FollowUpLogOut])
+def get_followup_logs(applicationId: Optional[str] = None, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    query = db.query(FollowUpLogDB).filter(FollowUpLogDB.userId == user_id)
+    if applicationId:
+        query = query.filter(FollowUpLogDB.applicationId == applicationId)
+    logs = query.all()
+    logs.sort(key=lambda entry: entry.createdAt, reverse=True)
+    return logs
+
+
+@app.post("/api/followups/logs", response_model=FollowUpLogOut, status_code=201)
+def create_followup_log(log_in: FollowUpLogCreate, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    _require_owned_application(db, user_id, log_in.applicationId)
+    log = FollowUpLogDB(id=f"fu-{uuid.uuid4().hex[:10]}", userId=user_id, createdAt=_utc_now(), **log_in.model_dump())
+    db.add(log)
+    # A follow-up counts as activity: bump the application so its quiet-clock restarts.
+    app_row = db.query(ApplicationDB).filter(ApplicationDB.id == log_in.applicationId, ApplicationDB.userId == user_id).first()
+    if app_row:
+        app_row.updatedAt = log.createdAt
+    db.commit()
+    db.refresh(log)
+    return log
+
+
+@app.delete("/api/followups/logs/{log_id}", status_code=204)
+def delete_followup_log(log_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    log = db.query(FollowUpLogDB).filter(FollowUpLogDB.id == log_id, FollowUpLogDB.userId == user_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Follow-up log not found")
+    db.delete(log)
+    db.commit()
+    return None
+
+
+@app.post("/api/ai/followup-email")
+async def ai_followup_email(request: AIFollowUpRequest, user_id: str = Depends(get_current_user_id)):
+    if not gemini_service.is_configured():
+        raise HTTPException(status_code=503, detail="Gemini AI service unavailable")
+    ctx = request.model_dump()
+    ctx["tone"] = tone_or_default(request.tone, TONES_FOLLOWUP, "polite")
+    ctx["channel"] = request.channel if request.channel in ("email", "linkedin") else "email"
+    return await gemini_service.generate_followup_email(ctx)
+
 
 # ---------------------------------------------------------
 # Dashboard Stats Endpoint
