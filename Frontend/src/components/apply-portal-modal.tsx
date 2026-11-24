@@ -995,7 +995,7 @@ export function ApplyPortalModal({
               ) : (
                 <>
                   <Check size={14} />
-                  Apply Now
+                  Record that I applied externally
                 </>
               )}
             </button>

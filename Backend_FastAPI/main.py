@@ -1,4 +1,7 @@
 import os
+from pathlib import Path
+from sqlalchemy.exc import IntegrityError
+from services import greenhouse
 import uuid
 import shutil
 import io
@@ -9,7 +12,7 @@ from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, computed_field
-from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
+from sqlalchemy import JSON, UniqueConstraint, create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 import httpx
 
@@ -164,6 +167,17 @@ class FollowUpLogDB(Base):
     application = relationship("ApplicationDB", back_populates="followUpLogs")
 
 # Create the database tables
+class AgentAttempt(Base):
+    __tablename__ = "agent_attempts"
+    __table_args__ = (UniqueConstraint("userId", "board", "job"),)
+    id = Column(String, primary_key=True)
+    userId = Column(String, nullable=False)
+    board = Column(String, nullable=False)
+    job = Column(Integer, nullable=False)
+    status = Column(String, nullable=False)
+    reviewed = Column(JSON, nullable=False)
+
+
 Base.metadata.create_all(bind=engine)
 
 # ---------------------------------------------------------
@@ -1020,6 +1034,116 @@ def get_dashboard_stats(user_id: str = Depends(get_current_user_id), db: Session
         "recentApplications": recentApplications,
         "upcomingFollowUps": upcomingFollowUps,
     }
+
+class ReviewedApplication(BaseModel):
+    board: str
+    version: str
+    answers: dict[str, str]
+    resumeId: Optional[str] = None
+    approved: Literal[True]
+
+
+def attempt_status(row):
+    return {"status": row.status, "applicationId": row.id if row.status == "confirmed" else None}
+
+
+@app.get("/api/agent/attempts")
+def agent_attempts(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    rows = db.query(AgentAttempt).filter_by(userId=user_id).all()
+    return [{"id": row.id, "board": row.board, "title": row.reviewed.get("title", str(row.job)),
+             **attempt_status(row)} for row in rows]
+
+
+@app.get("/api/agent/jobs")
+async def agent_jobs(user_id: str = Depends(get_current_user_id)):
+    token = greenhouse.board()
+    if not token:
+        return {"board": None, "jobs": []}
+    listing = await greenhouse.read(token, "/jobs")
+    return {"board": token, "jobs": [{"id": j["id"], "title": j["title"], "url": j["absolute_url"]}
+                                     for j in listing["jobs"]]}
+
+
+@app.get("/api/agent/{token}/jobs/{job_id}")
+async def agent_form(token: str, job_id: int, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    attempt = db.query(AgentAttempt).filter_by(userId=user_id, board=token, job=job_id).first()
+    if attempt and attempt.status != "rejected":
+        return attempt_status(attempt)
+    if token != greenhouse.board():
+        raise HTTPException(404, "Employer board unavailable")
+    job = await greenhouse.read(token, f"/jobs/{job_id}", questions="true")
+    fields = greenhouse.fields_for(job)
+    return {"status": "review" if fields else "unsupported", "title": job["title"], "url": job["absolute_url"],
+            "fields": fields, "version": greenhouse.fingerprint(fields, job["title"])}
+
+
+@app.post("/api/agent/{token}/jobs/{job_id}/submit")
+async def agent_submit(token: str, job_id: int, review: ReviewedApplication,
+                       user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    if token != greenhouse.board() or review.board != token:
+        raise HTTPException(409, "Employer board changed. Review the listing again.")
+    existing = db.query(AgentAttempt).filter_by(userId=user_id, board=token, job=job_id).first()
+    if existing and existing.status != "rejected":
+        return attempt_status(existing)
+    job = await greenhouse.read(token, f"/jobs/{job_id}", questions="true")
+    fields = greenhouse.fields_for(job)
+    if not fields or review.version != greenhouse.fingerprint(fields, job["title"]):
+        raise HTTPException(409, "The employer changed the form. Reopen the listing to review it again.")
+    names = {f["name"] for f in fields}
+    if review.answers.keys() - (names - {"resume"}) or (review.resumeId and "resume" not in names):
+        raise HTTPException(422, "Unexpected application field")
+    for field in fields:
+        value = review.resumeId if field["name"] == "resume" else review.answers.get(field["name"], "").strip()
+        if field["required"] and not value:
+            raise HTTPException(422, f"Complete {field['label']}")
+        if field["kind"] == "multi_value_single_select" and value and value not in {o["value"] for o in field["options"]}:
+            raise HTTPException(422, f"Invalid selection for {field['label']}")
+    attachment = None
+    if review.resumeId:
+        doc = db.query(DocumentDB).filter_by(userId=user_id, id=review.resumeId).first()
+        if not doc or not os.path.isfile(doc.storageRef):
+            raise HTTPException(422, "Select an available résumé from your documents")
+        attachment = (doc.fileName, Path(doc.storageRef).read_bytes(), doc.fileType)
+    # Commit the claim before contacting the employer. A lost response must never trigger a resend.
+    snapshot = {**review.model_dump(), "title": job["title"]}
+    if existing:
+        claimed = db.query(AgentAttempt).filter_by(id=existing.id, status="rejected").update(
+            {"status": "pending", "reviewed": snapshot})
+        if not claimed:
+            db.rollback()
+            return attempt_status(db.get(AgentAttempt, existing.id))
+        row = existing
+    else:
+        row = AgentAttempt(id=uuid.uuid4().hex, userId=user_id, board=token, job=job_id,
+                           status="pending", reviewed=snapshot)
+        db.add(row)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return attempt_status(db.query(AgentAttempt).filter_by(userId=user_id, board=token, job=job_id).one())
+    try:
+        response = await greenhouse.deliver(token, job_id, review.answers, attachment)
+    except httpx.RequestError:
+        return attempt_status(row)
+    if response.status_code in (400, 401, 403, 404, 422, 429):
+        row.status = "rejected"
+    elif response.status_code in (200, 201):
+        row.status = "confirmed"
+        now = _utc_now()
+        try:
+            receipt = response.json()
+        except ValueError:
+            receipt = None
+        reference = receipt.get("application_id") if isinstance(receipt, dict) else None
+        note = "Employer confirmed receipt via Greenhouse."
+        if isinstance(reference, (str, int)):
+            note += f" Employer reference: {reference}"
+        db.add(ApplicationDB(id=row.id, userId=user_id, company=job.get("company_name") or token, jobTitle=job["title"],
+                             applicationSource="Greenhouse", status="Applied", applicationUrl=job["absolute_url"],
+                             notes=note, createdAt=now, updatedAt=now))
+    db.commit()
+    return attempt_status(row)
 
 if __name__ == "__main__":
     import uvicorn

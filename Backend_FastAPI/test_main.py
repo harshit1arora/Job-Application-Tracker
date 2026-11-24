@@ -464,3 +464,78 @@ def test_followup_email_returns_draft_from_service(monkeypatch):
     assert captured["tone"] == "polite"
     assert captured["channel"] == "email"
     assert captured["followUpNumber"] == 2
+
+@pytest.fixture
+def employer(monkeypatch):
+    import httpx
+    from services import greenhouse
+    calls = []
+    questions = [{"label": key, "required": True, "fields": [{"type": "input_text", "name": key}]}
+                 for key in ("first_name", "last_name", "email")]
+    questions.append({"label": "Resume", "required": True, "fields": [{"type": "input_file", "name": "resume"}]})
+    job = {"id": 7, "title": "Engineer", "absolute_url": "https://example.org/jobs/7", "questions": questions}
+
+    async def read(token, path, **params):
+        return {"jobs": [job]} if path == "/jobs" else job
+
+    async def deliver(*args):
+        calls.append(args)
+        return httpx.Response(200, json={"success": True})
+
+    monkeypatch.setattr(greenhouse, "board", lambda: "test-board")
+    monkeypatch.setattr(greenhouse, "read", read)
+    monkeypatch.setattr(greenhouse, "deliver", deliver)
+    return job, calls
+
+
+def reviewed_payload(headers):
+    path = "/api/agent/test-board/jobs/7"
+    form = client.get(path, headers=headers).json()
+    doc = client.post("/api/documents/upload", headers=headers,
+                      files={"file": ("resume.pdf", b"%PDF-test", "application/pdf")}).json()
+    return path, {"approved": True, "version": form["version"], "board": "test-board", "resumeId": doc["id"],
+                  "answers": {"first_name": "Test", "last_name": "Applicant", "email": "candidate@example.org"}}
+
+
+def test_reviewed_submission(employer):
+    _, calls = employer
+    headers = {"X-User-Id": "candidate"}
+    path, payload = reviewed_payload(headers)
+    assert not calls
+    for changed in ({"approved": False}, {"version": "stale"}, {"answers": {}}):
+        assert client.post(path+"/submit", headers=headers, json=payload | changed).status_code in (409, 422)
+    assert client.post(path+"/submit", headers={"X-User-Id": "other"}, json=payload).status_code == 422
+    assert not calls
+    for _ in range(2):
+        assert client.post(path+"/submit", headers=headers, json=payload).json()["status"] == "confirmed"
+    assert len(calls) == 1
+    assert calls[0][2:] == (payload["answers"], ("resume.pdf", b"%PDF-test", "application/pdf"))
+    apps = client.get("/api/applications", headers=headers).json()
+    assert len(apps) == 1 and apps[0]["status"] == "Applied"
+    assert client.get(path, headers=headers).json()["applicationId"] == apps[0]["id"]
+
+
+def test_pending_and_rejected(employer, monkeypatch):
+    import httpx
+    from services import greenhouse
+    headers = {"X-User-Id": "candidate"}
+    path, payload = reviewed_payload(headers)
+    results = [httpx.Response(422), httpx.ReadTimeout("lost response")]
+
+    async def deliver(*args):
+        result = results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(greenhouse, "deliver", deliver)
+    for expected in ("rejected", "pending", "pending"):
+        assert client.post(path+"/submit", headers=headers, json=payload).json()["status"] == expected
+    assert client.get("/api/applications", headers=headers).json() == []
+
+
+def test_agent_declines_unrepresented_consent(employer):
+    job, _ = employer
+    job["data_compliance"] = [{"requires_consent": True}]
+    result = client.get("/api/agent/test-board/jobs/7", headers={"X-User-Id": "candidate"})
+    assert result.json()["status"] == "unsupported"

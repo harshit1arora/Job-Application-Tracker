@@ -1,3 +1,4 @@
+import { AgentApplications } from "@/components/agent-applications";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
@@ -980,6 +981,7 @@ function DashboardPage() {
         {/* Tab view for full Browse Jobs when clicked */}
         {activeTab === "browse" && profile && (
           <section className="pt-4 border-t border-border">
+            {user && <AgentApplications key={user.id} userId={user.id} profile={profile} />}
             <SuggestedJobsSection
               jobs={suggestedJobs}
               profile={profile}

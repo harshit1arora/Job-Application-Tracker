@@ -343,3 +343,17 @@ Test Files  11 passed (11)
 ## 📄 License
 This project is open source and available under the [MIT License](LICENSE).
 
+
+## Reviewed applications through Greenhouse
+
+In **Dashboard → Browse** or **Browse Jobs → Apply with JobPilot**, choose a connected listing. JobPilot fills contact details from the signed-in user's profile. Review every answer, choose a résumé previously uploaded in Documents, and select **Submit reviewed application**. The draft is saved on this device. Free-text fields can use Gemini to draft an answer from the profile when the backend has a Gemini key.
+
+Configure the following on the FastAPI server for an employer that has authorized your integration:
+
+- `GREENHOUSE_BOARD_TOKEN` identifies the employer's public board.
+- `GREENHOUSE_JOB_BOARD_API_KEY` is that employer's secret Job Board API key. Keep it on the server.
+- Use Firebase authentication and `DEMO_MODE=false` for direct submissions.
+
+The integration reads the board's live listings and questions. Forms requiring unsupported input types or additional consent use the employer's hosted application instead. A confirmed submission creates an Applied tracker entry. A definitive rejection allows a corrected submission. A timeout, an ambiguous response, or a process exit after claiming the submission leaves it pending. Check the employer's records before retrying through another channel. The Job Board API supplies no applicant-side status lookup.
+
+Provider reference: [Greenhouse Job Board API](https://developers.greenhouse.io/job-board.html).

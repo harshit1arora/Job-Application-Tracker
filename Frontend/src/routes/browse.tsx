@@ -1,3 +1,4 @@
+import { AgentApplications } from "@/components/agent-applications";
 import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
@@ -108,6 +109,7 @@ function BrowseJobsPage() {
           </div>
         </div>
 
+        {profile && user && <AgentApplications key={user.id} userId={user.id} profile={profile} />}
         {profile && (
           <SuggestedJobsSection
             jobs={suggestedJobs}
