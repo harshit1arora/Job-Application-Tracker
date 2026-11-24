@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
 from sqlalchemy.exc import IntegrityError
-from services import greenhouse
+import hashlib
+import json
+import urllib3
+from services import greenhouse, job_import
 import uuid
 import shutil
 import io
@@ -176,6 +179,13 @@ class AgentAttempt(Base):
     job = Column(Integer, nullable=False)
     status = Column(String, nullable=False)
     reviewed = Column(JSON, nullable=False)
+
+
+class ImportedListing(Base):
+    __tablename__ = "imported_listings"
+    id = Column(String, primary_key=True)
+    userId = Column(String, nullable=False, index=True)
+    details = Column(JSON, nullable=False)
 
 
 class ReceiptFile(Base):
@@ -1199,6 +1209,94 @@ def receipt_resume(app_id: str, user_id: str = Depends(get_current_user_id), db:
     return Response(archived.contents, media_type=info["mime"],
                     headers={"Cache-Control": "private, no-store", "Content-Disposition": "attachment"})
 
+
+class ListingPreview(BaseModel):
+    url: str = Field(min_length=1, max_length=4000)
+    description: str = Field(default="", max_length=40000)
+
+
+class ConfirmListing(ListingPreview):
+    company: str = Field(min_length=1, max_length=200)
+    role: str = Field(min_length=1, max_length=300)
+    deadline: str = Field(default="", max_length=100)
+    instructions: str = Field(default="", max_length=4000)
+
+
+def validated_listing_url(value):
+    try:
+        return job_import.listing_url(value)
+    except (ValueError, UnicodeError):
+        raise HTTPException(422, "Enter a public HTTPS listing URL.")
+
+
+@app.post("/api/job-imports/preview")
+def preview_listing(request: ListingPreview, user_id: str = Depends(get_current_user_id)):
+    url = validated_listing_url(request.url)
+    if request.description.strip():
+        return {"needsDescription": False, **job_import.extract(request.description.strip(), pasted=True)}
+    try:
+        result = job_import.extract(job_import.read_page(url))
+    except (ValueError, OSError, urllib3.exceptions.HTTPError, RecursionError):
+        return {"needsDescription": True}
+    if (not result["description"] or (not result["company"] and not result["instructions"] and
+            (not result["role"] or len(result["description"]) < 100 or result["role"].lower() in
+             {"access denied", "just a moment...", "sign in", "page not found"}))):
+        return {"needsDescription": True}
+    return {"needsDescription": False, **result}
+
+
+@app.post("/api/job-imports")
+def save_listing(request: ConfirmListing, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    details = {k: v.strip() for k, v in request.model_dump().items()}
+    details["url"] = validated_listing_url(request.url)
+    if not details["company"] or not details["role"]:
+        raise HTTPException(422, "Confirm the company and role.")
+    key = hashlib.sha256(json.dumps([user_id, details["url"]]).encode()).hexdigest()
+    row = db.get(ImportedListing, key)
+    if row is None:
+        row = ImportedListing(id=key, userId=user_id, details=details)
+        db.add(row)
+    else:
+        row.details = details
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        row = db.get(ImportedListing, key)
+        if row is None:
+            raise
+        row.details = details
+        db.commit()
+    return {"id": key, **details}
+
+
+@app.get("/api/job-imports")
+def list_imports(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    return [{"id": row.id, **row.details} for row in db.query(ImportedListing).filter_by(userId=user_id)]
+
+
+@app.get("/api/job-imports/{listing_id}/methods")
+async def listing_methods(listing_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    row = db.query(ImportedListing).filter_by(id=listing_id, userId=user_id).first()
+    if not row:
+        raise HTTPException(404, "Opening unavailable")
+    url = row.details["url"]
+    instructions = row.details["instructions"]
+    email = job_import.application_email(instructions)
+    result = {"url": url, "email": email, "direct": None}
+    board = greenhouse.board()
+    if board:
+        try:
+            jobs = await greenhouse.read(board, "/jobs")
+            for job in jobs["jobs"]:
+                if job_import.same_listing(url, job["absolute_url"]):
+                    form = await greenhouse.read(board, f"/jobs/{job['id']}", questions="true")
+                    if greenhouse.fields_for(form):
+                        result["direct"] = {"board": board, "id": job["id"], "title": job["title"], "url": job["absolute_url"]}
+                    break
+        except HTTPException:
+            result["verificationUnavailable"] = True
+    return result
 
 if __name__ == "__main__":
     import uvicorn

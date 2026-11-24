@@ -56,7 +56,14 @@ def run():
 
         main.gemini_service.is_configured = lambda: True
         main.gemini_service.chat = draft_answer
-        from services import greenhouse
+        from services import greenhouse, job_import
+        def fixture_listing(url):
+            if url.endswith("/blocked"):
+                raise ValueError("unreadable fixture")
+            return b"""<html><script type="application/ld+json">{"@type":"JobPosting","title":"Fixture engineer",
+            "hiringOrganization":{"name":"Fixture Co"},"validThrough":"2027-04-30","description":"Build software.",
+            "applicationInstructions":"Apply on the employer website."}</script></html>"""
+        job_import.read_page = fixture_listing
         greenhouse.board = lambda: "fixture"
         greenhouse.endpoint = lambda token, suffix: f"http://127.0.0.1:{employer.server_port}{suffix}"
         threading.Thread(target=employer.serve_forever, daemon=True).start()
@@ -94,7 +101,21 @@ def run():
                     library.locator('input[type=file]').set_input_files({"name":"fixture.pdf", "mimeType":"application/pdf", "buffer":b"%PDF-analyst-version"})
                     expect(library.get_by_text("Data analyst résumé", exact=True)).to_be_visible()
                     page.goto("http://127.0.0.1:5197/browse")
-                    page.get_by_label("Employer listings").select_option("7")
+                    page.get_by_label("Listing URL").fill("https://example.invalid/blocked")
+                    page.get_by_role("button", name="Extract listing details").click()
+                    page.get_by_label("Paste job description").fill("Company: Acme\nRole: Analyst\nDeadline: Friday\nInstructions: Email your resume to hiring@example.org")
+                    page.get_by_role("button", name="Extract listing details").click()
+                    page.get_by_label("Company", exact=True).fill("Acme Data")
+                    page.get_by_role("button", name="Confirm and save opening").click()
+                    expect(page.get_by_role("link", name="Apply by email to hiring@example.org")).to_be_visible()
+                    page.reload()
+                    page.get_by_label("Imported openings").select_option(label="Acme Data · Analyst")
+                    expect(page.get_by_text("Deadline: Friday")).to_be_visible()
+                    page.get_by_label("Listing URL").fill(job["absolute_url"])
+                    page.get_by_role("button", name="Extract listing details").click()
+                    expect(page.get_by_label("Application deadline")).to_have_value("2027-04-30")
+                    page.get_by_role("button", name="Confirm and save opening").click()
+                    page.get_by_role("button", name="Review with JobPilot").click()
                     expect(page.get_by_label("First name")).to_have_value("Taylor")
                     page.get_by_role("button", name="Draft from my profile").click()
                     expect(page.get_by_label("Availability")).to_have_value("I build software.")

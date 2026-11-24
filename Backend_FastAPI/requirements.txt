@@ -7,3 +7,6 @@ httpx
 firebase-admin
 python-multipart
 google-genai
+beautifulsoup4
+urllib3>=2
+certifi

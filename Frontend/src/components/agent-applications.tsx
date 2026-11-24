@@ -1,3 +1,4 @@
+import { JobImport } from "./job-import";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 import { extractFirstAndLastName, type UserProfile } from "@/lib/profile";
@@ -52,50 +53,65 @@ export function AgentApplications({ userId, profile }: { userId: string; profile
     return () => controller.abort();
   }, [userId]);
   return (
-    <section className="rounded-xl border bg-card p-5 space-y-3">
-      <h2 className="font-semibold">Apply with JobPilot</h2>
-      {error ||
-        (!listing ? (
-          "Loading connected employers…"
-        ) : !listing.jobs.length ? (
-          "No connected employer has published jobs available for direct submission."
-        ) : (
-          <label className="block">
-            Employer listings
-            <select
-              className={control}
-              value={job?.id ?? ""}
-              onChange={(e) => setJob(listing.jobs.find((j) => String(j.id) === e.target.value))}
-            >
-              <option value="">Choose a job</option>
-              {listing.jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {listing.board} · {j.title}
-                </option>
+    <>
+      <JobImport
+        userId={userId}
+        renderReview={(direct) => (
+          <ReviewJob
+            key={userId + direct.board + direct.id}
+            userId={userId}
+            profile={profile}
+            job={direct}
+            board={direct.board}
+          />
+        )}
+      />
+      <section className="rounded-xl border bg-card p-5 space-y-3">
+        <h2 className="font-semibold">Apply with JobPilot</h2>
+        {error ||
+          (!listing ? (
+            "Loading connected employers…"
+          ) : !listing.jobs.length ? (
+            "No connected employer has published jobs available for direct submission."
+          ) : (
+            <label className="block">
+              Employer listings
+              <select
+                className={control}
+                value={job?.id ?? ""}
+                onChange={(e) => setJob(listing.jobs.find((j) => String(j.id) === e.target.value))}
+              >
+                <option value="">Choose a job</option>
+                {listing.jobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {listing.board} · {j.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        {listing?.board && job && (
+          <ReviewJob
+            key={userId + listing.board + job.id}
+            {...{ userId, profile, job }}
+            board={listing.board}
+          />
+        )}
+        {attempts.length > 0 && (
+          <details>
+            <summary>Submission history</summary>
+            <ul>
+              {attempts.map((a) => (
+                <li key={a.id}>
+                  {a.board} · {a.title} —{" "}
+                  {a.status === "pending" ? "Confirmation pending" : a.status}
+                </li>
               ))}
-            </select>
-          </label>
-        ))}
-      {listing?.board && job && (
-        <ReviewJob
-          key={userId + listing.board + job.id}
-          {...{ userId, profile, job }}
-          board={listing.board}
-        />
-      )}
-      {attempts.length > 0 && (
-        <details>
-          <summary>Submission history</summary>
-          <ul>
-            {attempts.map((a) => (
-              <li key={a.id}>
-                {a.board} · {a.title} — {a.status === "pending" ? "Confirmation pending" : a.status}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </section>
+            </ul>
+          </details>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -267,7 +283,10 @@ function ReviewJob({
                       <option value="">Choose an uploaded résumé</option>
                       {docs.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.displayName && d.displayName !== d.fileName ? d.displayName + " · " : ""}{d.fileName}
+                          {d.displayName && d.displayName !== d.fileName
+                            ? d.displayName + " · "
+                            : ""}
+                          {d.fileName}
                         </option>
                       ))}
                     </select>
@@ -308,7 +327,9 @@ function ReviewJob({
                   </button>
                 )}
                 {f.name === "resume" && !docs.length && (
-                  <p>Upload a named résumé in Profile → Résumé versions, then reopen this listing.</p>
+                  <p>
+                    Upload a named résumé in Profile → Résumé versions, then reopen this listing.
+                  </p>
                 )}
               </div>
             ))}

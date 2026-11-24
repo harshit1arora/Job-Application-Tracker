@@ -556,3 +556,31 @@ def test_receipt_survives_source_deletion_and_tracker_edits(employer):
     assert client.get(app_path+"/receipt/resume", headers=other).status_code == 404
     client.delete(app_path, headers=headers).raise_for_status()
     assert client.get(app_path+"/receipt/resume", headers=headers).status_code == 404
+
+def test_job_import_confirmation_and_isolation(monkeypatch):
+    from services import job_import
+    headers = {"X-User-Id": "reader"}
+    source = '<script type="application/ld+json">{"@graph":[{"@type":"JobPosting","title":"Developer","hiringOrganization":{"name":"Example"},"validThrough":"2028-02-01","description":"Build things"}]}</script>'
+    monkeypatch.setattr(job_import, "read_page", lambda url: source)
+    url = "https://careers.example.org/job/2"
+    preview = client.post("/api/job-imports/preview", json={"url":url}, headers=headers).json()
+    assert preview["role"] == "Developer" and preview["deadline"] == "2028-02-01"
+    assert client.get("/api/job-imports", headers=headers).json() == []
+    data = {**preview, "url":url, "company":"Confirmed employer"}
+    for _ in range(2):
+        saved = client.post("/api/job-imports", json=data, headers=headers).json()
+    assert len(client.get("/api/job-imports", headers=headers).json()) == 1
+    other = {"X-User-Id":"other"}
+    assert client.get("/api/job-imports", headers=other).json() == []
+    assert client.get("/api/job-imports/"+saved["id"]+"/methods", headers=other).status_code == 404
+
+
+def test_listing_reader_and_methods():
+    from services import job_import
+    for value in ("file:///jobs", "https://127.0.0.1/jobs", "https://user:pass@example.org/jobs"):
+        with pytest.raises(ValueError):
+            job_import.listing_url(value)
+    assert not job_import.same_listing("https://example.org/jobs?id=7", "https://example.org/jobs?id=8")
+    assert job_import.same_listing("https://example.org/7?utm_source=portal", "https://example.org/7")
+    assert job_import.application_email("Email your resume to jobs@example.org") == "jobs@example.org"
+    assert job_import.application_email("Email support@example.org for questions.") is None
