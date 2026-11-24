@@ -2,12 +2,12 @@
   "name": "job-application-tracker",
   "version": "1.0.0",
   "private": true,
-  "description": "AI-Powered Job Application Tracker with React 19 Frontend and .NET Core Backend",
+  "description": "AI-Powered Job Application Tracker with React 19 Frontend and FastAPI Backend",
   "scripts": {
     "dev": "npm --prefix Frontend run dev",
     "build": "npm --prefix Frontend run build",
     "test": "npm --prefix Frontend test",
-    "backend": "cd Backend_FastAPI && .\\venv\\Scripts\\uvicorn main:app --port 5117 --reload",
+    "backend": "cd Backend_FastAPI && python -m uvicorn main:app --port 5117 --reload",
     "start:all": "concurrently \"npm --prefix Frontend run dev\" \"npm run backend\""
   },
   "devDependencies": {

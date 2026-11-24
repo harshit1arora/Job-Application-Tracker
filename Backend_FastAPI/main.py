@@ -8,7 +8,7 @@ from typing import Optional, List, Literal
 from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 import httpx
@@ -234,8 +234,7 @@ class ApplicationOut(ApplicationBase):
     matchScore: Optional[float] = None
     createdAt: str
     updatedAt: str
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentOut(BaseModel):
     id: str
@@ -247,8 +246,7 @@ class DocumentOut(BaseModel):
     applicationId: Optional[str] = None
     displayName: Optional[str] = None
     createdAt: str
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ReminderBase(BaseModel):
     applicationId: str
@@ -270,8 +268,7 @@ class ReminderOut(ReminderBase):
     userId: str
     isCompleted: bool
     createdAt: str
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DashboardStatsByStatus(BaseModel):
     saved: int
@@ -760,8 +757,7 @@ class OfferOut(OfferBase):
             self.otherBenefitsValue,
         )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 def _utc_now() -> str:
@@ -887,8 +883,7 @@ class FollowUpSettingsIn(BaseModel):
 class FollowUpSettingsOut(FollowUpSettingsIn):
     updatedAt: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FollowUpLogCreate(BaseModel):
@@ -911,8 +906,7 @@ class FollowUpLogOut(BaseModel):
     note: Optional[str] = None
     createdAt: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AIFollowUpRequest(BaseModel):

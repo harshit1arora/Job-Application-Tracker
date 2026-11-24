@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 import re
@@ -48,7 +47,7 @@ class GeminiService:
             for m in messages
         )
         try:
-            response = client.models.generate_content(
+            response = await client.aio.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
@@ -74,7 +73,7 @@ class GeminiService:
         if not texts:
             return []
         try:
-            response = client.models.embed_content(
+            response = await client.aio.models.embed_content(
                 model="gemini-embedding-001",
                 contents=texts,
                 config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
@@ -100,7 +99,7 @@ class GeminiService:
             "\"linkedin\": string, \"portfolio\": string, \"github\": string, \"summary\": string}. "
             f"Resume text:\n\n{resume_text[:12000]}"
         )
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model=self.model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -140,7 +139,7 @@ class GeminiService:
             f"Job description: {job_description or 'Not provided'}\n"
             f"Resume highlights: {resume_highlights or 'Not provided'}"
         )
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model=self.model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -161,7 +160,7 @@ class GeminiService:
             "Return plain text only.\n\nRole: "
             f"{role}\nContext: {context}"
         )
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model=self.model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -182,7 +181,7 @@ class GeminiService:
             "Return only the integer, with no extra text.\n\n"
             f"Resume:\n{resume_text[:6000]}\n\nJob description:\n{job_text[:6000]}"
         )
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model=self.model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -208,8 +207,8 @@ class GeminiService:
     async def _generate_json(self, prompt: str, max_tokens: int, temperature: float) -> Dict[str, Any]:
         client = self._require_client()
 
-        def _call():
-            return client.models.generate_content(
+        try:
+            response = await client.aio.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
@@ -219,9 +218,6 @@ class GeminiService:
                 ),
             )
 
-        try:
-            # The google-genai client is synchronous; keep the event loop free.
-            response = await asyncio.to_thread(_call)
             return parse_json_object(getattr(response, "text", None))
         except HTTPException:
             raise

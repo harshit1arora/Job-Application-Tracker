@@ -27,7 +27,7 @@ describe("Voice Assistant Navigation Matcher", () => {
 
   it("matches 'offers' and 'follow-ups' commands", () => {
     expect(matchVoiceNavigation("open offers")?.route).toBe("/offers");
-    expect(matchVoiceNavigation("compare offers")?.route).toBeUndefined(); // needs an action prefix
+    expect(matchVoiceNavigation("compare offers")?.route).toBe("/offers");
     expect(matchVoiceNavigation("go to offer comparison")?.route).toBe("/offers");
     expect(matchVoiceNavigation("show follow ups")?.route).toBe("/followups");
     expect(matchVoiceNavigation("go to follow-ups")?.label).toBe("Follow-ups");

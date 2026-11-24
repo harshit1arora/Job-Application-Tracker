@@ -7,4 +7,3 @@ httpx
 firebase-admin
 python-multipart
 google-genai
-httpx

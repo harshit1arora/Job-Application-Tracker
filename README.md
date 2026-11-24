@@ -213,7 +213,7 @@ Job-Application-Tracker/
 ## 🚀 Quick Start & Installation
 
 ### Prerequisites
-- **Node.js** `v20+` or `v22+`
+- **Node.js** `22.12.0+`
 - **npm** `10+` or **bun**
 - **Python 3.9+** (for running the FastAPI backend)
 
@@ -249,7 +249,7 @@ cd Backend_FastAPI
 pip install -r requirements.txt
 uvicorn main:app --port 5117
 ```
-API runs locally on `http://localhost:5117` and is automatically proxied by Vite. Documents will be saved in `Backend_FastAPI/uploads`.
+API runs locally on `http://localhost:5117` and is automatically proxied by Vite. Documents will be saved in `Backend_FastAPI/data/uploads` by default.
 
 **Note:** The backend requires `python-multipart` (already included in `requirements.txt`) to process raw `multipart/form-data` during file uploads on strict production WSGI/ASGI servers. Additionally, the backend provides a root `/` endpoint that returns a JSON status message to quickly verify deployment uptime. All other endpoints are strictly prefixed with `/api/` (e.g., `/api/health`).
 
