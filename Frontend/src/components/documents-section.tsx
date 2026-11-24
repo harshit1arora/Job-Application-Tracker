@@ -12,7 +12,7 @@ import { AppError } from "@/lib/types";
 import { FileText, Upload, Trash2, Download, Loader2, File as FileIcon } from "lucide-react";
 
 interface DocumentsSectionProps {
-  applicationId: string;
+  applicationId?: string;
 }
 
 export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
@@ -20,13 +20,14 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [versionName, setVersionName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDocuments = async () => {
     if (!user) return;
     try {
       const data = await getDocuments(user.id, applicationId);
-      setDocuments(data);
+      setDocuments(applicationId ? data : data.filter(doc => !doc.applicationId));
     } catch (error) {
       console.error("Failed to load documents:", error);
       toast.error("Failed to load attached documents.");
@@ -45,11 +46,11 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
 
     setIsUploading(true);
     try {
-      // Create a nice display name (e.g. "Resume.pdf" -> "Resume")
-      const displayName = file.name.split(".").slice(0, -1).join(".");
+      const displayName = versionName.trim() || file.name;
 
-      const newDoc = await uploadDocument(user.id, file, applicationId, displayName);
+      const newDoc = await uploadDocument(user.id, file, applicationId, displayName, !applicationId);
       setDocuments((prev) => [newDoc, ...prev]);
+      setVersionName("");
       toast.success("Document uploaded successfully!");
     } catch (error) {
       console.error("Upload error:", error);
@@ -111,7 +112,7 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold flex items-center gap-2">
           <FileText size={18} className="text-primary" />
-          Documents
+          {applicationId ? "Documents" : "Résumé versions"}
         </h3>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -130,6 +131,11 @@ export function DocumentsSection({ applicationId }: DocumentsSectionProps) {
         />
       </div>
 
+      <label className="text-sm">Version name
+        <input value={versionName} onChange={e => setVersionName(e.target.value)} maxLength={120}
+          disabled={isUploading} placeholder="e.g. Backend résumé"
+          className="mt-1 block w-full rounded-md border bg-background p-2" />
+      </label>
       {isLoading ? (
         <div className="flex justify-center py-4">
           <Loader2 size={20} className="animate-spin text-muted-foreground" />

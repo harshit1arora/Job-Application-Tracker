@@ -10,9 +10,9 @@ from datetime import datetime, timezone
 from typing import Optional, List, Literal
 from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, computed_field
-from sqlalchemy import JSON, UniqueConstraint, create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
+from sqlalchemy import LargeBinary, JSON, UniqueConstraint, create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 import httpx
 
@@ -176,6 +176,12 @@ class AgentAttempt(Base):
     job = Column(Integer, nullable=False)
     status = Column(String, nullable=False)
     reviewed = Column(JSON, nullable=False)
+
+
+class ReceiptFile(Base):
+    __tablename__ = "receipt_files"
+    applicationId = Column(String, primary_key=True)
+    contents = Column(LargeBinary, nullable=False)
 
 
 Base.metadata.create_all(bind=engine)
@@ -524,6 +530,7 @@ def delete_application(app_id: str, user_id: str = Depends(get_current_user_id),
     db.query(OfferDB).filter(OfferDB.userId == user_id, OfferDB.applicationId == app_id).update(
         {"applicationId": None}
     )
+    db.query(ReceiptFile).filter_by(applicationId=app_id).delete()
     db.delete(app_doc)
     db.commit()
     return None
@@ -1102,7 +1109,8 @@ async def agent_submit(token: str, job_id: int, review: ReviewedApplication,
     if review.resumeId:
         doc = db.query(DocumentDB).filter_by(userId=user_id, id=review.resumeId).first()
         if not doc or not os.path.isfile(doc.storageRef):
-            raise HTTPException(422, "Select an available résumé from your documents")
+            raise HTTPException(422, "Select an available rÃ©sumÃ© from your documents")
+        version_name = doc.displayName or doc.fileName
         attachment = (doc.fileName, Path(doc.storageRef).read_bytes(), doc.fileType)
     # Commit the claim before contacting the employer. A lost response must never trigger a resend.
     snapshot = {**review.model_dump(), "title": job["title"]}
@@ -1122,6 +1130,7 @@ async def agent_submit(token: str, job_id: int, review: ReviewedApplication,
     except IntegrityError:
         db.rollback()
         return attempt_status(db.query(AgentAttempt).filter_by(userId=user_id, board=token, job=job_id).one())
+    sent_at = _utc_now()
     try:
         response = await greenhouse.deliver(token, job_id, review.answers, attachment)
     except httpx.RequestError:
@@ -1136,6 +1145,22 @@ async def agent_submit(token: str, job_id: int, review: ReviewedApplication,
         except ValueError:
             receipt = None
         reference = receipt.get("application_id") if isinstance(receipt, dict) else None
+        answer_rows = []
+        for field in fields:
+            value = review.answers.get(field["name"])
+            if not value:
+                continue
+            label = next((option["label"] for option in field["options"] if option["value"] == value), value)
+            answer_rows.append({"question": field["label"], "answer": label, "value": value})
+        file_info = None
+        if attachment:
+            file_info = {"name": version_name, "fileName": attachment[0],
+                         "mime": attachment[2], "size": len(attachment[1])}
+            db.add(ReceiptFile(applicationId=row.id, contents=attachment[1]))
+        row.reviewed = {**snapshot, "receipt": {"company": job.get("company_name") or token,
+                        "title": job["title"], "destination": job["absolute_url"], "submittedAt": sent_at,
+                        "confirmedAt": now, "answers": answer_rows, "resume": file_info,
+                        "reference": str(reference) if isinstance(reference, (str, int)) else None}}
         note = "Employer confirmed receipt via Greenhouse."
         if isinstance(reference, (str, int)):
             note += f" Employer reference: {reference}"
@@ -1144,6 +1169,36 @@ async def agent_submit(token: str, job_id: int, review: ReviewedApplication,
                              notes=note, createdAt=now, updatedAt=now))
     db.commit()
     return attempt_status(row)
+
+def confirmed_attempt(app_id, user_id, db):
+    return db.query(AgentAttempt).join(ApplicationDB, ApplicationDB.id == AgentAttempt.id).filter(
+        AgentAttempt.id == app_id, AgentAttempt.userId == user_id, ApplicationDB.userId == user_id,
+        AgentAttempt.status == "confirmed").first()
+
+
+@app.get("/api/applications/{app_id}/receipt")
+def application_receipt(app_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    row = confirmed_attempt(app_id, user_id, db)
+    if not row:
+        return None
+    if "receipt" in row.reviewed:
+        return row.reviewed["receipt"]
+    # Earlier submissions preserved raw answers but did not archive files, labels or timestamps.
+    return {"legacy": True, "company": row.board, "title": row.reviewed.get("title"),
+            "destination": f"https://boards.greenhouse.io/{row.board}/jobs/{row.job}",
+            "answers": [{"question": k, "answer": v, "value": v} for k, v in row.reviewed.get("answers", {}).items() if v]}
+
+
+@app.get("/api/applications/{app_id}/receipt/resume")
+def receipt_resume(app_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    row = confirmed_attempt(app_id, user_id, db)
+    info = row.reviewed.get("receipt", {}).get("resume") if row else None
+    archived = db.get(ReceiptFile, app_id) if info else None
+    if not archived:
+        raise HTTPException(404, "Archived résumé unavailable")
+    return Response(archived.contents, media_type=info["mime"],
+                    headers={"Cache-Control": "private, no-store", "Content-Disposition": "attachment"})
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -267,7 +267,7 @@ function ReviewJob({
                       <option value="">Choose an uploaded résumé</option>
                       {docs.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.fileName}
+                          {d.displayName && d.displayName !== d.fileName ? d.displayName + " · " : ""}{d.fileName}
                         </option>
                       ))}
                     </select>
@@ -308,7 +308,7 @@ function ReviewJob({
                   </button>
                 )}
                 {f.name === "resume" && !docs.length && (
-                  <p>Upload a résumé in dashboard Documents, then reopen this listing.</p>
+                  <p>Upload a named résumé in Profile → Résumé versions, then reopen this listing.</p>
                 )}
               </div>
             ))}

@@ -1,3 +1,4 @@
+import { DocumentsSection } from "@/components/documents-section";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
@@ -666,6 +667,7 @@ function ProfilePage() {
             </div>
           </form>
         )}
+        <DocumentsSection />
       </main>
 
       {showMissingModal && profile && user && (

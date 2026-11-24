@@ -1,3 +1,4 @@
+import { SubmissionReceipt } from "@/components/submission-receipt";
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
@@ -420,6 +421,8 @@ function ApplicationDetailsPage() {
             )}
           </div>
         </div>
+
+        {user && <SubmissionReceipt key={user.id + applicationId} userId={user.id} applicationId={applicationId} />}
 
         {/* AI Career Intelligence (Predictor, Proof, Twin, Next-Best-Action) */}
         {intelligence && profile && (

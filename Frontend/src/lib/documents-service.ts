@@ -25,6 +25,7 @@ export async function uploadDocument(
   file: File,
   applicationId?: string,
   displayName?: string,
+  requireStoredFile = false,
 ): Promise<DocumentMetadata> {
   if (file.size > MAX_FILE_SIZE_BYTES) {
     throw new AppError("VALIDATION_ERROR", "File size must be under 5 MB.");
@@ -48,7 +49,7 @@ export async function uploadDocument(
       body: formData,
     });
   } catch (error) {
-    if (!shouldUseLocalPersistence()) throw error;
+    if (requireStoredFile || !shouldUseLocalPersistence()) throw error;
     const id = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const doc: DocumentMetadata = {
       id,

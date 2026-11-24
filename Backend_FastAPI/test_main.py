@@ -539,3 +539,20 @@ def test_agent_declines_unrepresented_consent(employer):
     job["data_compliance"] = [{"requires_consent": True}]
     result = client.get("/api/agent/test-board/jobs/7", headers={"X-User-Id": "candidate"})
     assert result.json()["status"] == "unsupported"
+
+def test_receipt_survives_source_deletion_and_tracker_edits(employer):
+    headers = {"X-User-Id": "candidate"}
+    path, payload = reviewed_payload(headers)
+    submitted = client.post(path+"/submit", headers=headers, json=payload).json()
+    app_path = "/api/applications/" + submitted["applicationId"]
+    client.delete("/api/documents/" + payload["resumeId"], headers=headers).raise_for_status()
+    client.patch(app_path, headers=headers, json={"company": "Edited"}).raise_for_status()
+    receipt = client.get(app_path+"/receipt", headers=headers).json()
+    assert receipt["company"] == "test-board" and receipt["submittedAt"] <= receipt["confirmedAt"]
+    assert receipt["destination"] == employer[0]["absolute_url"]
+    assert client.get(app_path+"/receipt/resume", headers=headers).content == b"%PDF-test"
+    other = {"X-User-Id": "other"}
+    assert client.get(app_path+"/receipt", headers=other).json() is None
+    assert client.get(app_path+"/receipt/resume", headers=other).status_code == 404
+    client.delete(app_path, headers=headers).raise_for_status()
+    assert client.get(app_path+"/receipt/resume", headers=headers).status_code == 404

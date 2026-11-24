@@ -76,9 +76,6 @@ def run():
                         pass
                     time.sleep(.5)
                 headers = {"X-User-Id": "fixture-user"}
-                doc = httpx.post("http://127.0.0.1:5198/api/documents/upload", headers=headers,
-                                 files={"file": ("fixture.pdf", b"%PDF-browser-test", "application/pdf")})
-                doc.raise_for_status()
                 with sync_playwright() as pw:
                     browser = pw.chromium.launch(channel="chrome")
                     page = browser.new_page()
@@ -88,13 +85,21 @@ def run():
                       localStorage.setItem("jobpilot:profile:fixture-user", JSON.stringify({
                       fullName:"Taylor Fixture",email:"taylor@example.org",phone:"1234",
                       resumeText:"I build software.",location:"City",targetRole:"Engineer"}));""")
+                    page.goto("http://127.0.0.1:5197/profile")
+                    library = page.locator("div.bg-card").filter(has=page.get_by_role("heading", name="Résumé versions")).last
+                    page.get_by_label("Version name").fill("Backend résumé")
+                    library.locator('input[type=file]').set_input_files({"name":"fixture.pdf", "mimeType":"application/pdf", "buffer":b"%PDF-browser-test"})
+                    expect(library.get_by_text("Backend résumé", exact=True)).to_be_visible()
+                    page.get_by_label("Version name").fill("Data analyst résumé")
+                    library.locator('input[type=file]').set_input_files({"name":"fixture.pdf", "mimeType":"application/pdf", "buffer":b"%PDF-analyst-version"})
+                    expect(library.get_by_text("Data analyst résumé", exact=True)).to_be_visible()
                     page.goto("http://127.0.0.1:5197/browse")
                     page.get_by_label("Employer listings").select_option("7")
                     expect(page.get_by_label("First name")).to_have_value("Taylor")
                     page.get_by_role("button", name="Draft from my profile").click()
                     expect(page.get_by_label("Availability")).to_have_value("I build software.")
                     page.get_by_label("Availability").fill("Reviewed answer for fixture")
-                    page.get_by_label("Resume", exact=False).filter(visible=True).first.select_option(doc.json()["id"])
+                    page.get_by_label("Resume", exact=False).filter(visible=True).first.select_option(label="Backend résumé · fixture.pdf")
                     page.reload()
                     page.get_by_label("Employer listings").select_option("7")
                     expect(page.get_by_label("Availability")).to_have_value("Reviewed answer for fixture")
@@ -106,6 +111,15 @@ def run():
                         assert value in received[0]
                     page.get_by_role("link", name="View tracked application").click()
                     expect(page.get_by_text(role, exact=True).first).to_be_visible(timeout=30000)
+                    receipt = page.get_by_role("region", name="Submission receipt")
+                    expect(receipt.get_by_text("Backend résumé", exact=False).first).to_be_visible()
+                    receipt.get_by_text("Submitted answers", exact=False).click()
+                    expect(receipt.get_by_text("Reviewed answer for fixture", exact=True)).to_be_visible()
+                    expect(receipt.locator("time")).to_be_visible()
+                    expect(receipt.get_by_role("link")).to_have_attribute("href", job["absolute_url"])
+                    with page.expect_download() as saved:
+                        receipt.get_by_role("button", name="Download fixture.pdf").click()
+                    assert Path(saved.value.path()).read_bytes() == b"%PDF-browser-test"
                     browser.close()
             finally:
                 vite.terminate()
