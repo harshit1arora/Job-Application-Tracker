@@ -1,5 +1,4 @@
-import { describe, it, expect } from "vitest";
-import { AppError } from "../types";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { uploadDocument, getDocuments, deleteDocument } from "../documents-service";
 
 function makeFile(name = "resume.pdf", type = "application/pdf", size = 1024): File {
@@ -8,6 +7,7 @@ function makeFile(name = "resume.pdf", type = "application/pdf", size = 1024): F
 }
 
 describe("documents-service", () => {
+  afterEach(() => vi.unstubAllGlobals());
   it("throws VALIDATION_ERROR when file exceeds 5MB", async () => {
     const hugeFile = makeFile("huge.pdf", "application/pdf", 6 * 1024 * 1024);
     await expect(uploadDocument("user-1", hugeFile)).rejects.toMatchObject({
@@ -22,7 +22,8 @@ describe("documents-service", () => {
     });
   });
 
-  it("uploads valid PDF metadata and fetches documents list", async () => {
+  it("stores and lists PDF metadata in the offline fallback", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Offline")));
     const { createApplicationApi } = await import("../api-client");
     const app = await createApplicationApi("test-user-docs", {
       company: "C",

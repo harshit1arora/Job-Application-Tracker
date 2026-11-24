@@ -10,3 +10,4 @@ google-genai
 beautifulsoup4
 urllib3>=2
 certifi
+cryptography

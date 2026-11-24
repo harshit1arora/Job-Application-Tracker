@@ -584,3 +584,73 @@ def test_listing_reader_and_methods():
     assert job_import.same_listing("https://example.org/7?utm_source=portal", "https://example.org/7")
     assert job_import.application_email("Email your resume to jobs@example.org") == "jobs@example.org"
     assert job_import.application_email("Email support@example.org for questions.") is None
+
+@pytest.fixture
+def gmail_review(monkeypatch):
+    from cryptography.fernet import Fernet
+    from main import GmailAccount
+    from services import gmail
+    monkeypatch.setattr(gmail, "client_id", lambda: "fixture")
+    monkeypatch.setenv("GMAIL_TOKEN_KEY", Fernet.generate_key().decode())
+    async def tokens(**kwargs):
+        return {"access_token":"fixture"}
+    monkeypatch.setattr(gmail, "tokens", tokens)
+    headers = {"X-User-Id":"applicant"}
+    with TestingSessionLocal() as db:
+        db.add(GmailAccount(userId="applicant", email="applicant@example.org", secret=gmail.cipher().encrypt(b"refresh")))
+        db.commit()
+    listing = client.post("/api/job-imports", headers=headers, json={"url":"https://example.org/jobs/42",
+        "role":"Analyst","company":"Example","instructions":"Email your resume to hiring@example.org"}).json()
+    doc = client.post("/api/documents/upload", headers=headers, files={"file":("resume.pdf",b"%PDF-test","application/pdf")}).json()
+    return headers, "/api/job-imports/"+listing["id"]+"/gmail", {"approved":True,"sender":"applicant@example.org",
+        "recipient":"hiring@example.org","subject":"Application","body":"Reviewed body","resumeId":doc["id"]}
+
+
+def test_gmail_validates_review_and_prevents_uncertain_retry(gmail_review, monkeypatch):
+    import httpx
+    from services import gmail
+    headers, path, payload = gmail_review
+    calls = []
+    async def send(*args):
+        calls.append(1)
+        raise httpx.ReadTimeout("ambiguous")
+    monkeypatch.setattr(gmail,"send",send)
+    for change in ({"approved":False},{"sender":"other@example.org"},{"recipient":"other@example.org"},
+                   {"resumeId":"missing"},{"subject":"hi\nthere"},{"body":"  "}):
+        assert client.post(path, headers=headers,json=payload|change).status_code in (409,422)
+    assert client.post(path,headers={"X-User-Id":"other"},json=payload).status_code == 404
+    assert not calls
+    for _ in range(2):
+        assert client.post(path,headers=headers,json=payload).json()["status"] == "pending"
+    assert len(calls) == 1
+    assert client.get("/api/applications",headers=headers).json() == []
+
+
+def test_gmail_definite_rejection_and_receipt(gmail_review, monkeypatch):
+    import httpx
+    from services import gmail
+    headers, path, payload = gmail_review
+    responses = [httpx.Response(403), httpx.Response(200,json={"id":"mail-1"})]
+    async def send(*args):
+        return responses.pop(0)
+    monkeypatch.setattr(gmail,"send",send)
+    assert client.post(path,headers=headers,json=payload).status_code == 409
+    result = client.post(path,headers=headers,json=payload).json()
+    assert result["status"] == "sent"
+    assert client.post(path,headers=headers,json=payload).json() == result
+    base = "/api/applications/"+result["applicationId"]+"/receipt"
+    assert client.get(base,headers=headers).json()["reference"] == "mail-1"
+    assert client.get(base+"/resume",headers=headers).content == b"%PDF-test"
+    assert client.get(base+"/resume",headers={"X-User-Id":"other"}).status_code == 404
+    client.delete("/api/gmail/account",headers=headers).raise_for_status()
+    assert client.get("/api/gmail/account",headers=headers).json()["email"] is None
+
+
+def test_gmail_popup_requires_expected_origin_and_header(monkeypatch):
+    from services import gmail
+    monkeypatch.setenv("GMAIL_WEB_ORIGIN", "https://jobpilot.example")
+    monkeypatch.setattr(gmail, "client_id", lambda: "fixture")
+    for extra in ({"Origin":"https://other.example","X-Requested-With":"XmlHttpRequest"},
+                  {"Origin":"https://jobpilot.example"}):
+        response = client.post("/api/gmail/account",headers={"X-User-Id":"candidate",**extra},json={"code":"fixture"})
+        assert response.status_code == 403

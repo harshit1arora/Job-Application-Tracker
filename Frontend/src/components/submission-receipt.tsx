@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest, apiDownloadRequest } from "@/lib/api-client";
 
 type Receipt = {
+  channel?: string;
   company: string;
   title?: string;
   destination: string;
@@ -66,7 +67,8 @@ export function SubmissionReceipt({
       {receipt && (
         <>
           <p>
-            {receipt.title} · {receipt.company} · Greenhouse
+            {receipt.title} · {receipt.company} ·{" "}
+            {receipt.channel === "Gmail" ? "Sent by email via Gmail" : "Greenhouse"}
           </p>
           <a href={receipt.destination} className="underline" target="_blank" rel="noreferrer">
             {receipt.destination}
@@ -82,7 +84,12 @@ export function SubmissionReceipt({
               </time>
             </p>
           )}
-          {receipt.reference && <p>Employer reference: {receipt.reference}</p>}
+          {receipt.reference && (
+            <p>
+              {receipt.channel === "Gmail" ? "Gmail message ID" : "Employer reference"}:{" "}
+              {receipt.reference}
+            </p>
+          )}
           {receipt.legacy && (
             <p>Earlier submission. The original file and submission time were not archived.</p>
           )}

@@ -4,7 +4,8 @@ from sqlalchemy.exc import IntegrityError
 import hashlib
 import json
 import urllib3
-from services import greenhouse, job_import
+from services import greenhouse, job_import, gmail
+from cryptography.fernet import InvalidToken
 import uuid
 import shutil
 import io
@@ -14,7 +15,7 @@ from typing import Optional, List, Literal
 from fastapi import FastAPI, Header, HTTPException, Query, Depends, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import SecretStr, BaseModel, ConfigDict, Field, computed_field
 from sqlalchemy import LargeBinary, JSON, UniqueConstraint, create_engine, Column, String, Integer, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 import httpx
@@ -186,6 +187,22 @@ class ImportedListing(Base):
     id = Column(String, primary_key=True)
     userId = Column(String, nullable=False, index=True)
     details = Column(JSON, nullable=False)
+
+
+class GmailAccount(Base):
+    __tablename__ = "gmail_accounts"
+    userId = Column(String, primary_key=True)
+    email = Column(String, nullable=False)
+    secret = Column(LargeBinary, nullable=False)
+
+
+class GmailDelivery(Base):
+    __tablename__ = "gmail_deliveries"
+    id = Column(String, primary_key=True)
+    listingId = Column(String, unique=True, nullable=False)
+    userId = Column(String, index=True, nullable=False)
+    status = Column(String, nullable=False)
+    receipt = Column(JSON, nullable=False)
 
 
 class ReceiptFile(Base):
@@ -540,6 +557,7 @@ def delete_application(app_id: str, user_id: str = Depends(get_current_user_id),
     db.query(OfferDB).filter(OfferDB.userId == user_id, OfferDB.applicationId == app_id).update(
         {"applicationId": None}
     )
+    db.query(GmailDelivery).filter_by(id=app_id, userId=user_id).update({"receipt": {}, "status":"archived"})
     db.query(ReceiptFile).filter_by(applicationId=app_id).delete()
     db.delete(app_doc)
     db.commit()
@@ -1190,7 +1208,8 @@ def confirmed_attempt(app_id, user_id, db):
 def application_receipt(app_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
     row = confirmed_attempt(app_id, user_id, db)
     if not row:
-        return None
+        mail = db.query(GmailDelivery).filter_by(id=app_id, userId=user_id, status="sent").first()
+        return mail.receipt if mail else None
     if "receipt" in row.reviewed:
         return row.reviewed["receipt"]
     # Earlier submissions preserved raw answers but did not archive files, labels or timestamps.
@@ -1201,8 +1220,8 @@ def application_receipt(app_id: str, user_id: str = Depends(get_current_user_id)
 
 @app.get("/api/applications/{app_id}/receipt/resume")
 def receipt_resume(app_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    row = confirmed_attempt(app_id, user_id, db)
-    info = row.reviewed.get("receipt", {}).get("resume") if row else None
+    receipt = application_receipt(app_id, user_id, db)
+    info = receipt.get("resume") if receipt else None
     archived = db.get(ReceiptFile, app_id) if info else None
     if not archived:
         raise HTTPException(404, "Archived résumé unavailable")
@@ -1297,6 +1316,134 @@ async def listing_methods(listing_id: str, user_id: str = Depends(get_current_us
         except HTTPException:
             result["verificationUnavailable"] = True
     return result
+
+class GmailCode(BaseModel):
+    code: SecretStr
+
+
+class EmailReview(BaseModel):
+    approved: Literal[True]
+    sender: str
+    recipient: str
+    subject: str = Field(min_length=1, max_length=250)
+    body: str = Field(min_length=1, max_length=30000)
+    resumeId: str
+
+
+def require_gmail():
+    if not gmail.client_id():
+        raise HTTPException(503, "Gmail sending is not configured for this deployment.")
+
+
+@app.get("/api/gmail/account")
+def gmail_account(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    client_id = gmail.client_id()
+    account = db.get(GmailAccount, user_id) if client_id else None
+    return {"clientId": client_id, "email": account.email if account else None}
+
+
+@app.post("/api/gmail/account")
+async def connect_gmail(data: GmailCode, origin: str = Header(""), x_requested_with: str = Header(""),
+                        user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    require_gmail()
+    if origin != os.environ["GMAIL_WEB_ORIGIN"] or x_requested_with != "XmlHttpRequest":
+        raise HTTPException(403, "Invalid Gmail connection origin.")
+    email, refresh = await gmail.exchange(data.code.get_secret_value())
+    account = db.get(GmailAccount, user_id)
+    if not refresh and (not account or account.email != email):
+        raise HTTPException(409, "Remove JobPilot in Google Account permissions, then connect Gmail again.")
+    if not account:
+        account = GmailAccount(userId=user_id)
+        db.add(account)
+    account.email = email
+    if refresh:
+        account.secret = gmail.cipher().encrypt(refresh.encode())
+    db.commit()
+    return {"email":email, "clientId":gmail.client_id()}
+
+
+@app.delete("/api/gmail/account", status_code=204)
+def disconnect_gmail(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    require_gmail()
+    db.query(GmailAccount).filter_by(userId=user_id).delete()
+    db.commit()
+
+
+def mail_status(row):
+    return {"status": row.status if row else "draft",
+            "applicationId": row.id if row and row.status == "sent" else None}
+
+
+@app.get("/api/job-imports/{listing_id}/gmail")
+def email_status(listing_id: str, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+    return mail_status(db.query(GmailDelivery).filter_by(listingId=listing_id, userId=user_id).first())
+
+
+@app.post("/api/job-imports/{listing_id}/gmail")
+async def email_application(listing_id: str, review: EmailReview, user_id: str = Depends(get_current_user_id),
+                            db: Session = Depends(get_db)):
+    require_gmail()
+    listing = db.query(ImportedListing).filter_by(id=listing_id, userId=user_id).first()
+    if not listing:
+        raise HTTPException(404, "Opening unavailable.")
+    previous = db.query(GmailDelivery).filter_by(listingId=listing_id, userId=user_id).first()
+    if previous:
+        return mail_status(previous)
+    details = listing.details
+    if review.recipient != job_import.application_email(details["instructions"]):
+        raise HTTPException(409, "The application address changed. Reopen the listing and review again.")
+    account = db.get(GmailAccount, user_id)
+    if not account or review.sender != account.email:
+        raise HTTPException(409, "Reconnect Gmail and review the sender address.")
+    if not review.subject.strip() or not review.body.strip() or any(ord(c)<32 for c in review.subject):
+        raise HTTPException(422, "Enter a single-line subject and a message.")
+    doc = db.query(DocumentDB).filter_by(id=review.resumeId, userId=user_id).first()
+    if not doc or not os.path.isfile(doc.storageRef):
+        raise HTTPException(422, "Choose an available rÃ©sumÃ©.")
+    contents = Path(doc.storageRef).read_bytes()
+    file_info = {"name":doc.displayName or doc.fileName, "fileName":doc.fileName,
+                 "mime":doc.fileType, "size":len(contents)}
+    raw = gmail.raw_message(account.email, review.recipient, review.subject, review.body,
+                            doc.fileName, doc.fileType, contents)
+    try:
+        refresh = gmail.cipher().decrypt(account.secret).decode()
+    except InvalidToken:
+        raise HTTPException(409, "Reconnect Gmail before sending.")
+    access = (await gmail.tokens(refresh_token=refresh, grant_type="refresh_token"))["access_token"]
+    now = _utc_now()
+    receipt = {"channel":"Gmail", "company":details["company"], "title":details["role"],
+               "destination":"mailto:"+review.recipient, "submittedAt":now, "resume":file_info,
+               "answers":[{"question":key, "answer":v, "value":v} for key,v in
+                          (("From",review.sender),("To",review.recipient),("Subject",review.subject),("Message",review.body))]}
+    row = GmailDelivery(id=uuid.uuid4().hex, userId=user_id, listingId=listing_id, status="pending", receipt=receipt)
+    db.add(row)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return mail_status(db.query(GmailDelivery).filter_by(userId=user_id, listingId=listing_id).one())
+    try:
+        result = await gmail.send(access, raw)
+    except httpx.RequestError:
+        return mail_status(row)
+    if result.status_code in (400, 401, 403, 404, 413, 429):
+        db.delete(row)
+        db.commit()
+        raise HTTPException(409, "Gmail declined the message. Check the account and attachment before trying again.")
+    try:
+        message_id = result.json().get("id") if result.status_code == 200 else None
+    except (ValueError, AttributeError):
+        message_id = None
+    if not message_id:
+        return mail_status(row)
+    row.status = "sent"
+    row.receipt = {**receipt, "reference":message_id}
+    db.add(ReceiptFile(applicationId=row.id, contents=contents))
+    db.add(ApplicationDB(id=row.id, userId=user_id, company=details["company"], jobTitle=details["role"],
+                         applicationSource="Email", status="Applied", applicationUrl=details["url"],
+                         notes="Sent by email via Gmail.", createdAt=now, updatedAt=now))
+    db.commit()
+    return mail_status(row)
 
 if __name__ == "__main__":
     import uvicorn

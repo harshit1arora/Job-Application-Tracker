@@ -357,3 +357,18 @@ Configure the following on the FastAPI server for an employer that has authorize
 The integration reads the board's live listings and questions. Forms requiring unsupported input types or additional consent use the employer's hosted application instead. A confirmed submission creates an Applied tracker entry. A definitive rejection allows a corrected submission. A timeout, an ambiguous response, or a process exit after claiming the submission leaves it pending. Check the employer's records before retrying through another channel. The Job Board API supplies no applicant-side status lookup.
 
 Provider reference: [Greenhouse Job Board API](https://developers.greenhouse.io/job-board.html).
+
+### Apply by Gmail
+
+Import a listing whose application instructions give an email address. Open **Apply by Gmail**, connect your Google account, review the sender and recipient, edit the subject and message, and select a résumé. You can download the selected file before clicking **Send application**. JobPilot records a Gmail message ID and archives the exact submitted attachment after Gmail accepts the message. An uncertain response stays pending; check Gmail Sent before taking further action.
+
+For live sending, enable the Gmail API in Google Cloud, configure the OAuth consent screen with the email identity and Gmail send scopes, and create a Web application OAuth client. Register the frontend origin as an authorized JavaScript origin and redirect URI (for example, `http://localhost:5173`). Add your Google account as a test user if the consent screen is in testing mode. On the FastAPI server set:
+
+- `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` from that client.
+- `GMAIL_WEB_ORIGIN` to the exact frontend origin, without a trailing slash. Include it in the API CORS origins.
+- `GMAIL_TOKEN_KEY` to a persistent Fernet key. Generate once with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` and store it in backend secrets.
+- `DEMO_MODE=false` and working Firebase authentication. Real mailbox access is disabled with demo header authentication.
+
+Connections are per JobPilot user. Disconnect Gmail removes the stored encrypted refresh token; you can also revoke the app in your Google Account permissions. An external public release can require Google OAuth verification. [Google popup authorization](https://developers.google.com/identity/oauth2/web/guides/use-code-model) · [Gmail sending API](https://developers.google.com/workspace/gmail/api/guides/sending)
+
+The localhost browser test in `tests/reviewed_application_browser.py` uses a simulated Google consent callback, token service and Gmail receiver. It verifies the decoded email and attachment without contacting a real mailbox.

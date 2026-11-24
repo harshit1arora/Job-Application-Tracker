@@ -34,6 +34,7 @@ export const APPLICATION_STATUSES = [
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
 export const APPLICATION_SOURCES = [
+  "Email",
   "Greenhouse",
   "Lever",
   "Ashby",

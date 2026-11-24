@@ -1,3 +1,4 @@
+import { GmailApplication } from "./gmail-application";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 
@@ -233,6 +234,14 @@ export function JobImport({
             Open employer listing
           </a>
           {methods?.email && (
+            <GmailApplication
+              key={selected.id + methods.email}
+              userId={userId}
+              opening={selected}
+              recipient={methods.email}
+            />
+          )}
+          {methods?.email && (
             <p>
               <a className="underline" href={`mailto:${methods.email}`}>
                 Apply by email to {methods.email}
@@ -246,7 +255,7 @@ export function JobImport({
             </button>
           )}
           {methods?.direct && reviewId === selected.id && renderReview(methods.direct)}
-          {methods && !methods.direct && !methods.verificationUnavailable && (
+          {methods && !methods.email && !methods.direct && !methods.verificationUnavailable && (
             <p>Direct submission through JobPilot is unavailable for this opening.</p>
           )}
           {(methodsError || methods?.verificationUnavailable) && (
